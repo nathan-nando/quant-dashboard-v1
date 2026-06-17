@@ -13,7 +13,14 @@ function SettingsContent() {
 
   const [configs, setConfigs] = useState<any[]>([]);
   const [models, setModels] = useState<any[]>([]);
+  const [modelRouting, setModelRouting] = useState<any>({
+    TREND_BULL: "NONE",
+    TREND_BEAR: "NONE",
+    MEAN_REVERTING: "NONE",
+    VOLATILE_CHOP: "NONE"
+  });
   const [isLoadingData, setIsLoadingData] = useState(true);
+  const [savingRouting, setSavingRouting] = useState(false);
 
   // Modal states
   const [isConfigModalOpen, setConfigModalOpen] = useState(false);
@@ -29,14 +36,17 @@ function SettingsContent() {
   const fetchData = async () => {
     setIsLoadingData(true);
     try {
-      const [confRes, modRes] = await Promise.all([
+      const [confRes, modRes, routeRes] = await Promise.all([
         fetch("http://127.0.0.1:8000/api/configurations"),
-        fetch("http://127.0.0.1:8000/api/models")
+        fetch("http://127.0.0.1:8000/api/models"),
+        fetch("http://127.0.0.1:8000/api/configurations/model-routing")
       ]);
       const confData = await confRes.json();
       const modData = await modRes.json();
+      const routeData = await routeRes.json();
       setConfigs(confData);
       setModels(modData);
+      setModelRouting(routeData);
     } catch (err) {
       console.error("Failed to load settings data", err);
     } finally {
@@ -114,6 +124,19 @@ function SettingsContent() {
         fetchData();
       } catch(e) { console.error(e); }
     }
+  };
+
+  const saveRouting = async () => {
+    setSavingRouting(true);
+    try {
+      await fetch("http://127.0.0.1:8000/api/configurations/model-routing", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(modelRouting)
+      });
+      alert("Model routing saved successfully!");
+    } catch(e) { console.error(e); }
+    setSavingRouting(false);
   };
 
   // --- TABLE FORMATTERS ---
@@ -212,33 +235,35 @@ function SettingsContent() {
                 {/* Left Side: Settings */}
                 <Column lg={5} md={8} sm={4} style={{ marginBottom: "2rem" }}>
                   <Tile>
-                    <h3 style={{ marginBottom: '1.5rem' }}>Active Settings</h3>
+                    <h3 style={{ marginBottom: '1.5rem' }}>Regime Model Routing</h3>
                     <Form>
-                      <FormGroup legendText="Model Selection">
-                        <Select id="primary_model" labelText="Primary Directional Model" defaultValue="1" style={{ marginBottom: '1rem' }}>
-                          {models.map(m => (
-                            <SelectItem key={m.id} value={m.id} text={m.name} />
-                          ))}
+                      <FormGroup legendText="Assign ML Models to specific market conditions">
+                        <Select id="route_bull" labelText="Trend Bull (Up)" value={modelRouting.TREND_BULL || "NONE"} onChange={e => setModelRouting({...modelRouting, TREND_BULL: e.target.value})} style={{ marginBottom: '1rem' }}>
+                          <SelectItem value="NONE" text="-- None (Disable Trading) --" />
+                          <SelectItem value="xgboost_baseline_v1" text="xgboost_baseline_v1 (Default)" />
+                          {models.filter(m => m.name !== "xgboost_baseline_v1").map(m => <SelectItem key={m.id} value={m.name} text={m.name} />)}
                         </Select>
-
-                        <Select id="regime_model" labelText="Market Regime Model" defaultValue="hmm_v1" style={{ marginBottom: '1rem' }}>
-                          <SelectItem value="hmm_v1" text="Hidden Markov Model v1" />
-                          <SelectItem value="adx_kmean" text="ADX + K-Means Clustering" />
+                        
+                        <Select id="route_bear" labelText="Trend Bear (Down)" value={modelRouting.TREND_BEAR || "NONE"} onChange={e => setModelRouting({...modelRouting, TREND_BEAR: e.target.value})} style={{ marginBottom: '1rem' }}>
+                          <SelectItem value="NONE" text="-- None (Disable Trading) --" />
+                          <SelectItem value="xgboost_baseline_v1" text="xgboost_baseline_v1 (Default)" />
+                          {models.filter(m => m.name !== "xgboost_baseline_v1").map(m => <SelectItem key={m.id} value={m.name} text={m.name} />)}
+                        </Select>
+                        
+                        <Select id="route_mean" labelText="Mean Reverting (Sideways)" value={modelRouting.MEAN_REVERTING || "NONE"} onChange={e => setModelRouting({...modelRouting, MEAN_REVERTING: e.target.value})} style={{ marginBottom: '1rem' }}>
+                          <SelectItem value="NONE" text="-- None (Disable Trading) --" />
+                          <SelectItem value="xgboost_baseline_v1" text="xgboost_baseline_v1 (Default)" />
+                          {models.filter(m => m.name !== "xgboost_baseline_v1").map(m => <SelectItem key={m.id} value={m.name} text={m.name} />)}
+                        </Select>
+                        
+                        <Select id="route_chop" labelText="Volatile Chop (Uncertain)" value={modelRouting.VOLATILE_CHOP || "NONE"} onChange={e => setModelRouting({...modelRouting, VOLATILE_CHOP: e.target.value})} style={{ marginBottom: '1rem' }}>
+                          <SelectItem value="NONE" text="-- None (Disable Trading) --" />
+                          <SelectItem value="xgboost_baseline_v1" text="xgboost_baseline_v1 (Default)" />
+                          {models.filter(m => m.name !== "xgboost_baseline_v1").map(m => <SelectItem key={m.id} value={m.name} text={m.name} />)}
                         </Select>
                       </FormGroup>
 
-                      <FormGroup legendText="Model Retraining">
-                        <Toggle 
-                          labelA="Manual" 
-                          labelB="Auto" 
-                          id="auto_retrain" 
-                          labelText="Auto-Retrain Models Weekly" 
-                          defaultToggled={true} 
-                          style={{ marginBottom: '1.5rem' }} 
-                        />
-                      </FormGroup>
-
-                      <Button type="button" onClick={() => alert("Active Settings Saved!")}>Save</Button>
+                      <Button type="button" onClick={saveRouting} disabled={savingRouting}>{savingRouting ? "Saving..." : "Save Routing"}</Button>
                     </Form>
                   </Tile>
                 </Column>

@@ -1,6 +1,6 @@
 "use client";
 
-import { Grid, Column, Tile, FormGroup, NumberInput, Button, Toggle } from "@carbon/react";
+import { Grid, Column, Tile, FormGroup, NumberInput, Button, Toggle, ToastNotification } from "@carbon/react";
 import { View, ViewOff, Save } from "@carbon/icons-react";
 import { useEffect, useState } from "react";
 
@@ -20,7 +20,8 @@ export default function ThresholdsPage() {
     sl_mult_mean_reverting: 1.0,
     tp_mult_mean_reverting: 1.5,
     sl_mult_volatile: 2.0,
-    tp_mult_volatile: 2.0
+    tp_mult_volatile: 2.0,
+    cron_interval_minutes: 3
   });
 
   const [originalConfig, setOriginalConfig] = useState<any>(null);
@@ -29,11 +30,13 @@ export default function ThresholdsPage() {
     "risk-execution": true,
     "alpha-model": true,
     "regime-detection": true,
-    "sltp-multipliers": true
+    "sltp-multipliers": true,
+    "system-config": true
   });
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [toastMsg, setToastMsg] = useState<{ kind: any, title: string, subtitle: string, caption?: string } | null>(null);
 
   useEffect(() => {
     fetch("http://127.0.0.1:8000/api/configurations/thresholds")
@@ -47,14 +50,19 @@ export default function ThresholdsPage() {
 
   const handleSave = async () => {
     setSaving(true);
-    await fetch("http://127.0.0.1:8000/api/configurations/thresholds", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(config)
-    });
-    setOriginalConfig({ ...config });
-    setSaving(false);
-    alert("Configuration saved successfully!");
+    try {
+      await fetch("http://127.0.0.1:8000/api/configurations/thresholds", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(config)
+      });
+      setOriginalConfig({ ...config });
+      setToastMsg({ kind: "success", title: "Configuration Saved", subtitle: "System parameters updated successfully!", caption: new Date().toLocaleTimeString() });
+    } catch (err) {
+      setToastMsg({ kind: "error", title: "Error", subtitle: "Failed to save configuration.", caption: new Date().toLocaleTimeString() });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const updateConfig = (key: string, value: any) => {
@@ -74,11 +82,26 @@ export default function ThresholdsPage() {
   const alphaKeys = ["rsi_buy_threshold", "rsi_sell_threshold", "ml_confidence_threshold"];
   const regimeKeys = ["adx_trend_threshold", "bb_width_volatility_threshold"];
   const sltpKeys = ["sl_mult_trend", "tp_mult_trend", "sl_mult_mean_reverting", "tp_mult_mean_reverting", "sl_mult_volatile", "tp_mult_volatile"];
+  const systemKeys = ["cron_interval_minutes"];
 
   if (loading) return <div>Loading configuration...</div>;
 
   return (
-    <Grid>
+    <Grid style={{ position: 'relative' }}>
+      {/* --- FLASH MESSAGE --- */}
+      {toastMsg && (
+        <div style={{ position: "absolute", top: "1rem", right: "2rem", zIndex: 9999 }}>
+          <ToastNotification
+            kind={toastMsg.kind}
+            title={toastMsg.title}
+            subtitle={toastMsg.subtitle}
+            caption={toastMsg.caption}
+            timeout={5000}
+            onClose={() => setToastMsg(null)}
+          />
+        </div>
+      )}
+
       <Column lg={16} md={8} sm={4} className="landing-page__banner">
         <h1 style={{ marginBottom: "1rem" }}>Thresholds</h1>
       </Column>
@@ -235,6 +258,25 @@ export default function ThresholdsPage() {
             </FormGroup>
           </Tile>
         )}
+
+        {visibleCategories["system-config"] && (
+          <Tile id="system-config" style={{ marginBottom: "2rem" }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h4 style={{ margin: 0 }}>System Engine Config</h4>
+              <Button size="sm" renderIcon={Save} onClick={handleSave} disabled={saving || !hasChanges(systemKeys)} style={{ border: 'none' }}>
+                {saving ? "Saving..." : "Save"}
+              </Button>
+            </div>
+            <FormGroup legendText="" style={{ marginTop: "1rem" }}>
+              <div>
+                <NumberInput 
+                  id="cron_interval" label="Engine Cycle Interval (Minutes)" value={config.cron_interval_minutes} 
+                  min={1} max={60} step={1} onChange={(e: any, { value }: any) => updateConfig("cron_interval_minutes", Number(value))}
+                />
+              </div>
+            </FormGroup>
+          </Tile>
+        )}
       </Column>
 
       <Column lg={4} md={2} sm={0}>
@@ -264,6 +306,12 @@ export default function ThresholdsPage() {
                 {visibleCategories["sltp-multipliers"] ? <View size={16} /> : <ViewOff size={16} />}
               </div>
               <a href="#sltp-multipliers" style={{ textDecoration: "none", color: visibleCategories["sltp-multipliers"] ? "#0f62fe" : "#8d8d8d" }}>SL/TP Multipliers</a>
+            </li>
+            <li style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <div style={{ cursor: 'pointer', display: 'flex', color: visibleCategories["system-config"] ? "#0f62fe" : "#8d8d8d" }} onClick={() => toggleCategory("system-config")}>
+                {visibleCategories["system-config"] ? <View size={16} /> : <ViewOff size={16} />}
+              </div>
+              <a href="#system-config" style={{ textDecoration: "none", color: visibleCategories["system-config"] ? "#0f62fe" : "#8d8d8d" }}>System Engine Config</a>
             </li>
           </ul>
         </div>

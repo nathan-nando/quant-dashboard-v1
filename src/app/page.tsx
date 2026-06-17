@@ -2,7 +2,7 @@
 
 import { Grid, Column, Tile, Button, ToastNotification } from "@carbon/react";
 import { CurrencyDollar, Activity, Power, Wallet, MachineLearningModel } from "@carbon/icons-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import dynamic from 'next/dynamic';
 import GlobalTable from '../components/GlobalTable';
 import GlobalDetailTable from '../components/GlobalDetailTable';
@@ -10,10 +10,21 @@ import { Tag } from '@carbon/react';
 
 const CandlestickChart = dynamic(() => import('../components/CandlestickChart'), { ssr: false });
 
+const getRegimeFormat = (regime: string) => {
+  if (!regime) return { text: 'UNKNOWN', color: '#f4f4f4' };
+  if (regime === 'TREND_BULL') return { text: 'Bull Trend', color: '#24a148' }; // Green
+  if (regime === 'TREND_BEAR') return { text: 'Bear Trend', color: '#fa4d56' }; // Red
+  if (regime === 'VOLATILE_CHOP') return { text: 'Volatile Chop', color: '#f1c21b' }; // Yellow
+  if (regime === 'MEAN_REVERTING') return { text: 'Mean Reverting', color: '#4589ff' }; // Blue
+  return { text: regime, color: '#f4f4f4' };
+};
+
 export default function Home() {
   const [state, setState] = useState<any>(null);
   const [signals, setSignals] = useState<any[]>([]);
   const [analytics, setAnalytics] = useState<any>(null);
+
+  const latestSignalIdRef = useRef<number | null>(null);
 
   useEffect(() => {
     // 1. Subscribe to lightning-fast SSE for ALL live state (Price, Regime, Execution, Signals)
@@ -22,7 +33,34 @@ export default function Home() {
       try {
         const payload = JSON.parse(event.data);
         setState(payload);
-        if (payload.recent_signals) {
+        if (payload.recent_signals && payload.recent_signals.length > 0) {
+          const topSignal = payload.recent_signals[0];
+          
+          // Check if this is a genuinely new signal arriving during the session
+          if (latestSignalIdRef.current !== null && latestSignalIdRef.current !== topSignal.id) {
+            let msgKind = "info";
+            if (topSignal.direction === "BUY") msgKind = "success";
+            if (topSignal.direction === "SELL") msgKind = "error";
+            
+            const readableDirection = topSignal.direction ? topSignal.direction.charAt(0).toUpperCase() + topSignal.direction.slice(1).toLowerCase() : '';
+            const format = getRegimeFormat(topSignal.regime);
+
+            setToastMsg({ 
+              kind: msgKind, 
+              title: "🔔 New Live Signal", 
+              subtitle: (
+                <div style={{ marginTop: '0.25rem', lineHeight: '1.4' }}>
+                  <strong>{topSignal.symbol}</strong> &mdash; <strong style={{ color: format.color }}>{readableDirection}</strong> @ <strong>{topSignal.entry_price?.toFixed(2) || '-'}</strong><br/>
+                  Confidence: {(topSignal.confidence * 100).toFixed(2)}%<br/>
+                  SL: <strong>{topSignal.sl_price?.toFixed(2) || '-'}</strong> ({topSignal.sl_pips}p) | TP: <strong>{topSignal.tp_price?.toFixed(2) || '-'}</strong> ({topSignal.tp_pips}p) (R:R {topSignal.rr_ratio})<br/>
+                  Regime: <strong>{format.text}</strong>
+                </div>
+              ),
+              caption: new Date().toLocaleTimeString()
+            });
+          }
+          
+          latestSignalIdRef.current = topSignal.id;
           setSignals(payload.recent_signals);
         }
       } catch (err) {
@@ -44,12 +82,18 @@ export default function Home() {
   const signalHeaders = [
     { key: "timestamp", header: "Time" },
     { key: "symbol", header: "Symbol" },
+    { key: "entry_price", header: "Price" },
     { key: "direction", header: "Signal" },
+    { key: "confidence", header: "Conf" },
+    { key: "sl_price", header: "SL $" },
+    { key: "tp_price", header: "TP $" },
+    { key: "rr_ratio", header: "R:R" },
+    { key: "regime", header: "Regime" },
     { key: "status", header: "Status" },
   ];
 
   const [isTriggering, setIsTriggering] = useState(false);
-  const [toastMsg, setToastMsg] = useState<{ kind: any, title: string, subtitle: string } | null>(null);
+  const [toastMsg, setToastMsg] = useState<{ kind: any, title: string, subtitle: React.ReactNode, caption?: string } | null>(null);
   const [selectedSignal, setSelectedSignal] = useState<number | null>(null);
 
   const handleTriggerML = async () => {
@@ -61,14 +105,14 @@ export default function Home() {
       });
       const data = await res.json();
       if (data.status === "success") {
-        setToastMsg({ kind: "success", title: "ML Triggered", subtitle: "Signal computed successfully!" });
+        setToastMsg({ kind: "success", title: "ML Triggered", subtitle: "Signal computed successfully!", caption: new Date().toLocaleTimeString() });
         console.log("Triggered ML Engine Successfully:", data.signal);
       } else {
-        setToastMsg({ kind: "error", title: "ML Engine Error", subtitle: data.message });
+        setToastMsg({ kind: "error", title: "ML Engine Error", subtitle: data.message, caption: new Date().toLocaleTimeString() });
         console.error("Error triggering ML Engine:", data.message);
       }
     } catch (err: any) {
-      setToastMsg({ kind: "error", title: "Network Error", subtitle: err.message });
+      setToastMsg({ kind: "error", title: "Network Error", subtitle: err.message, caption: new Date().toLocaleTimeString() });
       console.error("Fetch error:", err);
     }
     setIsTriggering(false);
@@ -83,8 +127,8 @@ export default function Home() {
           <ToastNotification
             kind={toastMsg.kind}
             title={toastMsg.title}
-            subtitle={toastMsg.subtitle}
-            caption={new Date().toLocaleTimeString()}
+            subtitle={toastMsg.subtitle as any}
+            caption={toastMsg.caption}
             timeout={5000}
             onClose={() => setToastMsg(null)}
           />
@@ -123,7 +167,7 @@ export default function Home() {
               <Activity size={16} color="#a8a8a8" />
               <p style={{ fontSize: "12px", color: "#a8a8a8", margin: 0 }}>Regime</p>
             </div>
-            <h3 style={{ margin: 0, color: "#4589ff" }}>{state?.regime || "UNKNOWN"}</h3>
+            <h3 style={{ margin: 0, color: getRegimeFormat(state?.regime).color }}>{getRegimeFormat(state?.regime).text}</h3>
           </Tile>
 
           <Tile style={{ padding: "1rem", height: "100%" }}>
@@ -132,7 +176,7 @@ export default function Home() {
               <p style={{ fontSize: "12px", color: "#a8a8a8", margin: 0 }}>Auto Execution</p>
             </div>
             <h3 style={{ margin: 0, color: state?.auto_execution ? "#24a148" : "#fa4d56" }}>
-              {state?.auto_execution ? "ACTIVE" : "DISABLED"}
+              {state?.auto_execution ? "ON" : "OFF"}
             </h3>
           </Tile>
 
@@ -170,7 +214,30 @@ export default function Home() {
                   return <Tag type={value === "NEW" ? "blue" : value === "PENDING_EXECUTION" ? "cyan" : "gray"}>{value}</Tag>;
                 }
                 if (col.includes("direction")) {
-                  return <span style={{ color: value === 'BUY' ? '#24a148' : value === 'SELL' ? '#fa4d56' : '#f4f4f4', fontWeight: 'bold' }}>{value}</span>;
+                  const readableVal = value ? value.charAt(0).toUpperCase() + value.slice(1).toLowerCase() : '';
+                  return <span style={{ color: value === 'BUY' ? '#24a148' : value === 'SELL' ? '#fa4d56' : '#f4f4f4', fontWeight: 'bold' }}>{readableVal}</span>;
+                }
+                if (col.includes("confidence")) {
+                  const conf = Number(value);
+                  const color = conf >= 0.7 ? '#24a148' : conf >= 0.5 ? '#f1c21b' : '#fa4d56';
+                  return <span style={{ color, fontWeight: 'bold' }}>{(conf * 100).toFixed(2)}%</span>;
+                }
+                if (col.includes("entry_price")) {
+                  return <span>{value ? Number(value).toFixed(2) : '-'}</span>;
+                }
+                if (col.includes("sl_price") || col.includes("sl_pips")) {
+                  return <span style={{ color: '#fa4d56' }}>{value ? Number(value).toFixed(2) : '-'}</span>;
+                }
+                if (col.includes("tp_price") || col.includes("tp_pips")) {
+                  return <span style={{ color: '#24a148' }}>{value ? Number(value).toFixed(2) : '-'}</span>;
+                }
+                if (col.includes("rr_ratio")) {
+                  const rr = Number(value) || 0;
+                  return <span style={{ color: rr >= 2.0 ? '#24a148' : '#f4f4f4' }}>{rr.toFixed(2)}</span>;
+                }
+                if (col.includes("regime")) {
+                  const format = getRegimeFormat(value);
+                  return <span style={{ color: format.color, fontWeight: 'bold' }}>{format.text}</span>;
                 }
                 return value;
               }}

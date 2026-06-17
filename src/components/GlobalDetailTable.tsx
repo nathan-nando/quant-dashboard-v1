@@ -71,7 +71,11 @@ export default function GlobalDetailTable({ signalId, onClose }: GlobalDetailTab
             <Tag type={data.direction === 'BUY' ? 'green' : data.direction === 'SELL' ? 'red' : 'gray'}>
               {data.direction}
             </Tag>
-            <span>Confidence: {(data.confidence * 100).toFixed(2)}%</span>
+            <span>Conf: {(data.confidence * 100).toFixed(2)}%</span>
+            <span>Entry: <strong>{data.entry_price ? data.entry_price.toFixed(2) : '-'}</strong></span>
+            <Tag type="red">SL: {data.sl_price ? data.sl_price.toFixed(2) : '-'} ({data.sl_pips}p)</Tag>
+            <Tag type="green">TP: {data.tp_price ? data.tp_price.toFixed(2) : '-'} ({data.tp_pips}p)</Tag>
+            <span>R:R: {data.rr_ratio}</span>
             <span>Regime: {data.regime}</span>
           </div>
 
