@@ -1,0 +1,133 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap');
+
+html {
+  font-size: 10px !important; /* Scale down all rem-based sizes significantly more */
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  background-color: var(--cds-background);
+  color: var(--cds-text-primary);
+  font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+}
+
+/* Custom override for compactness */
+body {
+  font-size: 1rem; /* Use rem to scale with html */
+}
+
+/* Ensure the Next app wrapper takes full height */
+#__next,
+main {
+  height: 100%;
+}
+
+* {
+  font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+}
+
+/* Header Navigation Overrides */
+.cds--header {
+  border-bottom: 1px solid #e0e0e0 !important; /* Subtle bottom border for light mode */
+}
+
+/* Base style for header items */
+.cds--header {
+  border-bottom: none !important;
+  height: 4rem !important; /* Reduced vertical padding */
+  background-color: #161616 !important; /* Dark gray approaching black */
+}
+
+.cds--header__name,
+.cds--header__menu-item,
+.cds--header__menu-title,
+.cds--header__action {
+  font-size: 1.2rem !important; /* Decreased 2px from 1.4rem */
+  padding: 0 1.5rem !important; 
+  border: none !important; 
+  color: #f4f4f4 !important; /* Light text for dark mode */
+  text-decoration: none !important;
+  height: 4rem !important; /* Match header height */
+  display: inline-flex !important;
+  align-items: center !important;
+}
+
+/* Removed margin-right hack, layout is now perfectly handled by Carbon Grid in React */
+.cds--header__name {
+  padding-left: 1.5rem !important;
+}
+
+/* Allow the button container to fit the icons normally */
+.cds--header__action {
+  width: auto !important;
+  padding: 0 1rem !important;
+}
+
+/* Make icons proportional to the text */
+.cds--header__action svg {
+  width: 2.2rem !important; /* Decreased 2px from 2.4rem */
+  height: 2.2rem !important; /* Decreased 2px from 2.4rem */
+  transform: none !important; /* Remove extreme scaling */
+  fill: #f4f4f4 !important; /* Ensure icons are white */
+}
+
+/* Ensure any inner spans inherit the light color */
+.cds--header__menu-item *,
+.cds--header__name *,
+.cds--header__action * {
+  color: #f4f4f4 !important;
+}
+
+/* Hover state for all menu items */
+.cds--header__menu-item:hover {
+  background-color: #262626 !important; /* Dark mode hover */
+}
+
+/* Ensure brand has no pseudo-element divider */
+.cds--header__name::before,
+.cds--header__name::after,
+.cds--header__nav::before,
+.cds--header__nav::after {
+  content: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+/* Custom Active Link Styling (Dark Mode) */
+.cds--header__menu-item {
+  border: none !important; /* Remove any CSS borders */
+  height: 100%;
+  position: relative; /* Anchor for pseudo-elements */
+}
+
+/* Remove Carbon UI's default active bottom border which is usually an ::after pseudo-element */
+.cds--header__menu-item::after {
+  content: none !important;
+  display: none !important;
+}
+
+/* Set gray background for the active tab */
+.cds--header__menu-item[aria-current="page"] {
+  background-color: #353535 !important; /* Dark mode active tab background */
+}
+
+/* Position the blue line absolutely at the top edge of the navigation bar */
+.cds--header__menu-item[aria-current="page"]::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px; /* Increased thickness from 2px to 4px */
+  background-color: #0f62fe !important; /* Carbon Blue */
+  z-index: 1;
+}
+
+/* Remove border specifically from the nav container */
+.cds--header__nav {
+  border-left: none !important;
+}
