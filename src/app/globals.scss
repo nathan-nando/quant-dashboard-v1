@@ -1,7 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap');
 
 html {
-  font-size: 10px !important; /* Scale down all rem-based sizes significantly more */
+  font-size: 12px !important; /* Scale down all rem-based sizes significantly more */
 }
 
 html, body {
@@ -9,8 +9,8 @@ html, body {
   padding: 0;
   height: 100%;
   width: 100%;
-  background-color: var(--cds-background);
-  color: var(--cds-text-primary);
+  background-color: #161616 !important; /* Force dark background */
+  color: #f4f4f4;
   font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
 }
 
@@ -45,7 +45,7 @@ main {
 .cds--header__menu-item,
 .cds--header__menu-title,
 .cds--header__action {
-  font-size: 1.2rem !important; /* Decreased 2px from 1.4rem */
+  font-size: 1.05rem !important; /* Decreased font size for navbar */
   padding: 0 1.5rem !important; 
   border: none !important; 
   color: #f4f4f4 !important; /* Light text for dark mode */
@@ -68,8 +68,8 @@ main {
 
 /* Make icons proportional to the text */
 .cds--header__action svg {
-  width: 2.2rem !important; /* Decreased 2px from 2.4rem */
-  height: 2.2rem !important; /* Decreased 2px from 2.4rem */
+  width: 1.6rem !important; /* Decreased size */
+  height: 1.6rem !important; /* Decreased size */
   transform: none !important; /* Remove extreme scaling */
   fill: #f4f4f4 !important; /* Ensure icons are white */
 }

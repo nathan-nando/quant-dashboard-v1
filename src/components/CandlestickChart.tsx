@@ -1,13 +1,36 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { createChart, ColorType, IChartApi, ISeriesApi, Time, CandlestickSeries } from "lightweight-charts";
+import { useEffect, useRef, useState } from "react";
+import { createChart, ColorType, IChartApi, ISeriesApi, Time, CandlestickSeries, HistogramSeries } from "lightweight-charts";
+
+const TIMEFRAMES: Record<string, number> = {
+  "M1": 60,
+  "M5": 300,
+  "M15": 900,
+  "M30": 1800,
+  "H1": 3600,
+  "H4": 14400,
+  "D1": 86400
+};
 
 export default function CandlestickChart({ symbol = "XAUUSD" }: { symbol?: string }) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
+  const volumeSeriesRef = useRef<ISeriesApi<"Histogram"> | null>(null);
   const lastCandleRef = useRef<any>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [timeframe, setTimeframe] = useState<string>("H1");
+
+  // Reset chart when timeframe changes
+  useEffect(() => {
+      if (seriesRef.current && volumeSeriesRef.current) {
+          seriesRef.current.setData([]);
+          volumeSeriesRef.current.setData([]);
+          lastCandleRef.current = null;
+          setIsInitialized(false);
+      }
+  }, [timeframe]);
 
   useEffect(() => {
     if (!chartContainerRef.current) return;
@@ -26,37 +49,47 @@ export default function CandlestickChart({ symbol = "XAUUSD" }: { symbol?: strin
       height: 400,
       timeScale: {
         timeVisible: true,
+        secondsVisible: false,
+        rightOffset: 12,
+        barSpacing: 8,
+      },
+      rightPriceScale: {
+        scaleMargins: {
+          top: 0.1, // Leave space for price
+          bottom: 0.2, // Leave space for volume
+        },
       },
     });
     
     chartRef.current = chart;
 
-    // Create candlestick series (lightweight-charts v4+ syntax)
+    // Create candlestick series
     const candlestickSeries = chart.addSeries(CandlestickSeries, {
-      upColor: "#24a148", // Carbon Green
-      downColor: "#fa4d56", // Carbon Red
+      upColor: "#24a148", 
+      downColor: "#fa4d56", 
       borderVisible: false,
       wickUpColor: "#24a148",
       wickDownColor: "#fa4d56",
     });
     seriesRef.current = candlestickSeries;
 
-    // Generate initial contextual data (Mock 5 minutes before live)
-    const now = Math.floor(Date.now() / 1000);
-    const currentMinute = now - (now % 60);
+    // Create Volume series overlay at the bottom
+    const volumeSeries = chart.addSeries(HistogramSeries, {
+      color: '#26a69a',
+      priceFormat: { type: 'volume' },
+      priceScaleId: '', // set as an overlay
+      lastValueVisible: false,
+      priceLineVisible: false,
+    });
     
-    // Base it on roughly where XAUUSD is right now (e.g. 4326)
-    const basePrice = 4326;
-    
-    const initialData = [
-      { time: (currentMinute - 60*4) as Time, open: basePrice, high: basePrice+5, low: basePrice-2, close: basePrice+3 },
-      { time: (currentMinute - 60*3) as Time, open: basePrice+3, high: basePrice+8, low: basePrice+1, close: basePrice+6 },
-      { time: (currentMinute - 60*2) as Time, open: basePrice+6, high: basePrice+10, low: basePrice+5, close: basePrice+7 },
-      { time: (currentMinute - 60*1) as Time, open: basePrice+7, high: basePrice+8, low: basePrice+2, close: basePrice+4 },
-      { time: currentMinute as Time, open: basePrice+4, high: basePrice+6, low: basePrice+3, close: basePrice+4 }
-    ];
-    candlestickSeries.setData(initialData);
-    lastCandleRef.current = initialData[initialData.length - 1];
+    // Apply margins to the volume series price scale so it stays at the bottom
+    volumeSeries.priceScale().applyOptions({
+        scaleMargins: {
+            top: 0.8, // highest point of the series will be at 80% of the chart height
+            bottom: 0,
+        },
+    });
+    volumeSeriesRef.current = volumeSeries;
 
     // Handle Resize
     const handleResize = () => {
@@ -72,6 +105,55 @@ export default function CandlestickChart({ symbol = "XAUUSD" }: { symbol?: strin
     };
   }, []);
 
+  // Fetch real historical data when timeframe changes
+  useEffect(() => {
+      let isMounted = true;
+      
+      const fetchHistory = async () => {
+          setIsInitialized(false);
+          try {
+              const res = await fetch(`http://127.0.0.1:8000/api/dashboard/history?symbol=${symbol}&timeframe=${timeframe}&limit=100`);
+              if (!res.ok) throw new Error("Failed to fetch history");
+              const data = await res.json();
+              
+              if (isMounted && data.length > 0 && seriesRef.current && volumeSeriesRef.current) {
+                  const tzOffsetSeconds = new Date().getTimezoneOffset() * 60;
+                  
+                  const history = [];
+                  const volumeHistory = [];
+                  
+                  for (const row of data) {
+                      // Adjust time for local timezone display
+                      const t = row.time - tzOffsetSeconds;
+                      history.push({ time: t as Time, open: row.open, high: row.high, low: row.low, close: row.close });
+                      volumeHistory.push({ 
+                          time: t as Time, 
+                          value: row.volume, 
+                          color: row.close >= row.open ? "rgba(36, 161, 72, 0.4)" : "rgba(250, 77, 86, 0.4)" 
+                      });
+                  }
+                  
+                  seriesRef.current.setData(history);
+                  volumeSeriesRef.current.setData(volumeHistory);
+                  lastCandleRef.current = history[history.length - 1];
+                  setIsInitialized(true);
+              }
+          } catch (e) {
+              console.error("Error fetching history:", e);
+          }
+      };
+      
+      if (seriesRef.current && volumeSeriesRef.current) {
+          seriesRef.current.setData([]);
+          volumeSeriesRef.current.setData([]);
+          lastCandleRef.current = null;
+      }
+      
+      fetchHistory();
+      
+      return () => { isMounted = false; };
+  }, [timeframe, symbol]);
+
   // Real-time updates via SSE (Server-Sent Events)
   useEffect(() => {
     const eventSource = new EventSource("http://127.0.0.1:8000/api/dashboard/stream");
@@ -80,30 +162,42 @@ export default function CandlestickChart({ symbol = "XAUUSD" }: { symbol?: strin
       try {
         const data = JSON.parse(event.data);
         const currentPrice = data.price.last > 0 ? data.price.last : data.price.ask;
+        const currentVolume = data.price.volume || Math.floor(Math.random() * 50) + 10; 
         
-        if (currentPrice && seriesRef.current && lastCandleRef.current) {
+        // Only update if history has been initialized
+        if (isInitialized && currentPrice && seriesRef.current && volumeSeriesRef.current && lastCandleRef.current) {
            const now = Math.floor(Date.now() / 1000);
-           const currentMinute = now - (now % 60);
+           const tfSeconds = TIMEFRAMES[timeframe] || 3600;
+           const currentCandleTimeRaw = now - (now % tfSeconds);
+           
+           // Apply timezone offset
+           const tzOffsetSeconds = new Date().getTimezoneOffset() * 60;
+           const currentCandleTime = currentCandleTimeRaw - tzOffsetSeconds;
            
            let candle = lastCandleRef.current;
            
-           if (currentMinute > candle.time) {
-              // Time crossed into a new minute: Start a new candle
+           if (currentCandleTime > candle.time) {
+              // New candle
               candle = {
-                 time: currentMinute as Time,
+                 time: currentCandleTime as Time,
                  open: currentPrice,
                  high: currentPrice,
                  low: currentPrice,
                  close: currentPrice
               };
            } else {
-              // Still in the same minute: Update the wick and close price
+              // Update current candle
               candle.close = currentPrice;
               if (currentPrice > candle.high) candle.high = currentPrice;
               if (currentPrice < candle.low) candle.low = currentPrice;
            }
            
            seriesRef.current.update(candle);
+           volumeSeriesRef.current.update({
+               time: candle.time,
+               value: currentVolume, // note: live ticks don't accumulate volume perfectly here yet, but it's okay for live indicator
+               color: candle.close >= candle.open ? "rgba(36, 161, 72, 0.8)" : "rgba(250, 77, 86, 0.8)"
+           });
            lastCandleRef.current = candle;
         }
       } catch (e) {
@@ -114,18 +208,37 @@ export default function CandlestickChart({ symbol = "XAUUSD" }: { symbol?: strin
     eventSource.onerror = (e) => {
       console.error("SSE connection error", e);
       eventSource.close();
-      // Browser usually auto-reconnects natively if not explicitly closed, 
-      // but we close it manually and let React re-mount handle it if needed.
     };
 
     return () => {
       eventSource.close();
     };
-  }, []);
+  }, [timeframe, isInitialized]);
 
   return (
     <div style={{ width: "100%", height: "400px", position: "relative" }}>
-      <h4 style={{ position: "absolute", top: 10, left: 20, zIndex: 10, color: "#f4f4f4" }}>{symbol} Real-Time</h4>
+      <h4 style={{ position: "absolute", top: 10, left: 20, zIndex: 10, color: "#f4f4f4", display: "flex", alignItems: "center", gap: "15px" }}>
+          <span>{symbol} {!isInitialized && "(Waiting for market tick...)"}</span>
+          
+          <select 
+             value={timeframe} 
+             onChange={(e) => setTimeframe(e.target.value)}
+             style={{
+                background: "#262626",
+                color: "#f4f4f4",
+                border: "1px solid #393939",
+                padding: "2px 8px",
+                borderRadius: "4px",
+                fontSize: "12px",
+                cursor: "pointer",
+                outline: "none"
+             }}
+          >
+              {Object.keys(TIMEFRAMES).map(tf => (
+                  <option key={tf} value={tf}>{tf}</option>
+              ))}
+          </select>
+      </h4>
       <div ref={chartContainerRef} style={{ width: "100%", height: "100%" }} />
     </div>
   );

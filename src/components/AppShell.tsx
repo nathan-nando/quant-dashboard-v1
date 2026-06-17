@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   Header,
   HeaderContainer,
@@ -15,10 +15,11 @@ import {
   Grid,
   Column
 } from '@carbon/react';
-import { Settings, Notification } from '@carbon/icons-react';
+import { Settings, Notification, Dashboard, SettingsAdjust, Activity, CurrencyDollar, ChartBar } from '@carbon/icons-react';
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
 
   return (
     <>
@@ -38,10 +39,21 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 <Grid style={{ width: '100%', height: '100%', margin: '0 auto' }}>
                   <Column lg={16} md={8} sm={4} style={{ display: 'flex', height: '100%' }}>
                     <HeaderNavigation aria-label="QuantV1 Navigation" style={{ border: 'none' }}>
-                      <HeaderMenuItem href="/" aria-current={pathname === '/' ? 'page' : undefined}>Dashboard</HeaderMenuItem>
-                      <HeaderMenuItem href="/thresholds" aria-current={pathname === '/thresholds' ? 'page' : undefined}>Thresholds & Gate</HeaderMenuItem>
-                      <HeaderMenuItem href="/monitoring" aria-current={pathname === '/monitoring' ? 'page' : undefined}>Monitoring & History</HeaderMenuItem>
-                      <HeaderMenuItem href="/analytics" aria-current={pathname === '/analytics' ? 'page' : undefined}>Analytics</HeaderMenuItem>
+                      <HeaderMenuItem href="/" aria-current={pathname === '/' ? 'page' : undefined}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Dashboard size={16} /> Dashboard</div>
+                      </HeaderMenuItem>
+                      <HeaderMenuItem href="/thresholds" aria-current={pathname === '/thresholds' ? 'page' : undefined}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><SettingsAdjust size={16} /> Thresholds</div>
+                      </HeaderMenuItem>
+                      <HeaderMenuItem href="/signals" aria-current={pathname === '/signals' ? 'page' : undefined}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Activity size={16} /> Signals</div>
+                      </HeaderMenuItem>
+                      <HeaderMenuItem href="/transactions" aria-current={pathname === '/transactions' ? 'page' : undefined}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><CurrencyDollar size={16} /> Transactions</div>
+                      </HeaderMenuItem>
+                      <HeaderMenuItem href="/analytics" aria-current={pathname === '/analytics' ? 'page' : undefined}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><ChartBar size={16} /> Analytics</div>
+                      </HeaderMenuItem>
                     </HeaderNavigation>
                   </Column>
                 </Grid>
@@ -52,7 +64,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 <HeaderGlobalAction aria-label="Notifications" tooltipAlignment="end">
                   <Notification size={20} />
                 </HeaderGlobalAction>
-                <HeaderGlobalAction aria-label="Settings" tooltipAlignment="end">
+                <HeaderGlobalAction aria-label="Settings" tooltipAlignment="end" onClick={() => router.push('/settings')}>
                   <Settings size={20} />
                 </HeaderGlobalAction>
               </HeaderGlobalBar>
@@ -61,7 +73,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         />
       </Theme>
       <Theme theme="g100" className="main-theme-wrapper">
-        <main style={{ marginTop: '4rem', height: 'calc(100vh - 4rem)', padding: '2rem 0', overflowY: 'auto' }}>
+        <main style={{ marginTop: '4rem', padding: '2rem 0', minHeight: 'calc(100vh - 4rem)' }}>
           {children}
         </main>
       </Theme>
