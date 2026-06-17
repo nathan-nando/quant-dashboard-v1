@@ -131,3 +131,14 @@ main {
 .cds--header__nav {
   border-left: none !important;
 }
+
+.dashboard-row-2 {
+  display: grid;
+  grid-template-columns: 10fr 6fr;
+  gap: 0.25rem;
+}
+@media (max-width: 1056px) {
+  .dashboard-row-2 {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,10 +1,12 @@
 "use client";
 
-import { Grid, Column, Tile } from "@carbon/react";
-import { CurrencyDollar, Activity, Power, Wallet } from "@carbon/icons-react";
+import { Grid, Column, Tile, Button, ToastNotification } from "@carbon/react";
+import { CurrencyDollar, Activity, Power, Wallet, MachineLearningModel } from "@carbon/icons-react";
 import { useEffect, useState } from "react";
 import dynamic from 'next/dynamic';
 import GlobalTable from '../components/GlobalTable';
+import GlobalDetailTable from '../components/GlobalDetailTable';
+import { Tag } from '@carbon/react';
 
 const CandlestickChart = dynamic(() => import('../components/CandlestickChart'), { ssr: false });
 
@@ -46,9 +48,61 @@ export default function Home() {
     { key: "status", header: "Status" },
   ];
 
+  const [isTriggering, setIsTriggering] = useState(false);
+  const [toastMsg, setToastMsg] = useState<{ kind: any, title: string, subtitle: string } | null>(null);
+  const [selectedSignal, setSelectedSignal] = useState<number | null>(null);
+
+  const handleTriggerML = async () => {
+    setIsTriggering(true);
+    setToastMsg(null);
+    try {
+      const res = await fetch("http://127.0.0.1:8000/api/dashboard/trigger-signal?symbol=XAUUSD", {
+        method: "POST"
+      });
+      const data = await res.json();
+      if (data.status === "success") {
+        setToastMsg({ kind: "success", title: "ML Triggered", subtitle: "Signal computed successfully!" });
+        console.log("Triggered ML Engine Successfully:", data.signal);
+      } else {
+        setToastMsg({ kind: "error", title: "ML Engine Error", subtitle: data.message });
+        console.error("Error triggering ML Engine:", data.message);
+      }
+    } catch (err: any) {
+      setToastMsg({ kind: "error", title: "Network Error", subtitle: err.message });
+      console.error("Fetch error:", err);
+    }
+    setIsTriggering(false);
+  };
+
   return (
-    <Grid fullWidth style={{ maxWidth: '100%', padding: '0 2rem' }}>
+    <Grid fullWidth style={{ maxWidth: '100%', padding: '0 2rem', position: 'relative' }}>
       
+      {/* --- FLASH MESSAGE --- */}
+      {toastMsg && (
+        <div style={{ position: "absolute", top: "1rem", right: "2rem", zIndex: 9999 }}>
+          <ToastNotification
+            kind={toastMsg.kind}
+            title={toastMsg.title}
+            subtitle={toastMsg.subtitle}
+            caption={new Date().toLocaleTimeString()}
+            timeout={5000}
+            onClose={() => setToastMsg(null)}
+          />
+        </div>
+      )}
+
+      {/* --- HEADER CONTROLS --- */}
+      <Column lg={16} md={8} sm={4} style={{ marginBottom: "1rem", display: "flex", justifyContent: "flex-end" }}>
+        <Button 
+          renderIcon={MachineLearningModel} 
+          onClick={handleTriggerML}
+          disabled={isTriggering}
+          kind="tertiary"
+        >
+          {isTriggering ? "Evaluating..." : "Force Trigger ML Engine"}
+        </Button>
+      </Column>
+
       {/* --- ROW 1: LIVE STATE METRICS --- */}
       <Column lg={16} md={8} sm={4} style={{ marginBottom: "1rem" }}>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "0.25rem" }}>
@@ -95,19 +149,41 @@ export default function Home() {
       </Column>
 
       {/* --- ROW 2: CHARTS AND SIGNALS --- */}
-      <Column lg={10} md={8} sm={4} style={{marginTop: "0.5rem"}}>
-        <Tile style={{ padding: 0, overflow: 'hidden', height: "100%", minHeight: "400px" }}>
-          <CandlestickChart symbol="XAUUSD" />
-        </Tile>
+      <Column lg={16} md={8} sm={4} style={{marginTop: "0.5rem"}}>
+        <div className="dashboard-row-2">
+          <Tile style={{ padding: 0, overflow: 'hidden', height: "100%", minHeight: "400px" }}>
+            <CandlestickChart symbol="XAUUSD" />
+          </Tile>
+          
+          <div style={{ height: "100%", overflow: "hidden" }}>
+            <GlobalTable 
+              title={<span style={{ fontSize: "14px", fontWeight: "normal" }}>Recent Signals</span>}
+              headers={signalHeaders}
+              initialData={signals}
+              onViewDetails={(id) => setSelectedSignal(Number(id))}
+              formatCell={(cellId, value) => {
+                const col = cellId.split('__')[1] || cellId.split(':').pop() || '';
+                if (col.includes("timestamp") && value) {
+                  return new Date(value).toLocaleString();
+                }
+                if (col.includes("status")) {
+                  return <Tag type={value === "NEW" ? "blue" : value === "PENDING_EXECUTION" ? "cyan" : "gray"}>{value}</Tag>;
+                }
+                if (col.includes("direction")) {
+                  return <span style={{ color: value === 'BUY' ? '#24a148' : value === 'SELL' ? '#fa4d56' : '#f4f4f4', fontWeight: 'bold' }}>{value}</span>;
+                }
+                return value;
+              }}
+            />
+          </div>
+        </div>
       </Column>
-
-      <Column lg={6} md={8} sm={4} style={{marginTop: "0.5rem"}}>
-        <GlobalTable 
-          title={<span style={{ fontSize: "14px", fontWeight: "normal" }}>Recent Signals</span>}
-          headers={signalHeaders}
-          initialData={signals}
-        />
-      </Column>
+      
+      {/* --- SIGNAL DETAIL MODAL --- */}
+      <GlobalDetailTable 
+        signalId={selectedSignal} 
+        onClose={() => setSelectedSignal(null)} 
+      />
     </Grid>
   );
 }

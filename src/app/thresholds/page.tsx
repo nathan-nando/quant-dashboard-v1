@@ -162,6 +162,15 @@ export default function ThresholdsPage() {
                 {saving ? "Saving..." : "Save"}
               </Button>
             </div>
+            <div style={{ marginTop: "1rem", marginBottom: "1.5rem", fontSize: "13px", color: "#e0e0e0", backgroundColor: "#393939", padding: "1rem", borderRadius: "4px", lineHeight: "1.5" }}>
+              <strong style={{ color: "#ffffff", fontSize: "14px" }}>Cara Kerja (Matriks Rezim 2x2):</strong><br/>
+              <span style={{ color: "#c6c6c6" }}>Kedua parameter ini bertindak sebagai garis pembatas untuk mendefinisikan 4 rezim pasar secara matematis:</span>
+              <div style={{ margin: "0.75rem 0 0 0.5rem", display: "grid", gridTemplateColumns: "180px 10px auto", rowGap: "6px", color: "#c6c6c6" }}>
+                <strong style={{ color: "#ffffff" }}>TREND_BULL / BEAR</strong> <span>:</span> <span>Jika ADX &gt; Trend Threshold (Arah ditentukan oleh EMA 50)</span>
+                <strong style={{ color: "#ffffff" }}>VOLATILE_CHOP</strong> <span>:</span> <span>Jika ADX &le; Trend Threshold DAN BB Width &gt; Volatility Threshold</span>
+                <strong style={{ color: "#ffffff" }}>MEAN_REVERTING</strong> <span>:</span> <span>Jika ADX &le; Trend Threshold DAN BB Width &le; Volatility Threshold</span>
+              </div>
+            </div>
             <FormGroup legendText="" style={{ marginTop: "1rem" }}>
               <div>
                 <NumberInput 

@@ -30,7 +30,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               <SkipToContent />
               
               {/* Brand positioned absolutely to the left */}
-              <HeaderName href="/" prefix="" style={{ position: 'absolute', left: 0, zIndex: 10, height: '100%' }}>
+              <HeaderName href="/" prefix="" style={{ position: 'absolute', left: '1rem', zIndex: 10, height: '100%', fontSize: '1.25rem', fontWeight: 600, letterSpacing: '0.5px' }}>
                 QuantV1
               </HeaderName>
               

@@ -13,8 +13,10 @@ import {
   TableToolbar,
   TableToolbarContent,
   TableToolbarSearch,
-  Pagination
+  Pagination,
+  Button
 } from '@carbon/react';
+import { View } from '@carbon/icons-react';
 
 interface GlobalTableProps {
   title: React.ReactNode;
@@ -23,6 +25,7 @@ interface GlobalTableProps {
   initialData?: any[]; // Fallback for local logic
   formatCell?: (cellId: string, value: any) => React.ReactNode;
   toolbarActions?: React.ReactNode; // Extra buttons for toolbar
+  onViewDetails?: (rowId: any) => void;
 }
 
 export default function GlobalTable({
@@ -31,7 +34,8 @@ export default function GlobalTable({
   fetchUrl,
   initialData = [],
   formatCell,
-  toolbarActions
+  toolbarActions,
+  onViewDetails
 }: GlobalTableProps) {
   // State
   const [data, setData] = useState<any[]>([]);
@@ -170,6 +174,9 @@ export default function GlobalTable({
                       {header.header}
                     </TableHeader>
                   ))}
+                  {onViewDetails && (
+                    <TableHeader>Actions</TableHeader>
+                  )}
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -180,11 +187,23 @@ export default function GlobalTable({
                         {formatCell ? formatCell(cell.id, cell.value) : cell.value}
                       </TableCell>
                     ))}
+                    {onViewDetails && (
+                      <TableCell style={{ padding: "0.2rem" }}>
+                        <Button 
+                          kind="ghost" 
+                          size="sm" 
+                          hasIconOnly 
+                          renderIcon={() => <View size={16} fill="#4589ff" />} 
+                          iconDescription="View Details" 
+                          onClick={() => onViewDetails(row.id)} 
+                        />
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
                 {rows.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={headers.length} style={{ textAlign: "center", padding: "2rem" }}>
+                    <TableCell colSpan={headers.length + (onViewDetails ? 1 : 0)} style={{ textAlign: "center", padding: "2rem" }}>
                       {loading ? "Loading..." : "No data available"}
                     </TableCell>
                   </TableRow>
