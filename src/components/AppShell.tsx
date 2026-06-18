@@ -15,7 +15,7 @@ import {
   Grid,
   Column
 } from '@carbon/react';
-import { Settings, Notification, Dashboard, SettingsAdjust, Activity, CurrencyDollar, ChartBar } from '@carbon/icons-react';
+import { Settings, Notification, Dashboard, SettingsAdjust, Activity, CurrencyDollar, ChartBar, MachineLearningModel } from '@carbon/icons-react';
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -57,6 +57,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                         aria-current={pathname === '/thresholds' ? 'page' : undefined}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><SettingsAdjust size={16} /> Thresholds</div>
+                      </HeaderMenuItem>
+                      <HeaderMenuItem 
+                        href="/models" 
+                        onClick={(e: React.MouseEvent) => { e.preventDefault(); router.push('/models'); }}
+                        aria-current={pathname === '/models' ? 'page' : undefined}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><MachineLearningModel size={16} /> Models</div>
                       </HeaderMenuItem>
                       <HeaderMenuItem 
                         href="/signals" 

@@ -98,7 +98,7 @@ export default function GlobalTable({
   }, [fetchData, isServerSide]);
 
   // Derived state for Client Side
-  const processedData = useMemo(() => {
+  const filteredData = useMemo(() => {
     if (isServerSide) return data;
     
     let result = [...initialData];
@@ -124,12 +124,21 @@ export default function GlobalTable({
       });
     }
 
-    setTotalItems(result.length); // Update total for pagination
+    return result;
+  }, [isServerSide, data, initialData, search, sortKey, sortDesc]);
 
-    // Pagination
+  // Set total items for pagination safely outside render
+  useEffect(() => {
+    if (!isServerSide) {
+      setTotalItems(filteredData.length);
+    }
+  }, [isServerSide, filteredData.length]);
+
+  const processedData = useMemo(() => {
+    if (isServerSide) return data;
     const skip = (page - 1) * pageSize;
-    return result.slice(skip, skip + pageSize);
-  }, [isServerSide, data, initialData, search, sortKey, sortDesc, page, pageSize]);
+    return filteredData.slice(skip, skip + pageSize);
+  }, [isServerSide, data, filteredData, page, pageSize]);
 
   const handleSort = (key: string) => {
     if (sortKey === key) {
