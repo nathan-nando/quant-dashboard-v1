@@ -164,7 +164,17 @@ export default function Home() {
           <Tile style={{ padding: "1rem", height: "100%" }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: "0.25rem" }}>
               <Power size={16} color="#a8a8a8" />
-              <p style={{ fontSize: "12px", color: "#a8a8a8", margin: 0 }}>Auto Execution</p>
+              <p style={{ fontSize: "12px", color: "#a8a8a8", margin: 0 }}>Engine</p>
+            </div>
+            <h3 style={{ margin: 0, color: state?.engine_active ? "#24a148" : "#fa4d56" }}>
+              {state?.engine_active ? "ON" : "OFF"}
+            </h3>
+          </Tile>
+
+          <Tile style={{ padding: "1rem", height: "100%" }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: "0.25rem" }}>
+              <MachineLearningModel size={16} color="#a8a8a8" />
+              <p style={{ fontSize: "12px", color: "#a8a8a8", margin: 0 }}>Auto Trade</p>
             </div>
             <h3 style={{ margin: 0, color: state?.auto_execution ? "#24a148" : "#fa4d56" }}>
               {state?.auto_execution ? "ON" : "OFF"}
@@ -333,7 +343,7 @@ export default function Home() {
       
       {/* --- SIGNAL DETAIL MODAL --- */}
       <GlobalDetailTable 
-        signalId={selectedSignal} 
+        id={selectedSignal} 
         onClose={() => setSelectedSignal(null)} 
       />
     </div>

@@ -115,7 +115,7 @@ export default function SignalsPage() {
       </Column>
       
       <GlobalDetailTable 
-        signalId={selectedSignal} 
+        id={selectedSignal} 
         onClose={() => setSelectedSignal(null)} 
       />
     </Grid>

@@ -13,17 +13,25 @@ import {
 } from '@carbon/react';
 
 interface GlobalDetailTableProps {
-  signalId: number | null;
+  id?: number | string | null;
+  type?: 'signal' | 'model';
+  dataObj?: any;
   onClose: () => void;
 }
 
-export default function GlobalDetailTable({ signalId, onClose }: GlobalDetailTableProps) {
+export default function GlobalDetailTable({ id, type = 'signal', dataObj, onClose }: GlobalDetailTableProps) {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (signalId === null) {
+    if (type === 'model') {
+      if (dataObj) setData(dataObj);
+      else setData(null);
+      return;
+    }
+
+    if (id === null || id === undefined) {
       setData(null);
       return;
     }
@@ -32,7 +40,7 @@ export default function GlobalDetailTable({ signalId, onClose }: GlobalDetailTab
     setLoading(true);
     setError(null);
     
-    fetch(`http://127.0.0.1:8000/api/dashboard/signals/${signalId}`)
+    fetch(`http://127.0.0.1:8000/api/dashboard/signals/${id}`)
       .then(res => {
         if (!res.ok) throw new Error("Failed to fetch signal details");
         return res.json();
@@ -48,15 +56,15 @@ export default function GlobalDetailTable({ signalId, onClose }: GlobalDetailTab
       });
       
     return () => { isMounted = false; };
-  }, [signalId]);
+  }, [id, type, dataObj]);
 
-  if (signalId === null) return null;
+  if (id === null && !dataObj) return null;
 
   return (
     <Modal
-      open={signalId !== null}
+      open={(id !== null && id !== undefined) || !!dataObj}
       onRequestClose={onClose}
-      modalHeading={`Signal Details #${signalId}`}
+      modalHeading={type === 'signal' ? `Signal Details #${id}` : `Model Details`}
       primaryButtonText="Close"
       onRequestSubmit={onClose}
       size="lg"
@@ -64,9 +72,9 @@ export default function GlobalDetailTable({ signalId, onClose }: GlobalDetailTab
       {loading && <Loading withOverlay={false} />}
       {error && <p style={{ color: "red" }}>{error}</p>}
       
-      {data && !loading && !error && (
+      {data && !loading && !error && type === 'signal' && (
         <div style={{ maxHeight: "60vh", overflowY: "auto" }}>
-          <div style={{ marginBottom: "1rem", display: "flex", gap: "0.5rem", alignItems: "center" }}>
+          <div style={{ marginBottom: "1rem", display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
             <Tag type="blue">{data.symbol}</Tag>
             <Tag type={data.direction === 'BUY' ? 'green' : data.direction === 'SELL' ? 'red' : 'gray'}>
               {data.direction}
@@ -100,8 +108,70 @@ export default function GlobalDetailTable({ signalId, onClose }: GlobalDetailTab
               </StructuredListBody>
             </StructuredListWrapper>
           ) : (
-            <p style={{ fontStyle: "italic", color: "#8d8d8d" }}>No features snapshot recorded for this signal.</p>
+            <p style={{ color: "#a8a8a8", fontSize: "0.9rem" }}>No feature snapshot available for this signal.</p>
           )}
+        </div>
+      )}
+
+      {data && type === 'model' && (
+        <div style={{ maxHeight: "60vh", overflowY: "auto" }}>
+          <StructuredListWrapper isCondensed style={{ marginBottom: "2rem" }}>
+            <StructuredListHead>
+               <StructuredListRow head>
+                  <StructuredListCell head>Property</StructuredListCell>
+                  <StructuredListCell head>Value</StructuredListCell>
+               </StructuredListRow>
+            </StructuredListHead>
+            <StructuredListBody>
+               {Object.entries(data).map(([key, value]: [string, any]) => {
+                  if (key === 'id') return null;
+                  
+                  let displayValue = value;
+                  let isNested = false;
+                  
+                  if (value === null || value === undefined) {
+                      displayValue = "-";
+                  } else if (typeof value === 'object') {
+                      displayValue = JSON.stringify(value, null, 2);
+                      isNested = true;
+                  } else if (typeof value === 'string') {
+                      // Try to parse JSON strings
+                      try {
+                          if ((value.startsWith('{') && value.endsWith('}')) || (value.startsWith('[') && value.endsWith(']'))) {
+                              const parsed = JSON.parse(value);
+                              displayValue = JSON.stringify(parsed, null, 2);
+                              isNested = true;
+                          }
+                      } catch (e) {}
+                  }
+
+                  // Special date formatting for known date fields
+                  if (['train_start_time', 'created_at', 'updated_at'].includes(key) && value && !isNested) {
+                      displayValue = new Date(value).toLocaleString();
+                  }
+
+                  // Format key
+                  const formattedKey = key.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+
+                  return (
+                      <StructuredListRow key={key}>
+                        <StructuredListCell style={{ fontWeight: "bold", width: "30%", verticalAlign: "top" }}>{formattedKey}</StructuredListCell>
+                        <StructuredListCell>
+                            {isNested ? (
+                               <div style={{ background: '#f4f4f4', padding: '1rem', borderRadius: '4px', overflowX: 'auto' }}>
+                                  <pre style={{ margin: 0, fontSize: '0.85rem', whiteSpace: 'pre-wrap' }}>
+                                    {displayValue}
+                                  </pre>
+                               </div>
+                            ) : (
+                                displayValue
+                            )}
+                        </StructuredListCell>
+                      </StructuredListRow>
+                  );
+               })}
+            </StructuredListBody>
+          </StructuredListWrapper>
         </div>
       )}
     </Modal>

@@ -1,10 +1,11 @@
 "use client";
 
-import { Grid, Column, Tile, Form, FormGroup, TextInput, Select, SelectItem, Button, Modal, Tabs, TabList, Tab, TabPanels, TabPanel, ProgressBar, DatePicker, DatePickerInput, NumberInput, CodeSnippet } from "@carbon/react";
-import { Add, Edit, TrashCan, Play, Save, Information } from "@carbon/icons-react";
+import { Grid, Column, Tile, Form, FormGroup, TextInput, Select, SelectItem, Button, Modal, Tabs, TabList, Tab, TabPanels, TabPanel, ProgressBar, DatePicker, DatePickerInput, NumberInput, CodeSnippet, ToastNotification } from "@carbon/react";
+import { Add, Edit, TrashCan, Play, Save, View, Stop, Document } from "@carbon/icons-react";
 import { useState, useEffect, Suspense, useRef } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import GlobalTable from "../../components/GlobalTable";
+import GlobalDetailTable from "../../components/GlobalDetailTable";
 
 function ModelsContent() {
   const router = useRouter();
@@ -36,6 +37,10 @@ function ModelsContent() {
   const [editingModel, setEditingModel] = useState<any>(null);
   const [modelForm, setModelForm] = useState({ id: "", name: "", algorithm_type: "", accuracy: "", status: "Inactive" });
 
+  // Delete confirmation state
+  const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [modelToDelete, setModelToDelete] = useState<string | null>(null);
+
   // Train states
   const initEnd = new Date().toISOString().split('T')[0];
   const d = new Date(); d.setFullYear(d.getFullYear() - 3);
@@ -45,10 +50,21 @@ function ModelsContent() {
   const [trainRegime, setTrainRegime] = useState<string>("");
   const [trainForm, setTrainForm] = useState({ algorithm: "XGBoost", model_name: "", start_date: initStart, end_date: initEnd, optuna_trials: 10 });
   const [trainProgress, setTrainProgress] = useState<Record<string, {label: string, value: number}>>({});
+  const [activeJobs, setActiveJobs] = useState<any[]>([]);
+  const [historyJobs, setHistoryJobs] = useState<any[]>([]);
+  const activeSSERef = useRef<Record<string, EventSource>>({});
 
-  // Detail Modal
-  const [isDetailModalOpen, setDetailModalOpen] = useState(false);
+  const [notification, setNotification] = useState<{kind: "success" | "error" | "info", title: string, subtitle: string} | null>(null);
+
+  // Detail Modal for models
   const [detailModel, setDetailModel] = useState<any>(null);
+
+  // Detail Logs Modal for jobs
+  const [detailJobId, setDetailJobId] = useState<string | null>(null);
+  const detailJobIdRef = useRef<string | null>(null);
+  useEffect(() => { detailJobIdRef.current = detailJobId; }, [detailJobId]);
+  const [detailLogs, setDetailLogs] = useState<string>("");
+  const [isDetailModalOpen, setDetailModalOpen] = useState(false);
 
   const fetchData = async () => {
     setIsLoadingData(true);
@@ -83,6 +99,42 @@ function ModelsContent() {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    if (currentTab === "train") {
+      fetchActiveJobs();
+      fetchHistoryJobs();
+    }
+  }, [currentTab]);
+
+  const fetchHistoryJobs = async () => {
+    try {
+      const res = await fetch("http://127.0.0.1:8000/api/models/train/history");
+      if (res.ok) {
+        const data = await res.json();
+        setHistoryJobs(data.jobs.map((j: any) => ({ ...j, id: j.task_id })));
+      }
+    } catch (e) {
+      console.error("Failed to fetch history jobs", e);
+    }
+  };
+
+  const fetchActiveJobs = async () => {
+    try {
+      const res = await fetch("http://127.0.0.1:8000/api/models/train/jobs");
+      if (res.ok) {
+        const data = await res.json();
+        setActiveJobs(data.jobs.map((j: any) => ({ ...j, id: j.task_id })));
+        data.jobs.forEach((job: any) => {
+          if (job.status === "running") {
+            connectToSSE(job.task_id, job.regime);
+          }
+        });
+      }
+    } catch (e) {
+      console.error("Failed to fetch active jobs", e);
+    }
+  };
+
   const openModelModal = (model: any = null) => {
     if (model) {
       setEditingModel(model);
@@ -108,13 +160,21 @@ function ModelsContent() {
     setModelModalOpen(false);
   };
 
-  const deleteModel = async (id: string) => {
-    if(confirm("Are you sure you want to delete this model?")) {
+  const confirmDeleteModel = (id: string) => {
+    setModelToDelete(id);
+    setDeleteModalOpen(true);
+  };
+
+  const deleteModel = async () => {
+    if (modelToDelete) {
       try {
-        await fetch(`http://127.0.0.1:8000/api/models/${id}`, { method: "DELETE" });
+        await fetch(`http://127.0.0.1:8000/api/models/${modelToDelete}`, { method: "DELETE" });
         fetchData();
+        setNotification({ kind: "success", title: "Model Deleted", subtitle: "Model was successfully deleted." });
       } catch(e) { console.error(e); }
     }
+    setDeleteModalOpen(false);
+    setModelToDelete(null);
   };
 
   const handleRouteChange = (regime: string, type: 'champion'|'challenger', val: string) => {
@@ -141,6 +201,73 @@ function ModelsContent() {
     setSavingRouting(false);
   };
   
+  const handleRetryJob = async (job: any) => {
+      try {
+        const payload = {
+          task_id: job.id,
+          regime: job.regime,
+          algorithm: job.algorithm || "XGBoost",
+          model_name: job.model_name || "",
+          start_date: job.start_date || "2023-01-01",
+          end_date: job.end_date || "2024-01-01",
+          optuna_trials: job.optuna_trials || 10
+        };
+        const res = await fetch("http://127.0.0.1:8000/api/models/train", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify(payload)
+        });
+        if(res.ok){
+          setNotification({ kind: "success", title: "Retry Started", subtitle: "Training queued successfully." });
+          fetchActiveJobs();
+        }
+      } catch(e) {
+          setNotification({ kind: "error", title: "Error", subtitle: "Failed to retry job." });
+      }
+  };
+
+  const handleCancelJob = async (jobId: string) => {
+      try {
+          const res = await fetch(`http://127.0.0.1:8000/api/models/train/cancel/${jobId}`, { method: 'POST' });
+          if(res.ok) {
+              setNotification({ kind: 'info', title: 'Job Cancelled', subtitle: 'Sent cancellation signal to backend.' });
+              fetchActiveJobs();
+          }
+      } catch(e) { }
+  };
+
+  const handleDeleteJob = async (jobId: string) => {
+      if (confirm("Are you sure you want to completely delete this job? This will stop any running processes and remove all logs from Redis and the database.")) {
+          try {
+              const res = await fetch(`http://127.0.0.1:8000/api/models/train/jobs/${jobId}`, { method: 'DELETE' });
+              if(res.ok) {
+                  setNotification({ kind: 'success', title: 'Job Deleted', subtitle: 'Job has been completely removed.' });
+                  fetchActiveJobs();
+                  fetchHistoryJobs();
+              }
+          } catch(e) { 
+              console.error("Failed to delete job", e);
+          }
+      }
+  };
+
+  const openJobDetails = async (jobId: string) => {
+      setDetailJobId(jobId);
+      setDetailLogs("Loading logs...");
+      setDetailModalOpen(true);
+      try {
+          const res = await fetch(`http://127.0.0.1:8000/api/models/train/logs/${jobId}`);
+          if(res.ok) {
+              const data = await res.json();
+              setDetailLogs(data.logs || "No logs available.");
+          } else {
+              setDetailLogs("Failed to load logs.");
+          }
+      } catch(e) {
+          setDetailLogs("Failed to load logs.");
+      }
+  };
+
   const openTrainModal = (regime: string) => {
     setTrainRegime(regime);
     
@@ -169,38 +296,87 @@ function ModelsContent() {
         const data = await res.json();
         const taskId = data.task_id;
         
-        // Listen to SSE
-        const eventSource = new EventSource(`http://127.0.0.1:8000/api/models/train/stream/${taskId}`);
-        eventSource.onmessage = (event) => {
-          const msg = event.data;
-          if(msg.includes("[DONE]")) {
-            eventSource.close();
-            setTrainProgress(prev => {
-              const newP = {...prev};
-              delete newP[targetRegime];
-              return newP;
-            });
-            fetchData(); // Refresh registry
-          } else {
-            let val = 0;
-            const match = msg.match(/PROGRESS:\s*(\d+)%/);
-            if(match) val = parseInt(match[1]);
-            setTrainProgress(prev => ({...prev, [targetRegime]: {label: msg.replace(/PROGRESS:\s*\d+%\s*-\s*/, ''), value: val || prev[targetRegime]?.value || 0}}));
-          }
-        };
-        eventSource.onerror = (e) => {
-            console.error("SSE Error", e);
-            eventSource.close();
-        };
+        connectToSSE(taskId, targetRegime);
+        fetchActiveJobs();
+      } else {
+         setNotification({ kind: "error", title: "Request Failed", subtitle: "Server responded with an error." });
+         setTimeout(() => setNotification(null), 5000);
+          setTrainProgress(prev => {
+             const newP = {...prev};
+             delete newP[targetRegime];
+             return newP;
+          });
       }
     } catch(e) { 
       console.error(e); 
+      setNotification({ kind: "error", title: "Request Failed", subtitle: "Could not connect to training engine." });
+      setTimeout(() => setNotification(null), 5000);
       setTrainProgress(prev => {
          const newP = {...prev};
          delete newP[targetRegime];
          return newP;
       });
     }
+  };
+
+  const connectToSSE = (taskId: string, targetRegime: string) => {
+    if (activeSSERef.current[targetRegime]) return;
+
+    setTrainProgress(prev => ({...prev, [targetRegime]: prev[targetRegime] || {label: "Reconnecting...", value: 0}}));
+
+    const eventSource = new EventSource(`http://127.0.0.1:8000/api/models/train/stream/${taskId}`);
+    activeSSERef.current[targetRegime] = eventSource;
+    
+    let hasError = false;
+
+    eventSource.onmessage = (event) => {
+      const msg = event.data;
+      if (detailJobIdRef.current === taskId) {
+        setDetailLogs(prev => prev + (prev ? "\n" : "") + msg);
+      }
+      
+      if (msg.includes("ERROR:")) {
+         hasError = true;
+      }
+
+      if(msg.includes("[DONE]")) {
+        eventSource.close();
+        delete activeSSERef.current[targetRegime];
+        setTrainProgress(prev => {
+          const newP = {...prev};
+          delete newP[targetRegime];
+          return newP;
+        });
+        fetchData(); // Refresh registry
+        fetchActiveJobs(); // Refresh jobs table
+        fetchHistoryJobs(); // Refresh history
+        setNotification({
+           kind: hasError ? "error" : "success",
+           title: hasError ? "Training Failed" : "Training Complete",
+           subtitle: hasError ? "Check terminal logs for Python traceback." : `Model for ${targetRegime} trained successfully.`
+        });
+        setTimeout(() => setNotification(null), 8000);
+      } else {
+        let val = 0;
+        const match = msg.match(/PROGRESS:\s*(\d+)%/);
+        if(match) val = parseInt(match[1]);
+        const cleanedMsg = msg.replace(/PROGRESS:\s*\d+%\s*-\s*/, '');
+        const displayMsg = cleanedMsg.length > 45 ? cleanedMsg.substring(0, 45) + '...' : cleanedMsg;
+        setTrainProgress(prev => ({...prev, [targetRegime]: {label: displayMsg, value: val || prev[targetRegime]?.value || 0}}));
+      }
+    };
+    eventSource.onerror = (e) => {
+        console.error("SSE Error", e);
+        eventSource.close();
+        delete activeSSERef.current[targetRegime];
+        setNotification({ kind: "error", title: "Connection Error", subtitle: "Failed to read progress stream." });
+        setTimeout(() => setNotification(null), 5000);
+        setTrainProgress(prev => {
+           const newP = {...prev};
+           delete newP[targetRegime];
+           return newP;
+        });
+    };
   };
 
   const modelHeaders = [
@@ -211,15 +387,97 @@ function ModelsContent() {
     { key: "actions", header: "Actions" },
   ];
 
+  const ongoingJobHeaders = [
+    { key: "task_id", header: "ID" },
+    { key: "regime", header: "Regime" },
+    { key: "model_name", header: "Nama Model" },
+    { key: "created_date", header: "Created Date" },
+    { key: "finished_date", header: "Finished Date" },
+    { key: "progress", header: "Progress" },
+    { key: "status", header: "Status" },
+    { key: "actions", header: "Actions" },
+  ];
+
+  const historyJobHeaders = [
+    { key: "task_id", header: "ID" },
+    { key: "regime", header: "Regime" },
+    { key: "model_name", header: "Nama Model" },
+    { key: "created_date", header: "Created Date" },
+    { key: "finished_date", header: "Finished Date" },
+    { key: "status", header: "Status" },
+    { key: "actions", header: "Actions" },
+  ];
+
+  const formatJobCell = (cellId: string, value: any) => {
+    if (cellId.endsWith(':actions')) {
+      const rowId = cellId.split(':')[0];
+      const job = activeJobs.find(j => j.id === rowId) || historyJobs.find(j => j.id === rowId);
+      if(!job) return "-";
+      return (
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <Button kind="ghost" size="sm" renderIcon={Document} iconDescription="Details" hasIconOnly onClick={() => openJobDetails(job.id)} />
+              {job.status === 'running' ? (
+                  <Button kind="danger--ghost" size="sm" renderIcon={Stop} iconDescription="Cancel" hasIconOnly onClick={() => handleCancelJob(job.id)} />
+              ) : job.status?.toLowerCase() !== 'done' && job.status?.toLowerCase() !== 'success' ? (
+                  <Button kind="ghost" size="sm" renderIcon={Play} iconDescription="Retry" hasIconOnly onClick={() => handleRetryJob(job)} />
+              ) : null}
+              {job.status?.toLowerCase() !== 'done' && job.status?.toLowerCase() !== 'success' && job.status?.toLowerCase() !== 'running' && (
+                  <Button kind="danger--ghost" size="sm" renderIcon={TrashCan} iconDescription="Delete" hasIconOnly onClick={() => handleDeleteJob(job.id)} />
+              )}
+          </div>
+      );
+    }
+    if (cellId.endsWith(':created_date') || cellId.endsWith(':finished_date')) {
+       if (!value) return "-";
+       const dateStr = value.endsWith('Z') || value.includes('+') ? value : value + 'Z';
+       const d = new Date(dateStr);
+       const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+       const day = d.getDate().toString().padStart(2, '0');
+       const month = months[d.getMonth()];
+       const year = d.getFullYear().toString().slice(-2);
+       const time = d.toTimeString().split(' ')[0];
+       return (
+         <div style={{ display: 'flex', flexDirection: 'column', lineHeight: '1.2' }}>
+           <span>{`${day} ${month} ${year}`}</span>
+           <span style={{ color: '#a8a8a8', fontSize: '0.9em' }}>{time}</span>
+         </div>
+       );
+    }
+    if (cellId.endsWith(':model_name')) {
+       return value || "-";
+    }
+    if (cellId.endsWith(':progress')) {
+      const rowId = cellId.split(':')[0];
+      const job = activeJobs.find(j => j.id === rowId);
+      if (job && job.status === 'running' && trainProgress[job.regime]) {
+         return (
+             <div style={{ maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                 <div style={{ width: '100%', minWidth: '100px' }}>
+                     <ProgressBar label={trainProgress[job.regime].label} value={trainProgress[job.regime].value} />
+                 </div>
+             </div>
+         );
+      }
+      return "-";
+    }
+    if (cellId.endsWith(':status')) {
+       return <span style={{ textTransform: 'uppercase', fontWeight: 600, color: value?.toLowerCase() === 'failed' || value?.toLowerCase() === 'error' ? '#da1e28' : value?.toLowerCase() === 'done' || value?.toLowerCase() === 'success' ? '#24a148' : '#0f62fe' }}>{value}</span>;
+    }
+    if (cellId.endsWith(':task_id')) {
+       return <span style={{ fontFamily: 'monospace' }}>{value.split('-')[0]}...</span>;
+    }
+    return value;
+  };
+
   const formatModelCell = (cellId: string, value: any) => {
     if (cellId.endsWith(':actions')) {
       const rowId = cellId.split(':')[0];
       const model = models.find(m => m.id === rowId);
       return (
         <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <Button size="sm" kind="ghost" renderIcon={Information} iconDescription="Details" hasIconOnly onClick={() => {setDetailModel(model); setDetailModalOpen(true);}} />
+          <Button size="sm" kind="ghost" renderIcon={View} iconDescription="Details" hasIconOnly onClick={() => setDetailModel(model)} />
           <Button size="sm" kind="ghost" renderIcon={Edit} iconDescription="Edit" hasIconOnly onClick={() => openModelModal(model)} />
-          <Button size="sm" kind="danger--ghost" renderIcon={TrashCan} iconDescription="Delete" hasIconOnly onClick={() => deleteModel(rowId)} />
+          <Button size="sm" kind="danger--ghost" renderIcon={TrashCan} iconDescription="Delete" hasIconOnly onClick={() => confirmDeleteModel(rowId)} />
         </div>
       );
     }
@@ -228,6 +486,18 @@ function ModelsContent() {
 
   return (
     <>
+      {notification && (
+        <div style={{ position: "fixed", top: "4rem", right: "1rem", zIndex: 9999 }}>
+          <ToastNotification
+            kind={notification.kind as any}
+            title={notification.title}
+            subtitle={notification.subtitle}
+            caption={new Date().toLocaleTimeString()}
+            onClose={() => setNotification(null)}
+          />
+        </div>
+      )}
+
       <Grid>
       <Column lg={16} md={8} sm={4} className="landing-page__banner">
         <h3 style={{ marginBottom: "1rem", fontWeight: 400 }}>Models & AI Lifecycle</h3>
@@ -252,12 +522,10 @@ function ModelsContent() {
                               <h4 style={{fontWeight: 400, marginBottom: '0.5rem'}}>{regime.split('_').map(w => w.charAt(0) + w.slice(1).toLowerCase()).join(' ')}</h4>
                               <Select id={`route_${regime}_champ`} labelText="👑 Champion" value={modelRouting[regime]?.champion || "NONE"} onChange={e => handleRouteChange(regime, 'champion', e.target.value)}>
                                 <SelectItem value="NONE" text="-- None (Disable) --" />
-                                <SelectItem value={`xgboost_${regime.toLowerCase()}`} text={`xgboost_${regime.toLowerCase()} (Default)`} />
                                 {models.map(m => <SelectItem key={`${m.id}-champ`} value={m.name} text={m.name} />)}
                               </Select>
                               <Select id={`route_${regime}_chall`} labelText="🔬 Challenger" value={modelRouting[regime]?.challenger || "NONE"} onChange={e => handleRouteChange(regime, 'challenger', e.target.value)}>
                                 <SelectItem value="NONE" text="-- None --" />
-                                <SelectItem value={`xgboost_${regime.toLowerCase()}`} text={`xgboost_${regime.toLowerCase()} (Default)`} />
                                 {models.map(m => <SelectItem key={`${m.id}-chall`} value={m.name} text={m.name} />)}
                               </Select>
                           </Tile>
@@ -271,15 +539,15 @@ function ModelsContent() {
 
               {/* TAB 2: TRAIN */}
               <TabPanel style={{ paddingTop: '2rem' }}>
-                 <Grid>
-                  <Column lg={12} md={8} sm={4}>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '2px' }}>
+                 <Grid condensed>
+                  <Column lg={5} md={3} sm={4} style={{ paddingRight: '2px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                         {['TREND_BULL', 'TREND_BEAR', 'MEAN_REVERTING', 'VOLATILE_CHOP'].map(regime => (
                           <Tile key={regime}>
                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                <h4 style={{fontWeight: 400}}>{regime.split('_').map(w => w.charAt(0) + w.slice(1).toLowerCase()).join(' ')}</h4>
                                {trainProgress[regime] ? (
-                                   <div style={{ width: '200px' }}>
+                                   <div style={{ width: '100px' }}>
                                       <ProgressBar label={trainProgress[regime].label} value={trainProgress[regime].value} />
                                    </div>
                                ) : (
@@ -295,20 +563,42 @@ function ModelsContent() {
                         ))}
                     </div>
                   </Column>
+                  <Column lg={11} md={5} sm={4}>
+                    <GlobalTable 
+                      headers={ongoingJobHeaders} 
+                      initialData={activeJobs.slice(0, 5)} 
+                      title="On Going Jobs" 
+                      description="Monitor active and recent model training tasks running on Redis."
+                      formatCell={formatJobCell}
+                      hidePagination={true}
+                    />
+                  </Column>
+                </Grid>
+                <Grid condensed style={{ marginTop: '2rem' }}>
+                  <Column lg={16} md={8} sm={4}>
+                    <GlobalTable 
+                      headers={historyJobHeaders} 
+                      initialData={historyJobs} 
+                      title="History Model Jobs" 
+                      description="Immutable log of past training jobs stored in PostgreSQL."
+                      formatCell={formatJobCell}
+                    />
+                  </Column>
                 </Grid>
               </TabPanel>
 
               {/* TAB 3: REGISTRY */}
               <TabPanel style={{ paddingTop: '2rem' }}>
-                <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "1rem" }}>
-                  <Button renderIcon={Add} onClick={() => openModelModal()}>Register External Model</Button>
-                </div>
                 <GlobalTable 
                   headers={modelHeaders} 
                   initialData={models} 
                   title="Models Registry" 
-                  description="List of available models that can be assigned to strategies."
                   formatCell={formatModelCell}
+                  toolbarActions={
+                    <Button renderIcon={Add} onClick={() => openModelModal()} size="sm">
+                      Register External Model
+                    </Button>
+                  }
                 />
               </TabPanel>
             </TabPanels>
@@ -329,6 +619,18 @@ function ModelsContent() {
         </FormGroup>
       </Modal>
 
+      <Modal 
+        open={isDeleteModalOpen} 
+        onRequestClose={() => { setDeleteModalOpen(false); setModelToDelete(null); }} 
+        onRequestSubmit={deleteModel} 
+        modalHeading="Delete Model" 
+        primaryButtonText="Delete" 
+        secondaryButtonText="Cancel"
+        danger
+      >
+        <p>Are you sure you want to delete this model? This action cannot be undone.</p>
+      </Modal>
+
       {/* TRAIN SETTINGS MODAL */}
       <Modal open={isTrainModalOpen} onRequestClose={() => setTrainModalOpen(false)} onRequestSubmit={startTraining} modalHeading={`Train settings for ${trainRegime.split('_').map(w => w.charAt(0) + w.slice(1).toLowerCase()).join(' ')}`} primaryButtonText="Start Training" secondaryButtonText="Cancel">
         <FormGroup legendText="">
@@ -345,30 +647,28 @@ function ModelsContent() {
       </Modal>
 
       {/* MODEL DETAILS MODAL */}
-      <Modal open={isDetailModalOpen} onRequestClose={() => setDetailModalOpen(false)} passiveModal modalHeading="Model Details">
-         {detailModel && (
-            <div>
-               <h4 style={{marginBottom: '1rem'}}>{detailModel.name}</h4>
-               <p><strong>Algorithm:</strong> {detailModel.algorithm_type}</p>
-               <p><strong>Accuracy:</strong> {detailModel.accuracy}</p>
-               {detailModel.train_start_time && <p><strong>Train Started:</strong> {new Date(detailModel.train_start_time).toLocaleString()}</p>}
-               {detailModel.train_duration_sec && <p><strong>Duration:</strong> {detailModel.train_duration_sec} seconds</p>}
-               
-               {detailModel.metrics_report && detailModel.metrics_report !== "{}" && (
-                   <div style={{marginTop: '1rem'}}>
-                       <h5>Metrics Report</h5>
-                       <CodeSnippet type="multi" light>{JSON.stringify(JSON.parse(detailModel.metrics_report), null, 2)}</CodeSnippet>
-                   </div>
-               )}
+        {detailModel && (
+          <GlobalDetailTable 
+             type="model"
+             dataObj={detailModel} 
+             onClose={() => setDetailModel(null)} 
+          />
+        )}
 
-               {detailModel.hyperparameters && detailModel.hyperparameters !== "{}" && (
-                   <div style={{marginTop: '1rem'}}>
-                       <h5>Hyperparameters</h5>
-                       <CodeSnippet type="multi" light>{JSON.stringify(JSON.parse(detailModel.hyperparameters), null, 2)}</CodeSnippet>
-                   </div>
-               )}
-            </div>
-         )}
+      {/* Logs Modal */}
+      <Modal 
+          open={isDetailModalOpen} 
+          onRequestClose={() => setDetailModalOpen(false)} 
+          passiveModal 
+          modalHeading="Training Logs" 
+      >
+         <div style={{ height: "75vh", overflowY: "auto", overflowX: "hidden", display: "flex", flexDirection: "column" }}>
+             <div style={{ flexGrow: 1, minHeight: "100%" }}>
+                 <CodeSnippet type="multi" feedback="Copied to clipboard" maxCollapsedNumberOfRows={0} maxExpandedNumberOfRows={0}>
+                     {detailLogs}
+                 </CodeSnippet>
+             </div>
+         </div>
       </Modal>
     </>
   );

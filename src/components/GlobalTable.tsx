@@ -20,6 +20,7 @@ import { View } from '@carbon/icons-react';
 
 interface GlobalTableProps {
   title: React.ReactNode;
+  description?: React.ReactNode;
   headers: Array<{ key: string; header: string; width?: string }>;
   fetchUrl?: string; // If provided, uses server-side logic
   initialData?: any[]; // Fallback for local logic
@@ -32,6 +33,7 @@ interface GlobalTableProps {
 
 export default function GlobalTable({
   title,
+  description,
   headers,
   fetchUrl,
   initialData = [],
@@ -159,7 +161,7 @@ export default function GlobalTable({
     <div style={{ position: 'relative' }}>
       <DataTable rows={processedData} headers={headers}>
         {({ rows, headers: tableHeaders, getHeaderProps, getTableProps }: any) => (
-          <TableContainer title={title}>
+          <TableContainer title={title} description={description}>
             {(!hideSearch || toolbarActions) && (
               <TableToolbar>
                 <TableToolbarContent>
@@ -190,11 +192,8 @@ export default function GlobalTable({
                       sortDirection={sortKey === header.key ? (sortDesc ? "DESC" : "ASC") : "NONE"}
                       onClick={() => handleSort(header.key)}
                       style={{ 
-                        cursor: "pointer", 
-                        width: w || "auto",
-                        minWidth: w,
-                        maxWidth: w,
-                        whiteSpace: w === "1%" ? "nowrap" : "normal"
+                        cursor: "pointer",
+                        ...(w ? { width: w } : {})
                       }}
                     >
                       {header.header}
@@ -215,11 +214,8 @@ export default function GlobalTable({
                       return (
                         <TableCell key={cell.id} style={{ 
                           fontSize: "11px", 
-                          padding: "0.4rem", 
-                          width: headerConf?.width || "auto",
-                          minWidth: headerConf?.width,
-                          maxWidth: headerConf?.width,
-                          whiteSpace: headerConf?.width === "1%" ? "nowrap" : "normal"
+                          padding: "0.4rem",
+                          ...(headerConf?.width ? { width: headerConf.width } : {})
                         }}>
                           {formatCell ? formatCell(cell.id, cell.value) : cell.value}
                         </TableCell>

@@ -3,7 +3,7 @@
 import { Grid, Column, Tabs, TabList, Tab, TabPanels, TabPanel, Tile, Form, FormGroup, TextInput, Select, SelectItem, Button, Toggle, Modal } from "@carbon/react";
 import { Add, Edit, TrashCan } from "@carbon/icons-react";
 import { useState, useEffect, Suspense } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import GlobalTable from "../../components/GlobalTable";
 
 function SettingsContent() {

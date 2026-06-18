@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 
 export default function ThresholdsPage() {
   const [config, setConfig] = useState<any>({
+    engine_active: false,
     auto_execution_enabled: false,
     max_drawdown_pct: 5.0,
     risk_per_trade_pct: 1.0,
@@ -82,7 +83,7 @@ export default function ThresholdsPage() {
   const alphaKeys = ["rsi_buy_threshold", "rsi_sell_threshold", "ml_confidence_threshold"];
   const regimeKeys = ["adx_trend_threshold", "bb_width_volatility_threshold"];
   const sltpKeys = ["sl_mult_trend", "tp_mult_trend", "sl_mult_mean_reverting", "tp_mult_mean_reverting", "sl_mult_volatile", "tp_mult_volatile"];
-  const systemKeys = ["cron_interval_minutes"];
+  const systemKeys = ["engine_active", "cron_interval_minutes"];
 
   if (loading) return <div>Loading configuration...</div>;
 
@@ -119,7 +120,7 @@ export default function ThresholdsPage() {
             <FormGroup legendText="" style={{ marginTop: "1rem" }}>
               <Toggle 
                 id="auto_exec" 
-                labelText="Auto Execution Master Switch" 
+                labelText="Auto Trade Master Switch" 
                 labelA="Off" 
                 labelB="On" 
                 toggled={config.auto_execution_enabled}
@@ -269,7 +270,15 @@ export default function ThresholdsPage() {
               </Button>
             </div>
             <FormGroup legendText="" style={{ marginTop: "1rem" }}>
-              <div>
+              <Toggle 
+                id="engine_active" 
+                labelText="Engine Active (Cron Job)" 
+                labelA="Off" 
+                labelB="On" 
+                toggled={config.engine_active}
+                onToggle={(val) => updateConfig("engine_active", val)}
+              />
+              <div style={{marginTop: "2rem"}}>
                 <NumberInput 
                   id="cron_interval" label="Engine Cycle Interval (Minutes)" value={config.cron_interval_minutes} 
                   min={1} max={60} step={1} onChange={(e: any, { value }: any) => updateConfig("cron_interval_minutes", Number(value))}
