@@ -1,3 +1,5 @@
+@import 'react-grid-layout/css/styles.css';
+@import 'react-resizable/css/styles.css';
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap');
 
 html {
@@ -141,4 +143,33 @@ main {
   .dashboard-row-2 {
     grid-template-columns: 1fr;
   }
+}
+
+/* Override Carbon component background colors globally to match the active tab gray */
+.cds--tile,
+.cds--data-table,
+.cds--data-table-header,
+.cds--data-table tbody tr,
+.cds--data-table th,
+.cds--data-table td,
+.cds--data-table-container,
+.cds--pagination,
+.cds--search-input,
+.cds--toolbar-content,
+.cds--toolbar-search-container,
+.cds--modal-container,
+.cds--modal-header,
+.cds--modal-content,
+.cds--modal-footer {
+  background-color: #353535 !important;
+}
+
+/* Remove border from modal container */
+.cds--modal-container {
+  border: none !important;
+}
+
+/* Ensure hovered rows in data tables don't look broken */
+.cds--data-table tbody tr:hover td {
+  background-color: #454545 !important; /* Slightly lighter gray on hover */
 }

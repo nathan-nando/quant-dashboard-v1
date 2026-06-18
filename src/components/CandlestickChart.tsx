@@ -13,7 +13,7 @@ const TIMEFRAMES: Record<string, number> = {
   "D1": 86400
 };
 
-export default function CandlestickChart({ symbol = "XAUUSD" }: { symbol?: string }) {
+export default function CandlestickChart({ symbol = "XAUUSD", onHistoryUpdate }: { symbol?: string, onHistoryUpdate?: (data: any[]) => void }) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
@@ -46,7 +46,7 @@ export default function CandlestickChart({ symbol = "XAUUSD" }: { symbol?: strin
         horzLines: { color: "#393939" },
       },
       width: chartContainerRef.current.clientWidth,
-      height: 400,
+      height: chartContainerRef.current.clientHeight,
       timeScale: {
         timeVisible: true,
         secondsVisible: false,
@@ -91,16 +91,16 @@ export default function CandlestickChart({ symbol = "XAUUSD" }: { symbol?: strin
     });
     volumeSeriesRef.current = volumeSeries;
 
-    // Handle Resize
-    const handleResize = () => {
-      if (chartContainerRef.current) {
-        chart.applyOptions({ width: chartContainerRef.current.clientWidth });
-      }
-    };
-    window.addEventListener("resize", handleResize);
+    // Handle Resize perfectly with ResizeObserver
+    const resizeObserver = new ResizeObserver((entries) => {
+      if (entries.length === 0 || entries[0].target !== chartContainerRef.current) return;
+      const newRect = entries[0].contentRect;
+      chart.applyOptions({ width: newRect.width, height: newRect.height });
+    });
+    resizeObserver.observe(chartContainerRef.current);
 
     return () => {
-      window.removeEventListener("resize", handleResize);
+      resizeObserver.disconnect();
       chart.remove();
     };
   }, []);
@@ -137,6 +137,7 @@ export default function CandlestickChart({ symbol = "XAUUSD" }: { symbol?: strin
                   volumeSeriesRef.current.setData(volumeHistory);
                   lastCandleRef.current = history[history.length - 1];
                   setIsInitialized(true);
+                  if (onHistoryUpdate) onHistoryUpdate(history);
               }
           } catch (e) {
               console.error("Error fetching history:", e);
@@ -216,15 +217,15 @@ export default function CandlestickChart({ symbol = "XAUUSD" }: { symbol?: strin
   }, [timeframe, isInitialized]);
 
   return (
-    <div style={{ width: "100%", height: "400px", position: "relative" }}>
+    <div style={{ width: "100%", height: "100%", minHeight: "300px", position: "relative" }}>
       <h4 style={{ position: "absolute", top: 10, left: 20, zIndex: 10, color: "#f4f4f4", display: "flex", alignItems: "center", gap: "15px" }}>
-          <span>{symbol} {!isInitialized && "(Waiting for market tick...)"}</span>
+          {!isInitialized && <span style={{ fontSize: "12px", color: "#a8a8a8" }}>(Waiting for market tick...)</span>}
           
           <select 
              value={timeframe} 
              onChange={(e) => setTimeframe(e.target.value)}
              style={{
-                background: "#262626",
+                background: "#353535",
                 color: "#f4f4f4",
                 border: "1px solid #393939",
                 padding: "2px 8px",

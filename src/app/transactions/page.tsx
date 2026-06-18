@@ -15,7 +15,24 @@ export default function TransactionsPage() {
   ];
 
   const formatCell = (cellId: string, value: any) => {
-    if (cellId.endsWith(':pnl') && value !== null && value !== undefined) {
+    const col = cellId.split('__')[1] || cellId.split(':').pop() || '';
+    
+    if (col.includes("time") && value) {
+      const d = new Date(value);
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const day = d.getDate().toString().padStart(2, '0');
+      const month = months[d.getMonth()];
+      const year = d.getFullYear().toString().slice(-2);
+      const time = d.toTimeString().split(' ')[0];
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', lineHeight: '1.2' }}>
+          <span>{`${day} ${month} ${year}`}</span>
+          <span style={{ color: '#a8a8a8', fontSize: '0.9em' }}>{time}</span>
+        </div>
+      );
+    }
+
+    if (col === 'pnl' && value !== null && value !== undefined) {
       return (
         <span style={{ color: value >= 0 ? '#24a148' : '#fa4d56' }}>
           ${Number(value).toFixed(2)}
@@ -26,9 +43,9 @@ export default function TransactionsPage() {
   };
 
   return (
-    <Grid fullWidth style={{ maxWidth: '100%', padding: '0 2rem' }}>
+    <Grid>
       <Column lg={16} md={8} sm={4} className="landing-page__banner">
-        <h1 style={{ marginBottom: "1rem" }}>Transactions (Trades)</h1>
+        <h3 style={{ marginBottom: "1rem", fontWeight: 400 }}>Transactions (Trades)</h3>
       </Column>
       <Column lg={16} md={8} sm={4}>
         <GlobalTable 

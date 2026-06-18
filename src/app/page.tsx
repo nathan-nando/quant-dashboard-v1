@@ -1,13 +1,15 @@
 "use client";
 
-import { Grid, Column, Tile, Button, ToastNotification } from "@carbon/react";
+import { Grid, Column, Button, ToastNotification, Tag, Tile } from "@carbon/react";
 import { CurrencyDollar, Activity, Power, Wallet, MachineLearningModel } from "@carbon/icons-react";
 import { useEffect, useState, useRef } from "react";
 import dynamic from 'next/dynamic';
 import GlobalTable from '../components/GlobalTable';
 import GlobalDetailTable from '../components/GlobalDetailTable';
-import { Tag } from '@carbon/react';
+import DashboardPanel from '../components/DashboardPanel';
+import { Responsive, WidthProvider } from 'react-grid-layout/legacy';
 
+const ResponsiveGridLayout = WidthProvider(Responsive);
 const CandlestickChart = dynamic(() => import('../components/CandlestickChart'), { ssr: false });
 
 const getRegimeFormat = (regime: string) => {
@@ -25,9 +27,10 @@ export default function Home() {
   const [analytics, setAnalytics] = useState<any>(null);
 
   const latestSignalIdRef = useRef<number | null>(null);
+  const chartHistoryRef = useRef<any[]>([]);
 
   useEffect(() => {
-    // 1. Subscribe to lightning-fast SSE for ALL live state (Price, Regime, Execution, Signals)
+    // 1. Subscribe to lightning-fast SSE for ALL live state
     const eventSource = new EventSource("http://127.0.0.1:8000/api/dashboard/stream");
     eventSource.onmessage = (event) => {
       try {
@@ -36,7 +39,6 @@ export default function Home() {
         if (payload.recent_signals && payload.recent_signals.length > 0) {
           const topSignal = payload.recent_signals[0];
           
-          // Check if this is a genuinely new signal arriving during the session
           if (latestSignalIdRef.current !== null && latestSignalIdRef.current !== topSignal.id) {
             let msgKind = "info";
             if (topSignal.direction === "BUY") msgKind = "success";
@@ -68,7 +70,7 @@ export default function Home() {
       }
     };
 
-    // 2. Fetch Analytics snapshot for Total PnL
+    // 2. Fetch Analytics snapshot
     fetch("http://127.0.0.1:8000/api/dashboard/analytics")
       .then(res => res.json())
       .then(data => setAnalytics(data))
@@ -81,50 +83,47 @@ export default function Home() {
 
   const signalHeaders = [
     { key: "timestamp", header: "Time" },
-    { key: "symbol", header: "Symbol" },
+    { key: "direction", header: "Signal", width: "1%" },
     { key: "entry_price", header: "Price" },
-    { key: "direction", header: "Signal" },
-    { key: "confidence", header: "Conf" },
     { key: "sl_price", header: "SL $" },
     { key: "tp_price", header: "TP $" },
-    { key: "rr_ratio", header: "R:R" },
-    { key: "regime", header: "Regime" },
+    { key: "rr_ratio", header: "R:R", width: "1%" },
+    { key: "confidence", header: "Conf" },
+    { key: "regime", header: "Regime", width: "1%" },
+    { key: "model", header: "Model" },
     { key: "status", header: "Status" },
   ];
 
-  const [isTriggering, setIsTriggering] = useState(false);
   const [toastMsg, setToastMsg] = useState<{ kind: any, title: string, subtitle: React.ReactNode, caption?: string } | null>(null);
   const [selectedSignal, setSelectedSignal] = useState<number | null>(null);
 
-  const handleTriggerML = async () => {
-    setIsTriggering(true);
-    setToastMsg(null);
-    try {
-      const res = await fetch("http://127.0.0.1:8000/api/dashboard/trigger-signal?symbol=XAUUSD", {
-        method: "POST"
-      });
-      const data = await res.json();
-      if (data.status === "success") {
-        setToastMsg({ kind: "success", title: "ML Triggered", subtitle: "Signal computed successfully!", caption: new Date().toLocaleTimeString() });
-        console.log("Triggered ML Engine Successfully:", data.signal);
-      } else {
-        setToastMsg({ kind: "error", title: "ML Engine Error", subtitle: data.message, caption: new Date().toLocaleTimeString() });
-        console.error("Error triggering ML Engine:", data.message);
-      }
-    } catch (err: any) {
-      setToastMsg({ kind: "error", title: "Network Error", subtitle: err.message, caption: new Date().toLocaleTimeString() });
-      console.error("Fetch error:", err);
+  const defaultLayout = [
+    { i: 'chart', x: 0, y: 0, w: 7, h: 5, minW: 4, minH: 3 },
+    { i: 'signals', x: 7, y: 0, w: 9, h: 5, minW: 4, minH: 3 }
+  ];
+  const [layouts, setLayouts] = useState<any>({ lg: defaultLayout });
+
+  useEffect(() => {
+    const saved = localStorage.getItem("quantDashboardLayout");
+    if (saved) {
+      try {
+        setLayouts(JSON.parse(saved));
+      } catch (e) {}
     }
-    setIsTriggering(false);
+  }, []);
+
+  const handleLayoutChange = (layout: any, allLayouts: any) => {
+    setLayouts(allLayouts);
+    localStorage.setItem("quantDashboardLayout", JSON.stringify(allLayouts));
   };
 
   return (
-    <Grid fullWidth style={{ maxWidth: '100%', padding: '0 2rem', position: 'relative' }}>
-      
+    <div style={{ maxWidth: '100%', padding: '0 2rem', position: 'relative' }}>
       {/* --- FLASH MESSAGE --- */}
       {toastMsg && (
-        <div style={{ position: "absolute", top: "1rem", right: "2rem", zIndex: 9999 }}>
+        <div style={{ position: "fixed", top: "4rem", right: "2rem", zIndex: 9999 }}>
           <ToastNotification
+            key={Date.now()}
             kind={toastMsg.kind}
             title={toastMsg.title}
             subtitle={toastMsg.subtitle as any}
@@ -135,20 +134,12 @@ export default function Home() {
         </div>
       )}
 
-      {/* --- HEADER CONTROLS --- */}
-      <Column lg={16} md={8} sm={4} style={{ marginBottom: "1rem", display: "flex", justifyContent: "flex-end" }}>
-        <Button 
-          renderIcon={MachineLearningModel} 
-          onClick={handleTriggerML}
-          disabled={isTriggering}
-          kind="tertiary"
-        >
-          {isTriggering ? "Evaluating..." : "Force Trigger ML Engine"}
-        </Button>
+      <Column lg={16} md={8} sm={4} className="landing-page__banner">
+        <h3 style={{ marginBottom: "1rem", fontWeight: 400 }}>Dashboard</h3>
       </Column>
 
-      {/* --- ROW 1: LIVE STATE METRICS --- */}
-      <Column lg={16} md={8} sm={4} style={{ marginBottom: "1rem" }}>
+      {/* --- ROW 1: STATIC LIVE STATE METRICS --- */}
+      <div style={{ marginBottom: "1rem", width: '100%' }}>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "0.25rem" }}>
           <Tile style={{ padding: "1rem", height: "100%" }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: "0.25rem" }}>
@@ -167,7 +158,7 @@ export default function Home() {
               <Activity size={16} color="#a8a8a8" />
               <p style={{ fontSize: "12px", color: "#a8a8a8", margin: 0 }}>Regime</p>
             </div>
-            <h3 style={{ margin: 0, color: getRegimeFormat(state?.regime).color }}>{getRegimeFormat(state?.regime).text}</h3>
+            <h3 style={{ margin: 0, fontSize: '1.25rem', color: getRegimeFormat(state?.regime).color }}>{getRegimeFormat(state?.regime).text}</h3>
           </Tile>
 
           <Tile style={{ padding: "1rem", height: "100%" }}>
@@ -190,67 +181,161 @@ export default function Home() {
             </h3>
           </Tile>
         </div>
-      </Column>
+      </div>
 
-      {/* --- ROW 2: CHARTS AND SIGNALS --- */}
-      <Column lg={16} md={8} sm={4} style={{marginTop: "0.5rem"}}>
-        <div className="dashboard-row-2">
-          <Tile style={{ padding: 0, overflow: 'hidden', height: "100%", minHeight: "400px" }}>
-            <CandlestickChart symbol="XAUUSD" />
-          </Tile>
-          
-          <div style={{ height: "100%", overflow: "hidden" }}>
-            <GlobalTable 
-              title={<span style={{ fontSize: "14px", fontWeight: "normal" }}>Recent Signals</span>}
-              headers={signalHeaders}
-              initialData={signals}
-              onViewDetails={(id) => setSelectedSignal(Number(id))}
-              formatCell={(cellId, value) => {
-                const col = cellId.split('__')[1] || cellId.split(':').pop() || '';
-                if (col.includes("timestamp") && value) {
-                  return new Date(value).toLocaleString();
-                }
-                if (col.includes("status")) {
-                  return <Tag type={value === "NEW" ? "blue" : value === "PENDING_EXECUTION" ? "cyan" : "gray"}>{value}</Tag>;
-                }
-                if (col.includes("direction")) {
-                  const readableVal = value ? value.charAt(0).toUpperCase() + value.slice(1).toLowerCase() : '';
-                  return <span style={{ color: value === 'BUY' ? '#24a148' : value === 'SELL' ? '#fa4d56' : '#f4f4f4', fontWeight: 'bold' }}>{readableVal}</span>;
-                }
-                if (col.includes("confidence")) {
-                  const conf = Number(value);
-                  const color = conf >= 0.7 ? '#24a148' : conf >= 0.5 ? '#f1c21b' : '#fa4d56';
-                  return <span style={{ color, fontWeight: 'bold' }}>{(conf * 100).toFixed(2)}%</span>;
-                }
-                if (col.includes("entry_price")) {
-                  return <span>{value ? Number(value).toFixed(2) : '-'}</span>;
-                }
-                if (col.includes("sl_price") || col.includes("sl_pips")) {
-                  return <span style={{ color: '#fa4d56' }}>{value ? Number(value).toFixed(2) : '-'}</span>;
-                }
-                if (col.includes("tp_price") || col.includes("tp_pips")) {
-                  return <span style={{ color: '#24a148' }}>{value ? Number(value).toFixed(2) : '-'}</span>;
-                }
-                if (col.includes("rr_ratio")) {
-                  const rr = Number(value) || 0;
-                  return <span style={{ color: rr >= 2.0 ? '#24a148' : '#f4f4f4' }}>{rr.toFixed(2)}</span>;
-                }
-                if (col.includes("regime")) {
-                  const format = getRegimeFormat(value);
-                  return <span style={{ color: format.color, fontWeight: 'bold' }}>{format.text}</span>;
-                }
-                return value;
-              }}
-            />
-          </div>
+      {/* --- ROW 2: DYNAMIC CHARTS AND SIGNALS --- */}
+      <ResponsiveGridLayout
+        className="layout"
+        layouts={layouts}
+        breakpoints={{ lg: 1056, md: 672, sm: 320, xs: 0 }}
+        cols={{ lg: 16, md: 8, sm: 4, xs: 2 }}
+        rowHeight={90}
+        draggableHandle=".panel-drag-handle"
+        margin={[4, 4]} // 0.25rem gap equivalent, matching metrics
+        onLayoutChange={handleLayoutChange}
+      >
+        <div key="chart">
+          <DashboardPanel 
+            title="XAUUSD" 
+            tooltipInfo="Interactive candlestick chart with technical indicators."
+            onExportCsv={() => {
+              if (!chartHistoryRef.current || chartHistoryRef.current.length === 0) return;
+              const headers = ["Time", "Open", "High", "Low", "Close"];
+              const rows = chartHistoryRef.current.map((c: any) => [
+                new Date(c.time * 1000).toLocaleString(),
+                c.open,
+                c.high,
+                c.low,
+                c.close
+              ].join(","));
+              
+              const csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n" + rows.join("\n");
+              const encodedUri = encodeURI(csvContent);
+              const link = document.createElement("a");
+              link.setAttribute("href", encodedUri);
+              link.setAttribute("download", `xauusd_chart_${new Date().toISOString().split('T')[0]}.csv`);
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+            }}
+          >
+             <div style={{ height: "100%", overflow: "hidden", position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}>
+               <CandlestickChart symbol="XAUUSD" onHistoryUpdate={(data) => chartHistoryRef.current = data} />
+             </div>
+          </DashboardPanel>
         </div>
-      </Column>
+
+        <div key="signals">
+          <DashboardPanel 
+            title="Recent Signals" 
+            tooltipInfo="Latest trade recommendations generated by the strategy."
+            onExportCsv={() => {
+              const headers = ["Time", "Signal", "Price", "SL", "TP", "R:R", "Conf", "Regime", "Model", "Status"];
+              const rows = signals.map(s => [
+                new Date(s.timestamp).toLocaleString(),
+                s.direction,
+                s.entry_price || '',
+                s.sl_price || '',
+                s.tp_price || '',
+                s.rr_ratio || '',
+                (s.confidence * 100).toFixed(2) + '%',
+                s.regime,
+                s.model || '',
+                s.status
+              ].join(","));
+              
+              const csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n" + rows.join("\n");
+              const encodedUri = encodeURI(csvContent);
+              const link = document.createElement("a");
+              link.setAttribute("href", encodedUri);
+              link.setAttribute("download", `recent_signals_${new Date().toISOString().split('T')[0]}.csv`);
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+            }}
+          >
+            <div style={{ height: "100%" }}>
+              <GlobalTable 
+                title=""
+                headers={signalHeaders}
+                initialData={signals.slice(0, 5)}
+                hidePagination
+                onViewDetails={(id) => setSelectedSignal(Number(id))}
+                formatCell={(cellId, value) => {
+                  const col = cellId.split('__')[1] || cellId.split(':').pop() || '';
+                  if (col.includes("timestamp") && value) {
+                    const d = new Date(value);
+                    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                    const day = d.getDate().toString().padStart(2, '0');
+                    const month = months[d.getMonth()];
+                    const year = d.getFullYear().toString().slice(-2);
+                    const time = d.toTimeString().split(' ')[0];
+                    return (
+                      <div style={{ display: 'flex', flexDirection: 'column', lineHeight: '1.2' }}>
+                        <span>{`${day} ${month} ${year}`}</span>
+                        <span style={{ color: '#a8a8a8', fontSize: '0.9em' }}>{time}</span>
+                      </div>
+                    );
+                  }
+                  if (col.includes("status")) {
+                    if (value === "PENDING_EXECUTION") {
+                      return (
+                        <Tag type="cyan" style={{ height: 'auto', padding: '4px 6px', lineHeight: '1.2', textAlign: 'left' }}>
+                          Pending<br/>Execution
+                        </Tag>
+                      );
+                    }
+                    const readableStatus = value === "NEW" ? "New" : value;
+                    return <Tag type={value === "NEW" ? "blue" : "gray"}>{readableStatus}</Tag>;
+                  }
+                  if (col.includes("direction")) {
+                    const readableVal = value ? value.charAt(0).toUpperCase() + value.slice(1).toLowerCase() : '';
+                    return <span style={{ color: value === 'BUY' ? '#24a148' : value === 'SELL' ? '#fa4d56' : '#f4f4f4', fontWeight: 'bold' }}>{readableVal}</span>;
+                  }
+                  if (col.includes("confidence")) {
+                    const conf = Number(value);
+                    const color = conf >= 0.7 ? '#24a148' : conf >= 0.5 ? '#f1c21b' : '#fa4d56';
+                    return <span style={{ color, fontWeight: 'bold' }}>{(conf * 100).toFixed(2)}%</span>;
+                  }
+                  if (col.includes("entry_price")) return <span>{value ? Number(value).toFixed(2) : '-'}</span>;
+                  if (col.includes("sl_price") || col.includes("sl_pips")) return <span style={{ color: '#fa4d56' }}>{value ? Number(value).toFixed(2) : '-'}</span>;
+                  if (col.includes("tp_price") || col.includes("tp_pips")) return <span style={{ color: '#24a148' }}>{value ? Number(value).toFixed(2) : '-'}</span>;
+                  if (col.includes("rr_ratio")) {
+                    const rr = Number(value) || 0;
+                    return <span style={{ color: rr >= 2.0 ? '#24a148' : '#f4f4f4' }}>{rr.toFixed(2)}</span>;
+                  }
+                  if (col.includes("regime")) {
+                    const format = getRegimeFormat(value);
+                    const parts = format.text.split(' ');
+                    return (
+                      <span style={{ color: format.color, fontWeight: 'bold', fontSize: '0.85em', display: 'inline-block', lineHeight: '1.1' }}>
+                        {parts.map((p, i) => <span key={i}>{p}{i < parts.length - 1 && <br/>}</span>)}
+                      </span>
+                    );
+                  }
+                  if (col.includes("model")) {
+                    if (!value) return <Tag type="purple" style={{ margin: 0 }}>-</Tag>;
+                    const words = value.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
+                    const readableModel = words.length > 1 ? <>{words[0]}<br/>{words.slice(1).join(' ')}</> : words[0];
+                    return (
+                      <Tag type="purple" style={{ margin: 0, height: 'auto', minHeight: '24px', whiteSpace: 'normal', lineHeight: '1.2', padding: '4px 8px', textAlign: 'left' }}>
+                        {readableModel}
+                      </Tag>
+                    );
+                  }
+                  return value;
+                }}
+              />
+            </div>
+          </DashboardPanel>
+        </div>
+      </ResponsiveGridLayout>
       
       {/* --- SIGNAL DETAIL MODAL --- */}
       <GlobalDetailTable 
         signalId={selectedSignal} 
         onClose={() => setSelectedSignal(null)} 
       />
-    </Grid>
+    </div>
   );
 }

@@ -90,11 +90,12 @@ export default function ThresholdsPage() {
     <Grid style={{ position: 'relative' }}>
       {/* --- FLASH MESSAGE --- */}
       {toastMsg && (
-        <div style={{ position: "absolute", top: "1rem", right: "2rem", zIndex: 9999 }}>
+        <div style={{ position: "fixed", top: "4rem", right: "2rem", zIndex: 9999 }}>
           <ToastNotification
+            key={Date.now()}
             kind={toastMsg.kind}
             title={toastMsg.title}
-            subtitle={toastMsg.subtitle}
+            subtitle={toastMsg.subtitle as any}
             caption={toastMsg.caption}
             timeout={5000}
             onClose={() => setToastMsg(null)}
@@ -103,7 +104,7 @@ export default function ThresholdsPage() {
       )}
 
       <Column lg={16} md={8} sm={4} className="landing-page__banner">
-        <h1 style={{ marginBottom: "1rem" }}>Thresholds</h1>
+        <h3 style={{ marginBottom: "1rem", fontWeight: 400 }}>Thresholds</h3>
       </Column>
       
       <Column lg={12} md={6} sm={4}>

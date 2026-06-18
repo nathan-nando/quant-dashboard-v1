@@ -20,12 +20,14 @@ import { View } from '@carbon/icons-react';
 
 interface GlobalTableProps {
   title: React.ReactNode;
-  headers: Array<{ key: string; header: string }>;
+  headers: Array<{ key: string; header: string; width?: string }>;
   fetchUrl?: string; // If provided, uses server-side logic
   initialData?: any[]; // Fallback for local logic
   formatCell?: (cellId: string, value: any) => React.ReactNode;
   toolbarActions?: React.ReactNode; // Extra buttons for toolbar
   onViewDetails?: (rowId: any) => void;
+  hideSearch?: boolean;
+  hidePagination?: boolean;
 }
 
 export default function GlobalTable({
@@ -35,7 +37,9 @@ export default function GlobalTable({
   initialData = [],
   formatCell,
   toolbarActions,
-  onViewDetails
+  onViewDetails,
+  hideSearch = false,
+  hidePagination = false
 }: GlobalTableProps) {
   // State
   const [data, setData] = useState<any[]>([]);
@@ -147,21 +151,28 @@ export default function GlobalTable({
       <DataTable rows={processedData} headers={headers}>
         {({ rows, headers: tableHeaders, getHeaderProps, getTableProps }: any) => (
           <TableContainer title={title}>
-            <TableToolbar>
-              <TableToolbarContent>
-                <TableToolbarSearch 
-                  onChange={handleSearch} 
-                  placeholder="Search records..." 
-                  persistent 
-                />
-                {toolbarActions}
-              </TableToolbarContent>
-            </TableToolbar>
+            {(!hideSearch || toolbarActions) && (
+              <TableToolbar>
+                <TableToolbarContent>
+                  {!hideSearch && (
+                    <TableToolbarSearch 
+                      onChange={handleSearch} 
+                      placeholder="Search records..." 
+                      persistent 
+                    />
+                  )}
+                  {toolbarActions}
+                </TableToolbarContent>
+              </TableToolbar>
+            )}
             
-            <Table {...getTableProps()}>
+            <Table {...getTableProps()} size="sm">
               <TableHead>
                 <TableRow>
-                  {tableHeaders.map((header: any) => (
+                  {tableHeaders.map((header: any) => {
+                    const origHeader = headers.find(h => h.key === header.key);
+                    const w = origHeader?.width;
+                    return (
                     <TableHeader 
                       {...getHeaderProps({ header })} 
                       key={header.key}
@@ -169,26 +180,44 @@ export default function GlobalTable({
                       isSortHeader={sortKey === header.key}
                       sortDirection={sortKey === header.key ? (sortDesc ? "DESC" : "ASC") : "NONE"}
                       onClick={() => handleSort(header.key)}
-                      style={{ cursor: "pointer" }}
+                      style={{ 
+                        cursor: "pointer", 
+                        width: w || "auto",
+                        minWidth: w,
+                        maxWidth: w,
+                        whiteSpace: w === "1%" ? "nowrap" : "normal"
+                      }}
                     >
                       {header.header}
                     </TableHeader>
-                  ))}
+                    );
+                  })}
                   {onViewDetails && (
-                    <TableHeader>Actions</TableHeader>
+                    <TableHeader style={{ textAlign: "center", width: "50px" }}>Actions</TableHeader>
                   )}
                 </TableRow>
               </TableHead>
               <TableBody>
                 {rows.map((row: any) => (
                   <TableRow key={row.id}>
-                    {row.cells.map((cell: any) => (
-                      <TableCell key={cell.id} style={{ fontSize: "12px", padding: "0.5rem" }}>
-                        {formatCell ? formatCell(cell.id, cell.value) : cell.value}
-                      </TableCell>
-                    ))}
+                    {row.cells.map((cell: any) => {
+                      const colKey = cell.id.split(':')[1];
+                      const headerConf = headers.find(h => h.key === colKey);
+                      return (
+                        <TableCell key={cell.id} style={{ 
+                          fontSize: "11px", 
+                          padding: "0.4rem", 
+                          width: headerConf?.width || "auto",
+                          minWidth: headerConf?.width,
+                          maxWidth: headerConf?.width,
+                          whiteSpace: headerConf?.width === "1%" ? "nowrap" : "normal"
+                        }}>
+                          {formatCell ? formatCell(cell.id, cell.value) : cell.value}
+                        </TableCell>
+                      );
+                    })}
                     {onViewDetails && (
-                      <TableCell style={{ padding: "0.2rem" }}>
+                      <TableCell style={{ padding: "0.2rem", textAlign: "center", width: "50px" }}>
                         <Button 
                           kind="ghost" 
                           size="sm" 
@@ -214,16 +243,18 @@ export default function GlobalTable({
         )}
       </DataTable>
 
-      <Pagination
-        totalItems={totalItems}
-        page={page}
-        pageSize={pageSize}
-        pageSizes={[5, 10, 20, 50, 100]}
-        onChange={(data: any) => {
-          setPage(data.page);
-          setPageSize(data.pageSize);
-        }}
-      />
+      {!hidePagination && (
+        <Pagination
+          totalItems={totalItems}
+          page={page}
+          pageSize={pageSize}
+          pageSizes={[5, 10, 20, 50, 100]}
+          onChange={(data: any) => {
+            setPage(data.page);
+            setPageSize(data.pageSize);
+          }}
+        />
+      )}
     </div>
   );
 }
