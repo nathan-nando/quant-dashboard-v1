@@ -195,10 +195,10 @@ function SettingsContent() {
   };
 
   const tabParam = searchParams.get('tab');
-  const selectedTab = tabParam === 'models' ? 1 : 0;
+  const selectedTab = tabParam === 'configurations' ? 1 : 0;
 
   const handleTabChange = (data: { selectedIndex: number }) => {
-    const tabName = data.selectedIndex === 1 ? 'models' : 'configurations';
+    const tabName = data.selectedIndex === 1 ? 'configurations' : 'models';
     router.replace(`${pathname}?tab=${tabName}`, { scroll: false });
   };
 
@@ -212,23 +212,10 @@ function SettingsContent() {
       <Column lg={16} md={8} sm={4}>
         <Tabs selectedIndex={selectedTab} onChange={handleTabChange}>
           <TabList aria-label="Settings Tabs">
-            <Tab>Configurations</Tab>
             <Tab>Models</Tab>
+            <Tab>Configurations</Tab>
           </TabList>
           <TabPanels>
-            {/* --- CONFIGURATIONS TAB --- */}
-            <TabPanel style={{ paddingTop: '2rem' }}>
-              <GlobalTable 
-                title={<span style={{ fontSize: "16px", fontWeight: "bold" }}>Global Configurations</span>}
-                headers={configHeaders}
-                initialData={configs}
-                formatCell={formatConfigCell}
-                toolbarActions={
-                  <Button size="sm" renderIcon={Add} onClick={() => openConfigModal()}>Add Configuration</Button>
-                }
-              />
-            </TabPanel>
-
             {/* --- MODELS TAB (SPLIT LAYOUT) --- */}
             <TabPanel style={{ paddingTop: '2rem' }}>
               <Grid>
@@ -281,6 +268,19 @@ function SettingsContent() {
                   />
                 </Column>
               </Grid>
+            </TabPanel>
+
+            {/* --- CONFIGURATIONS TAB --- */}
+            <TabPanel style={{ paddingTop: '2rem' }}>
+              <GlobalTable 
+                title={<span style={{ fontSize: "16px", fontWeight: "bold" }}>Global Configurations</span>}
+                headers={configHeaders}
+                initialData={configs}
+                formatCell={formatConfigCell}
+                toolbarActions={
+                  <Button size="sm" renderIcon={Add} onClick={() => openConfigModal()}>Add Configuration</Button>
+                }
+              />
             </TabPanel>
           </TabPanels>
         </Tabs>
