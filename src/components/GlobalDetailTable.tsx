@@ -11,6 +11,48 @@ import {
   Tag,
   Loading
 } from '@carbon/react';
+import { ChevronDown, ChevronUp, Copy } from '@carbon/icons-react';
+
+const CollapsibleJSON = ({ displayValue }: { displayValue: string }) => {
+  const [collapsed, setCollapsed] = useState(true);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(displayValue);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div style={{ background: 'transparent', border: '1px dashed #8d8d8d', color: 'inherit', padding: '0.5rem', borderRadius: '4px' }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+        <button 
+          type="button" 
+          title="Copy"
+          onClick={handleCopy} 
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', padding: '0.2rem', display: 'flex', alignItems: 'center' }}
+        >
+          {copied ? <span style={{fontSize: '0.75rem', marginRight: '0.2rem'}}>Copied!</span> : <Copy size={16} />}
+        </button>
+        <button 
+          type="button" 
+          title={collapsed ? "Expand Data" : "Collapse Data"}
+          onClick={() => setCollapsed(!collapsed)} 
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', padding: '0.2rem', display: 'flex', alignItems: 'center' }}
+        >
+          {collapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+        </button>
+      </div>
+      {!collapsed && (
+        <div style={{ marginTop: '0.5rem', overflowX: 'auto' }}>
+          <pre style={{ margin: 0, fontSize: '0.85rem', whiteSpace: 'pre-wrap', fontFamily: 'Consolas, "Courier New", monospace', color: 'inherit' }}>
+            {displayValue}
+          </pre>
+        </div>
+      )}
+    </div>
+  );
+};
 
 interface GlobalDetailTableProps {
   id?: number | string | null;
@@ -158,11 +200,7 @@ export default function GlobalDetailTable({ id, type = 'signal', dataObj, onClos
                         <StructuredListCell style={{ fontWeight: "bold", width: "30%", verticalAlign: "top" }}>{formattedKey}</StructuredListCell>
                         <StructuredListCell>
                             {isNested ? (
-                               <div style={{ background: '#f4f4f4', padding: '1rem', borderRadius: '4px', overflowX: 'auto' }}>
-                                  <pre style={{ margin: 0, fontSize: '0.85rem', whiteSpace: 'pre-wrap' }}>
-                                    {displayValue}
-                                  </pre>
-                               </div>
+                               <CollapsibleJSON displayValue={displayValue as string} />
                             ) : (
                                 displayValue
                             )}
