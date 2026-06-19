@@ -1,7 +1,7 @@
 "use client";
 
-import { Grid, Column, Tile, Form, FormGroup, TextInput, Select, SelectItem, Button, Modal, Tabs, TabList, Tab, TabPanels, TabPanel, ProgressBar, DatePicker, DatePickerInput, NumberInput, CodeSnippet, ToastNotification } from "@carbon/react";
-import { Add, Edit, TrashCan, Play, Save, View, Stop, Document } from "@carbon/icons-react";
+import { Grid, Column, Tile, Form, FormGroup, TextInput, Select, SelectItem, Button, Modal, Tabs, TabList, Tab, TabPanels, TabPanel, ProgressBar, DatePicker, DatePickerInput, NumberInput, CodeSnippet, ToastNotification, Toggle, InlineLoading, Tag } from "@carbon/react";
+import { Add, Edit, TrashCan, Play, Save, View, Stop, Document, ChevronDown, ChevronUp, Close, ArrowUpRight, ArrowDownRight, Activity, Lightning } from "@carbon/icons-react";
 import { useState, useEffect, Suspense, useRef } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import GlobalTable from "../../components/GlobalTable";
@@ -48,7 +48,7 @@ function ModelsContent() {
 
   const [isTrainModalOpen, setTrainModalOpen] = useState(false);
   const [trainRegime, setTrainRegime] = useState<string>("");
-  const [trainForm, setTrainForm] = useState({ algorithm: "XGBoost", model_name: "", start_date: initStart, end_date: initEnd, optuna_trials: 10 });
+  const [trainForm, setTrainForm] = useState({ algorithm: "XGBoost", model_name: "", start_date: initStart, end_date: initEnd, optuna_trials: 10, skip_ingestion: true });
   const [trainProgress, setTrainProgress] = useState<Record<string, {label: string, value: number}>>({});
   const [activeJobs, setActiveJobs] = useState<any[]>([]);
   const [historyJobs, setHistoryJobs] = useState<any[]>([]);
@@ -65,6 +65,7 @@ function ModelsContent() {
   useEffect(() => { detailJobIdRef.current = detailJobId; }, [detailJobId]);
   const [detailLogs, setDetailLogs] = useState<string>("");
   const [isDetailModalOpen, setDetailModalOpen] = useState(false);
+  const [isWidgetCollapsed, setIsWidgetCollapsed] = useState(false);
 
   const fetchData = async () => {
     setIsLoadingData(true);
@@ -276,7 +277,7 @@ function ModelsContent() {
     d.setFullYear(d.getFullYear() - 3);
     const startStr = d.toISOString().split('T')[0];
 
-    setTrainForm({ algorithm: "XGBoost", model_name: "", start_date: startStr, end_date: endStr, optuna_trials: 10 });
+    setTrainForm({ algorithm: "XGBoost", model_name: "", start_date: startStr, end_date: endStr, optuna_trials: 10, skip_ingestion: true });
     setTrainModalOpen(true);
   };
 
@@ -512,14 +513,20 @@ function ModelsContent() {
             </TabList>
             <TabPanels>
               {/* TAB 1: ROUTES */}
-              <TabPanel style={{ paddingTop: '2rem' }}>
+              <TabPanel style={{ paddingTop: '1rem' }}>
                 <Grid>
                   <Column lg={16} md={8} sm={4}>
                     <Form>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '2px', marginBottom: '2rem' }}>
                         {['TREND_BULL', 'TREND_BEAR', 'MEAN_REVERTING', 'VOLATILE_CHOP'].map(regime => (
                           <Tile key={regime} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                              <h4 style={{fontWeight: 400, marginBottom: '0.5rem'}}>{regime.split('_').map(w => w.charAt(0) + w.slice(1).toLowerCase()).join(' ')}</h4>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                                 {regime === 'TREND_BULL' && <ArrowUpRight size={20} style={{ color: '#24a148' }} />}
+                                 {regime === 'TREND_BEAR' && <ArrowDownRight size={20} style={{ color: '#da1e28' }} />}
+                                 {regime === 'MEAN_REVERTING' && <Activity size={20} style={{ color: '#4589ff' }} />}
+                                 {regime === 'VOLATILE_CHOP' && <Lightning size={20} style={{ color: '#f1c21b' }} />}
+                                 <h4 style={{fontWeight: 400, margin: 0}}>{regime.split('_').map(w => w.charAt(0) + w.slice(1).toLowerCase()).join(' ')}</h4>
+                              </div>
                               <Select id={`route_${regime}_champ`} labelText="👑 Champion" value={modelRouting[regime]?.champion || "NONE"} onChange={e => handleRouteChange(regime, 'champion', e.target.value)}>
                                 <SelectItem value="NONE" text="-- None (Disable) --" />
                                 {models.map(m => <SelectItem key={`${m.id}-champ`} value={m.name} text={m.name} />)}
@@ -538,14 +545,20 @@ function ModelsContent() {
               </TabPanel>
 
               {/* TAB 2: TRAIN */}
-              <TabPanel style={{ paddingTop: '2rem' }}>
+              <TabPanel style={{ paddingTop: '1rem' }}>
                  <Grid condensed>
-                  <Column lg={5} md={3} sm={4} style={{ paddingRight: '2px' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                  <Column lg={16} md={8} sm={4}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '2px' }}>
                         {['TREND_BULL', 'TREND_BEAR', 'MEAN_REVERTING', 'VOLATILE_CHOP'].map(regime => (
                           <Tile key={regime}>
                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                               <h4 style={{fontWeight: 400}}>{regime.split('_').map(w => w.charAt(0) + w.slice(1).toLowerCase()).join(' ')}</h4>
+                               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                 {regime === 'TREND_BULL' && <ArrowUpRight size={24} style={{ color: '#24a148' }} />}
+                                 {regime === 'TREND_BEAR' && <ArrowDownRight size={24} style={{ color: '#da1e28' }} />}
+                                 {regime === 'MEAN_REVERTING' && <Activity size={24} style={{ color: '#4589ff' }} />}
+                                 {regime === 'VOLATILE_CHOP' && <Lightning size={24} style={{ color: '#f1c21b' }} />}
+                                 <h4 style={{fontWeight: 400, margin: 0}}>{regime.split('_').map(w => w.charAt(0) + w.slice(1).toLowerCase()).join(' ')}</h4>
+                               </div>
                                {trainProgress[regime] ? (
                                    <div style={{ width: '100px' }}>
                                       <ProgressBar label={trainProgress[regime].label} value={trainProgress[regime].value} />
@@ -563,24 +576,13 @@ function ModelsContent() {
                         ))}
                     </div>
                   </Column>
-                  <Column lg={11} md={5} sm={4}>
-                    <GlobalTable 
-                      headers={ongoingJobHeaders} 
-                      initialData={activeJobs.slice(0, 5)} 
-                      title="On Going Jobs" 
-                      description="Monitor active and recent model training tasks running on Redis."
-                      formatCell={formatJobCell}
-                      hidePagination={true}
-                    />
-                  </Column>
                 </Grid>
-                <Grid condensed style={{ marginTop: '2rem' }}>
+                <Grid condensed style={{ marginTop: '.2rem' }}>
                   <Column lg={16} md={8} sm={4}>
                     <GlobalTable 
                       headers={historyJobHeaders} 
                       initialData={historyJobs} 
                       title="History Model Jobs" 
-                      description="Immutable log of past training jobs stored in PostgreSQL."
                       formatCell={formatJobCell}
                     />
                   </Column>
@@ -588,7 +590,7 @@ function ModelsContent() {
               </TabPanel>
 
               {/* TAB 3: REGISTRY */}
-              <TabPanel style={{ paddingTop: '2rem' }}>
+              <TabPanel style={{ paddingTop: '1rem' }}>
                 <GlobalTable 
                   headers={modelHeaders} 
                   initialData={models} 
@@ -638,10 +640,13 @@ function ModelsContent() {
              <SelectItem value="XGBoost" text="XGBoost Ensemble" />
           </Select>
           <TextInput id="model-name-train" labelText="Custom Model Name (Optional)" placeholder="e.g. xgboost_bull_v2" value={trainForm.model_name} onChange={e => setTrainForm({...trainForm, model_name: e.target.value})} style={{ marginBottom: "1rem" }} />
-          <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
-              <TextInput id="start-date" type="date" labelText="Start Date" value={trainForm.start_date} onChange={e => setTrainForm({...trainForm, start_date: e.target.value})} />
-              <TextInput id="end-date" type="date" labelText="End Date" value={trainForm.end_date} onChange={e => setTrainForm({...trainForm, end_date: e.target.value})} />
-          </div>
+          <Toggle id="skip-ingestion-toggle" labelText="Skip Data Ingestion (Use Existing CSV)" toggled={trainForm.skip_ingestion} onToggle={val => setTrainForm({...trainForm, skip_ingestion: val})} style={{ marginBottom: "1rem" }} />
+          {!trainForm.skip_ingestion && (
+            <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+                <TextInput id="start-date" type="date" labelText="Start Date" value={trainForm.start_date} onChange={e => setTrainForm({...trainForm, start_date: e.target.value})} />
+                <TextInput id="end-date" type="date" labelText="End Date" value={trainForm.end_date} onChange={e => setTrainForm({...trainForm, end_date: e.target.value})} />
+            </div>
+          )}
           <NumberInput id="optuna-trials" label="Optuna Tuning Trials" value={trainForm.optuna_trials} onChange={(e, {value}) => setTrainForm({...trainForm, optuna_trials: Number(value)})} min={1} max={500} />
         </FormGroup>
       </Modal>
@@ -654,6 +659,76 @@ function ModelsContent() {
              onClose={() => setDetailModel(null)} 
           />
         )}
+
+      {/* FLOATING JOBS WIDGET */}
+      {(() => {
+         if (currentTab !== "train" && currentTab !== "registry") return null;
+         const widgetJobs = activeJobs.filter(job => job.status?.toLowerCase() !== 'done' && job.status?.toLowerCase() !== 'success');
+         
+         return (
+         <div style={{ position: 'fixed', bottom: '2rem', right: '2rem', width: '380px', backgroundColor: 'var(--cds-layer-01, #262626)', boxShadow: 'none', zIndex: 9999, border: '1px solid var(--cds-border-subtle, #393939)', display: 'flex', flexDirection: 'column' }}>
+            {/* Header */}
+            <div style={{ backgroundColor: 'var(--cds-layer-02, #393939)', color: 'var(--cds-text-primary, #f4f4f4)', padding: '0.75rem 1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }} onClick={() => setIsWidgetCollapsed(!isWidgetCollapsed)}>
+               <span style={{ fontSize: '0.875rem', fontWeight: 600 }}>Active Training</span>
+               <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  {isWidgetCollapsed ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+               </div>
+            </div>
+            
+            {/* Body */}
+            {!isWidgetCollapsed && (
+            <div style={{ padding: '0', maxHeight: '400px', overflowY: 'auto', overflowX: 'hidden' }}>
+               {widgetJobs.length > 0 ? widgetJobs.map(job => (
+                  <div key={job.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1rem', borderBottom: '1px solid var(--cds-border-subtle, #393939)' }}>
+                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, overflow: 'hidden' }}>
+                        <div style={{ color: 'var(--cds-icon-secondary, #c6c6c6)', display: 'flex', alignItems: 'center' }}>
+                           <Document size={24} />
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
+                           <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
+                              <span style={{ fontSize: '0.875rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--cds-text-primary, #f4f4f4)' }}>{job.model_name || job.regime}</span>
+                              <span style={{ fontSize: '0.65rem', color: 'var(--cds-text-secondary, #c6c6c6)', textTransform: 'uppercase' }}>{job.algorithm || "XGBoost"}</span>
+                           </div>
+                           {job.status === 'running' ? (
+                               <div style={{ marginTop: '0.5rem', width: '100%', minWidth: 0 }}>
+                                   <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '230px' }}>
+                                      <ProgressBar 
+                                          label={trainProgress[job.regime] ? trainProgress[job.regime].label : "Starting..."} 
+                                          value={trainProgress[job.regime] ? trainProgress[job.regime].value : undefined} 
+                                      />
+                                   </div>
+                               </div>
+                           ) : (
+                               <span style={{ fontSize: '0.75rem', color: job.status?.toLowerCase() === 'failed' || job.status?.toLowerCase() === 'error' ? '#da1e28' : '#24a148' }}>
+                                   {job.status}
+                               </span>
+                           )}
+                        </div>
+                     </div>
+                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', paddingLeft: '0.5rem' }}>
+                        {job.status === 'running' ? (
+                            <>
+                              <Button kind="ghost" size="sm" renderIcon={View} hasIconOnly iconDescription="Logs" onClick={() => openJobDetails(job.id)} />
+                              <Button kind="ghost" size="sm" renderIcon={Stop} hasIconOnly iconDescription="Cancel" onClick={() => handleCancelJob(job.id)} />
+                            </>
+                        ) : (
+                            <>
+                               <Button kind="ghost" size="sm" renderIcon={View} hasIconOnly iconDescription="Logs" onClick={() => openJobDetails(job.id)} />
+                               <Button kind="ghost" size="sm" renderIcon={TrashCan} hasIconOnly iconDescription="Dismiss" onClick={() => handleDeleteJob(job.id)} />
+                            </>
+                        )}
+                     </div>
+                  </div>
+               )) : (
+                  <div style={{ padding: '1rem', color: 'var(--cds-text-secondary, #c6c6c6)', fontSize: '0.875rem', textAlign: 'center' }}>
+                     No active training
+                  </div>
+               )}
+            </div>
+            )}
+         </div>
+         );
+      })()}
 
       {/* Logs Modal */}
       <Modal 
