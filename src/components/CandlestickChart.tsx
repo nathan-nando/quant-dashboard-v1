@@ -24,12 +24,17 @@ export default function CandlestickChart({ symbol = "XAUUSD", onHistoryUpdate, s
   const [isInitialized, setIsInitialized] = useState(false);
   const [timeframe, setTimeframe] = useState<string>("H1");
 
-  // Reset chart when timeframe changes
+  // Reset chart and markers when timeframe changes
   useEffect(() => {
       if (seriesRef.current && volumeSeriesRef.current) {
           seriesRef.current.setData([]);
           volumeSeriesRef.current.setData([]);
           lastCandleRef.current = null;
+          dataRef.current = [];
+          // Clear markers by setting empty array on existing instance
+          if (markersRef.current) {
+              try { markersRef.current.setMarkers([]); } catch (_) {}
+          }
           setIsInitialized(false);
       }
   }, [timeframe]);
@@ -162,26 +167,28 @@ export default function CandlestickChart({ symbol = "XAUUSD", onHistoryUpdate, s
   useEffect(() => {
     if (!seriesRef.current || !isInitialized) return;
 
-    // Remove previous markers instance
-    if (markersRef.current) {
-        try { markersRef.current.detachPrimitive(markersRef.current); } catch (_) {}
-        markersRef.current = null;
+    // Ensure we have a single persistent markers instance
+    if (!markersRef.current) {
+        markersRef.current = createSeriesMarkers(seriesRef.current, []);
     }
 
-    if (!signals || signals.length === 0) return;
-    if (dataRef.current.length === 0) return;
+    if (!signals || signals.length === 0 || dataRef.current.length === 0) {
+        markersRef.current.setMarkers([]);
+        return;
+    }
+
+    const tfSeconds = TIMEFRAMES[timeframe] || 3600;
+    const tzOffsetSeconds = new Date().getTimezoneOffset() * 60;
 
     const markerData = signals
         .map(s => {
             const timeRaw = new Date(s.timestamp).getTime() / 1000;
-            const tfSeconds = TIMEFRAMES[timeframe] || 3600;
             const currentCandleTimeRaw = Math.floor(timeRaw / tfSeconds) * tfSeconds;
-            const tzOffsetSeconds = new Date().getTimezoneOffset() * 60;
             let markerTime = Math.floor(currentCandleTimeRaw - tzOffsetSeconds);
             
-            // Snap to nearest existing candle time
+            // Snap to nearest existing candle time in chart data
             let closest = dataRef.current[0];
-            let minDiff = Math.abs(closest.time - markerTime);
+            let minDiff = Math.abs((closest.time as number) - markerTime);
             for (const c of dataRef.current) {
                 const diff = Math.abs((c.time as number) - markerTime);
                 if (diff < minDiff) { minDiff = diff; closest = c; }
@@ -189,47 +196,33 @@ export default function CandlestickChart({ symbol = "XAUUSD", onHistoryUpdate, s
             markerTime = closest.time as number;
             
             let color = '#e8e8e8';
-            let shape = 'circle';
-            let position = 'aboveBar';
+            let shape: any = 'circle';
+            let position: any = 'aboveBar';
             let text = 'N';
             
-            if (s.direction === "BUY") {
-                color = '#24a148';
-                shape = 'arrowUp';
-                position = 'belowBar';
-                text = 'BUY';
-            } else if (s.direction === "SELL") {
-                color = '#fa4d56';
-                shape = 'arrowDown';
-                position = 'aboveBar';
-                text = 'SELL';
+            if (s.direction === 'BUY') {
+                color = '#24a148'; shape = 'arrowUp'; position = 'belowBar'; text = 'BUY';
+            } else if (s.direction === 'SELL') {
+                color = '#fa4d56'; shape = 'arrowDown'; position = 'aboveBar'; text = 'SELL';
             }
 
-            return {
-                time: markerTime as Time,
-                position: position as any,
-                color: color,
-                shape: shape as any,
-                text: text,
-                size: 2,
-            };
+            return { time: markerTime as Time, position, color, shape, text, size: 1 };
         })
         .sort((a, b) => (a.time as number) - (b.time as number));
 
-    // Deduplicate — keep latest signal per candle time
+    // Deduplicate — one marker per candle (keep first signal of that candle)
     const seen = new Map<number, any>();
     for (const m of markerData) {
-        seen.set(m.time as number, m);
+        if (!seen.has(m.time as number)) seen.set(m.time as number, m);
     }
     const uniqueMarkers = Array.from(seen.values()).sort((a, b) => (a.time as number) - (b.time as number));
 
     try {
-        // v5 API: createSeriesMarkers returns a primitive that holds the markers
-        markersRef.current = createSeriesMarkers(seriesRef.current, uniqueMarkers as any);
+        markersRef.current.setMarkers(uniqueMarkers);
     } catch (e) {
-        console.error("Failed to set markers on CandlestickChart", e);
+        console.error('Failed to set markers:', e);
     }
-  }, [signals, isInitialized]);
+  }, [signals, isInitialized, timeframe]);
 
   // Real-time updates via SSE (Server-Sent Events)
   useEffect(() => {

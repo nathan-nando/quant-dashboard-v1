@@ -131,7 +131,7 @@ export default function SignalsPage() {
             flex: '0 0 50%',
             background: '#262626',
             border: '1px solid #393939',
-            borderRadius: '4px',
+            borderRadius: 0,
             position: 'relative',
             overflow: 'hidden',
           }}>
@@ -157,7 +157,7 @@ export default function SignalsPage() {
           </div>
 
           {/* Table */}
-          <div style={{ flex: '1 1 0', overflow: 'auto', background: '#262626', border: '1px solid #393939', borderRadius: '4px' }}>
+          <div style={{ flex: '1 1 0', overflow: 'auto', background: '#262626', border: '1px solid #393939', borderRadius: 0 }}>
             <GlobalTable 
               title="Signal History"
               headers={headers}

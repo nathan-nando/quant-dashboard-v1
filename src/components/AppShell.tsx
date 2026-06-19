@@ -15,6 +15,8 @@ import {
 } from '@carbon/react';
 import { Settings, Notification, Dashboard, SettingsAdjust, Activity, CurrencyDollar, ChartBar, MachineLearningModel, Analytics } from '@carbon/icons-react';
 
+const HeaderAny = Header as any;
+
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -36,7 +38,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <Theme theme="g100">
         <HeaderContainer
           render={() => (
-            <Header aria-label="QuantV1" style={{ display: 'flex', alignItems: 'stretch' }}>
+            <HeaderAny aria-label="QuantV1" style={{ display: 'flex', alignItems: 'stretch' }}>
               <SkipToContent />
 
               {/* Brand — in normal flow */}
@@ -76,7 +78,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   <Settings size={20} />
                 </HeaderGlobalAction>
               </HeaderGlobalBar>
-            </Header>
+            </HeaderAny>
           )}
         />
       </Theme>
