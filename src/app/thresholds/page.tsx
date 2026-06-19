@@ -8,7 +8,11 @@ export default function ThresholdsPage() {
   const [config, setConfig] = useState<any>({
     engine_active: false,
     auto_execution_enabled: false,
-    max_drawdown_pct: 5.0,
+    use_equity_kill_switch: true,
+    max_drawdown_equity_pct: 10.0,
+    use_daily_kill_switch: true,
+    max_daily_drawdown_pct: 5.0,
+    use_ai_sl_tp: true,
     risk_per_trade_pct: 1.0,
     max_open_positions: 1,
     rsi_buy_threshold: 30,
@@ -79,10 +83,10 @@ export default function ThresholdsPage() {
     return keys.some(key => config[key] !== originalConfig[key]);
   };
 
-  const riskKeys = ["auto_execution_enabled", "max_drawdown_pct", "risk_per_trade_pct", "max_open_positions"];
+  const riskKeys = ["auto_execution_enabled", "use_equity_kill_switch", "max_drawdown_equity_pct", "use_daily_kill_switch", "max_daily_drawdown_pct", "risk_per_trade_pct", "max_open_positions"];
   const alphaKeys = ["rsi_buy_threshold", "rsi_sell_threshold", "ml_confidence_threshold"];
   const regimeKeys = ["adx_trend_threshold", "bb_width_volatility_threshold"];
-  const sltpKeys = ["sl_mult_trend", "tp_mult_trend", "sl_mult_mean_reverting", "tp_mult_mean_reverting", "sl_mult_volatile", "tp_mult_volatile"];
+  const sltpKeys = ["use_ai_sl_tp", "sl_mult_trend", "tp_mult_trend", "sl_mult_mean_reverting", "tp_mult_mean_reverting", "sl_mult_volatile", "tp_mult_volatile"];
   const systemKeys = ["engine_active", "cron_interval_minutes"];
 
   if (loading) return <div>Loading configuration...</div>;
@@ -110,7 +114,7 @@ export default function ThresholdsPage() {
       
       <Column lg={12} md={6} sm={4}>
         {visibleCategories["risk-execution"] && (
-          <Tile id="risk-execution" style={{ marginBottom: "2rem" }}>
+          <Tile id="risk-execution" style={{ marginBottom: ".5rem" }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h4 style={{ margin: 0 }}>Risk & Execution Parameters</h4>
               <Button size="sm" renderIcon={Save} onClick={handleSave} disabled={saving || !hasChanges(riskKeys)} style={{ border: 'none' }}>
@@ -126,11 +130,43 @@ export default function ThresholdsPage() {
                 toggled={config.auto_execution_enabled}
                 onToggle={(val) => updateConfig("auto_execution_enabled", val)}
               />
-              <div style={{marginTop: "2rem"}}>
-                <NumberInput 
-                  id="max_drawdown" label="Max Daily Drawdown (%)" value={config.max_drawdown_pct} 
-                  min={1} max={100} onChange={(e: any, { value }: any) => updateConfig("max_drawdown_pct", Number(value))}
-                />
+              <div style={{marginTop: "1.5rem", display: "flex", gap: "2rem"}}>
+                <div style={{ flex: 1 }}>
+                  <Toggle 
+                    id="use_equity_kill_switch" 
+                    labelText="Halt on Max Drawdown Equity" 
+                    labelA="Off" 
+                    labelB="On" 
+                    toggled={config.use_equity_kill_switch}
+                    onToggle={(val) => updateConfig("use_equity_kill_switch", val)}
+                  />
+                  {config.use_equity_kill_switch && (
+                    <div style={{marginTop: "1.5rem"}}>
+                      <NumberInput 
+                        id="max_drawdown_equity" label="Max Drawdown Equity (%)" value={config.max_drawdown_equity_pct} 
+                        min={1} max={100} onChange={(e: any, { value }: any) => updateConfig("max_drawdown_equity_pct", Number(value))}
+                      />
+                    </div>
+                  )}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <Toggle 
+                    id="use_daily_kill_switch" 
+                    labelText="Halt on Daily Drawdown" 
+                    labelA="Off" 
+                    labelB="On" 
+                    toggled={config.use_daily_kill_switch}
+                    onToggle={(val) => updateConfig("use_daily_kill_switch", val)}
+                  />
+                  {config.use_daily_kill_switch && (
+                    <div style={{marginTop: "1.5rem"}}>
+                      <NumberInput 
+                        id="max_daily_drawdown" label="Max Daily Drawdown (%)" value={config.max_daily_drawdown_pct} 
+                        min={1} max={100} onChange={(e: any, { value }: any) => updateConfig("max_daily_drawdown_pct", Number(value))}
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
               <div style={{marginTop: "1rem"}}>
                 <NumberInput 
@@ -149,7 +185,7 @@ export default function ThresholdsPage() {
         )}
 
         {visibleCategories["alpha-model"] && (
-          <Tile id="alpha-model" style={{ marginBottom: "2rem" }}>
+          <Tile id="alpha-model" style={{ marginBottom: ".5rem" }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h4 style={{ margin: 0 }}>Alpha / Signal Model Thresholds</h4>
               <Button size="sm" renderIcon={Save} onClick={handleSave} disabled={saving || !hasChanges(alphaKeys)} style={{ border: 'none' }}>
@@ -180,7 +216,7 @@ export default function ThresholdsPage() {
         )}
 
         {visibleCategories["regime-detection"] && (
-          <Tile id="regime-detection" style={{ marginBottom: "2rem" }}>
+          <Tile id="regime-detection" style={{ marginBottom: ".5rem" }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h4 style={{ margin: 0 }}>Regime Detection Thresholds</h4>
               <Button size="sm" renderIcon={Save} onClick={handleSave} disabled={saving || !hasChanges(regimeKeys)} style={{ border: 'none' }}>
@@ -214,55 +250,70 @@ export default function ThresholdsPage() {
         )}
 
         {visibleCategories["sltp-multipliers"] && (
-          <Tile id="sltp-multipliers" style={{ marginBottom: "2rem" }}>
+          <Tile id="sltp-multipliers" style={{ marginBottom: ".5rem" }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h4 style={{ margin: 0 }}>SL/TP Multipliers</h4>
               <Button size="sm" renderIcon={Save} onClick={handleSave} disabled={saving || !hasChanges(sltpKeys)} style={{ border: 'none' }}>
                 {saving ? "Saving..." : "Save"}
               </Button>
             </div>
-            <p style={{marginBottom: "1rem", marginTop: "0.5rem", fontSize: "12px", color: "#525252"}}>Multipliers based on Average True Range (ATR)</p>
-            <FormGroup legendText="Trend Regime" style={{ marginTop: "1rem" }}>
-              <div style={{ display: 'flex', gap: '1rem' }}>
-                <NumberInput 
-                  id="sl_trend" label="SL Multiplier" value={config.sl_mult_trend} 
-                  min={0.1} max={10.0} step={0.1} onChange={(e: any, { value }: any) => updateConfig("sl_mult_trend", Number(value))}
-                />
-                <NumberInput 
-                  id="tp_trend" label="TP Multiplier" value={config.tp_mult_trend} 
-                  min={0.1} max={10.0} step={0.1} onChange={(e: any, { value }: any) => updateConfig("tp_mult_trend", Number(value))}
-                />
-              </div>
-            </FormGroup>
-            <FormGroup legendText="Mean Reverting Regime" style={{ marginTop: "1rem" }}>
-              <div style={{ display: 'flex', gap: '1rem' }}>
-                <NumberInput 
-                  id="sl_mr" label="SL Multiplier" value={config.sl_mult_mean_reverting} 
-                  min={0.1} max={10.0} step={0.1} onChange={(e: any, { value }: any) => updateConfig("sl_mult_mean_reverting", Number(value))}
-                />
-                <NumberInput 
-                  id="tp_mr" label="TP Multiplier" value={config.tp_mult_mean_reverting} 
-                  min={0.1} max={10.0} step={0.1} onChange={(e: any, { value }: any) => updateConfig("tp_mult_mean_reverting", Number(value))}
-                />
-              </div>
-            </FormGroup>
-            <FormGroup legendText="Volatile Chop Regime" style={{ marginTop: "1rem" }}>
-              <div style={{ display: 'flex', gap: '1rem' }}>
-                <NumberInput 
-                  id="sl_vol" label="SL Multiplier" value={config.sl_mult_volatile} 
-                  min={0.1} max={10.0} step={0.1} onChange={(e: any, { value }: any) => updateConfig("sl_mult_volatile", Number(value))}
-                />
-                <NumberInput 
-                  id="tp_vol" label="TP Multiplier" value={config.tp_mult_volatile} 
-                  min={0.1} max={10.0} step={0.1} onChange={(e: any, { value }: any) => updateConfig("tp_mult_volatile", Number(value))}
-                />
-              </div>
-            </FormGroup>
+            <p style={{marginBottom: "1.5rem", marginTop: "0.5rem", fontSize: "12px", color: "#525252"}}>Multipliers based on Average True Range (ATR)</p>
+            <div style={{marginBottom: "1.5rem"}}>
+              <Toggle 
+                id="use_ai_sl_tp" 
+                labelText="SL/TP Control Mode" 
+                labelA="Manual Fallback" 
+                labelB="Fully AI Driven" 
+                toggled={config.use_ai_sl_tp}
+                onToggle={(val) => updateConfig("use_ai_sl_tp", val)}
+              />
+            </div>
+            
+            {!config.use_ai_sl_tp && (
+              <>
+                <FormGroup legendText="Trend Regime" style={{ marginTop: "1rem" }}>
+                  <div style={{ display: 'flex', gap: '1rem' }}>
+                    <NumberInput 
+                      id="sl_trend" label="SL Multiplier" value={config.sl_mult_trend} 
+                      min={0.1} max={10.0} step={0.1} onChange={(e: any, { value }: any) => updateConfig("sl_mult_trend", Number(value))}
+                    />
+                    <NumberInput 
+                      id="tp_trend" label="TP Multiplier" value={config.tp_mult_trend} 
+                      min={0.1} max={10.0} step={0.1} onChange={(e: any, { value }: any) => updateConfig("tp_mult_trend", Number(value))}
+                    />
+                  </div>
+                </FormGroup>
+                <FormGroup legendText="Mean Reverting Regime" style={{ marginTop: "1rem" }}>
+                  <div style={{ display: 'flex', gap: '1rem' }}>
+                    <NumberInput 
+                      id="sl_mr" label="SL Multiplier" value={config.sl_mult_mean_reverting} 
+                      min={0.1} max={10.0} step={0.1} onChange={(e: any, { value }: any) => updateConfig("sl_mult_mean_reverting", Number(value))}
+                    />
+                    <NumberInput 
+                      id="tp_mr" label="TP Multiplier" value={config.tp_mult_mean_reverting} 
+                      min={0.1} max={10.0} step={0.1} onChange={(e: any, { value }: any) => updateConfig("tp_mult_mean_reverting", Number(value))}
+                    />
+                  </div>
+                </FormGroup>
+                <FormGroup legendText="Volatile Chop Regime" style={{ marginTop: "1rem" }}>
+                  <div style={{ display: 'flex', gap: '1rem' }}>
+                    <NumberInput 
+                      id="sl_vol" label="SL Multiplier" value={config.sl_mult_volatile} 
+                      min={0.1} max={10.0} step={0.1} onChange={(e: any, { value }: any) => updateConfig("sl_mult_volatile", Number(value))}
+                    />
+                    <NumberInput 
+                      id="tp_vol" label="TP Multiplier" value={config.tp_mult_volatile} 
+                      min={0.1} max={10.0} step={0.1} onChange={(e: any, { value }: any) => updateConfig("tp_mult_volatile", Number(value))}
+                    />
+                  </div>
+                </FormGroup>
+              </>
+            )}
           </Tile>
         )}
 
         {visibleCategories["system-config"] && (
-          <Tile id="system-config" style={{ marginBottom: "2rem" }}>
+          <Tile id="system-config" style={{ marginBottom: ".5rem" }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h4 style={{ margin: 0 }}>System Engine Config</h4>
               <Button size="sm" renderIcon={Save} onClick={handleSave} disabled={saving || !hasChanges(systemKeys)} style={{ border: 'none' }}>
