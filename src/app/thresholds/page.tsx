@@ -114,7 +114,7 @@ export default function ThresholdsPage() {
       
       <Column lg={12} md={6} sm={4}>
         {visibleCategories["risk-execution"] && (
-          <Tile id="risk-execution" style={{ marginBottom: ".5rem" }}>
+          <Tile id="risk-execution" style={{ marginBottom: ".2rem" }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h4 style={{ margin: 0 }}>Risk & Execution Parameters</h4>
               <Button size="sm" renderIcon={Save} onClick={handleSave} disabled={saving || !hasChanges(riskKeys)} style={{ border: 'none' }}>
@@ -185,7 +185,7 @@ export default function ThresholdsPage() {
         )}
 
         {visibleCategories["alpha-model"] && (
-          <Tile id="alpha-model" style={{ marginBottom: ".5rem" }}>
+          <Tile id="alpha-model" style={{ marginBottom: ".2rem" }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h4 style={{ margin: 0 }}>Alpha / Signal Model Thresholds</h4>
               <Button size="sm" renderIcon={Save} onClick={handleSave} disabled={saving || !hasChanges(alphaKeys)} style={{ border: 'none' }}>
@@ -216,20 +216,20 @@ export default function ThresholdsPage() {
         )}
 
         {visibleCategories["regime-detection"] && (
-          <Tile id="regime-detection" style={{ marginBottom: ".5rem" }}>
+          <Tile id="regime-detection" style={{ marginBottom: ".2rem" }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h4 style={{ margin: 0 }}>Regime Detection Thresholds</h4>
               <Button size="sm" renderIcon={Save} onClick={handleSave} disabled={saving || !hasChanges(regimeKeys)} style={{ border: 'none' }}>
                 {saving ? "Saving..." : "Save"}
               </Button>
             </div>
-            <div style={{ marginTop: "1rem", marginBottom: "1.5rem", fontSize: "13px", color: "#e0e0e0", backgroundColor: "#393939", padding: "1rem", borderRadius: "4px", lineHeight: "1.5" }}>
-              <strong style={{ color: "#ffffff", fontSize: "14px" }}>Cara Kerja (Matriks Rezim 2x2):</strong><br/>
-              <span style={{ color: "#c6c6c6" }}>Kedua parameter ini bertindak sebagai garis pembatas untuk mendefinisikan 4 rezim pasar secara matematis:</span>
-              <div style={{ margin: "0.75rem 0 0 0.5rem", display: "grid", gridTemplateColumns: "180px 10px auto", rowGap: "6px", color: "#c6c6c6" }}>
-                <strong style={{ color: "#ffffff" }}>TREND_BULL / BEAR</strong> <span>:</span> <span>Jika ADX &gt; Trend Threshold (Arah ditentukan oleh EMA 50)</span>
-                <strong style={{ color: "#ffffff" }}>VOLATILE_CHOP</strong> <span>:</span> <span>Jika ADX &le; Trend Threshold DAN BB Width &gt; Volatility Threshold</span>
-                <strong style={{ color: "#ffffff" }}>MEAN_REVERTING</strong> <span>:</span> <span>Jika ADX &le; Trend Threshold DAN BB Width &le; Volatility Threshold</span>
+            <div style={{ marginTop: "0rem", fontSize: "11px", color: "#e0e0e0", backgroundColor: "#393939", padding: ".5rem", borderRadius: "4px", lineHeight: "1.5" }}>
+              <strong style={{ color: "#ffffff", fontSize: "11px" }}>Cara Kerja </strong><br/>
+              <span style={{ color: "#c6c6c6", fontSize: "10px" }}>Kedua parameter ini bertindak sebagai garis pembatas untuk mendefinisikan 4 rezim pasar secara matematis:</span>
+              <div style={{ margin: "0.75rem 0 0 0.5rem", display: "grid", gridTemplateColumns: "10rem 10px auto", rowGap: "3px", color: "#c6c6c6" }}>
+                <strong style={{ color: "#ffffff", fontSize: "10px" }}>TREND_BULL / BEAR</strong> <span>:</span> <span>Jika ADX &gt; Trend Threshold (Arah ditentukan oleh EMA 50)</span>
+                <strong style={{ color: "#ffffff", fontSize: "10px" }}>VOLATILE_CHOP</strong> <span>:</span> <span>Jika ADX &le; Trend Threshold DAN BB Width &gt; Volatility Threshold</span>
+                <strong style={{ color: "#ffffff", fontSize: "10px" }}>MEAN_REVERTING</strong> <span>:</span> <span>Jika ADX &le; Trend Threshold DAN BB Width &le; Volatility Threshold</span>
               </div>
             </div>
             <FormGroup legendText="" style={{ marginTop: "1rem" }}>
@@ -250,7 +250,7 @@ export default function ThresholdsPage() {
         )}
 
         {visibleCategories["sltp-multipliers"] && (
-          <Tile id="sltp-multipliers" style={{ marginBottom: ".5rem" }}>
+          <Tile id="sltp-multipliers" style={{ marginBottom: ".2rem" }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h4 style={{ margin: 0 }}>SL/TP Multipliers</h4>
               <Button size="sm" renderIcon={Save} onClick={handleSave} disabled={saving || !hasChanges(sltpKeys)} style={{ border: 'none' }}>
@@ -313,7 +313,7 @@ export default function ThresholdsPage() {
         )}
 
         {visibleCategories["system-config"] && (
-          <Tile id="system-config" style={{ marginBottom: ".5rem" }}>
+          <Tile id="system-config" style={{ marginBottom: ".2rem" }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h4 style={{ margin: 0 }}>System Engine Config</h4>
               <Button size="sm" renderIcon={Save} onClick={handleSave} disabled={saving || !hasChanges(systemKeys)} style={{ border: 'none' }}>

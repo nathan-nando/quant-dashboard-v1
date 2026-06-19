@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   Header,
@@ -12,8 +12,6 @@ import {
   HeaderGlobalAction,
   SkipToContent,
   Theme,
-  Grid,
-  Column
 } from '@carbon/react';
 import { Settings, Notification, Dashboard, SettingsAdjust, Activity, CurrencyDollar, ChartBar, MachineLearningModel, Analytics } from '@carbon/icons-react';
 
@@ -21,85 +19,56 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
 
+  const navItem = (href: string, label: string, Icon: any) => (
+    <HeaderMenuItem
+      href={href}
+      onClick={(e: React.MouseEvent) => { e.preventDefault(); router.push(href); }}
+      aria-current={pathname === href ? 'page' : undefined}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <Icon size={16} /> {label}
+      </div>
+    </HeaderMenuItem>
+  );
+
   return (
     <>
       <Theme theme="g100">
         <HeaderContainer
           render={() => (
-            <Header aria-label="QuantV1">
+            <Header aria-label="QuantV1" style={{ display: 'flex', alignItems: 'stretch' }}>
               <SkipToContent />
-              
-              {/* Brand positioned absolutely to the left */}
-              <HeaderName 
-                href="/" 
+
+              {/* Brand — in normal flow */}
+              <HeaderName
+                href="/"
                 onClick={(e: React.MouseEvent) => { e.preventDefault(); router.push('/'); }}
-                prefix="" 
-                style={{ position: 'absolute', left: '1rem', zIndex: 10, height: '100%', fontSize: '1.25rem', fontWeight: 600, letterSpacing: '0.5px' }}
+                prefix=""
+                style={{ fontSize: '1.25rem', fontWeight: 600, letterSpacing: '0.5px', flexShrink: 0 }}
               >
                 QuantV1
               </HeaderName>
-              
-              {/* Navigation wrapped in the exact same Grid layout as the main content for perfect alignment */}
-              <div style={{ width: '100vw', height: '100%', display: 'flex' }}>
-                <Grid style={{ width: '100%', height: '100%', margin: '0 auto' }}>
-                  <Column lg={16} md={8} sm={4} style={{ display: 'flex', height: '100%' }}>
-                    <HeaderNavigation aria-label="QuantV1 Navigation" style={{ border: 'none' }}>
-                      <HeaderMenuItem 
-                        href="/" 
-                        onClick={(e: React.MouseEvent) => { e.preventDefault(); router.push('/'); }}
-                        aria-current={pathname === '/' ? 'page' : undefined}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Dashboard size={16} /> Dashboard</div>
-                      </HeaderMenuItem>
-                      <HeaderMenuItem 
-                        href="/thresholds" 
-                        onClick={(e: React.MouseEvent) => { e.preventDefault(); router.push('/thresholds'); }}
-                        aria-current={pathname === '/thresholds' ? 'page' : undefined}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><SettingsAdjust size={16} /> Thresholds</div>
-                      </HeaderMenuItem>
-                      <HeaderMenuItem 
-                        href="/models" 
-                        onClick={(e: React.MouseEvent) => { e.preventDefault(); router.push('/models'); }}
-                        aria-current={pathname === '/models' ? 'page' : undefined}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><MachineLearningModel size={16} /> Models</div>
-                      </HeaderMenuItem>
-                      <HeaderMenuItem 
-                        href="/simulation" 
-                        onClick={(e: React.MouseEvent) => { e.preventDefault(); router.push('/simulation'); }}
-                        aria-current={pathname === '/simulation' ? 'page' : undefined}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Analytics size={16} /> Simulation</div>
-                      </HeaderMenuItem>
-                      <HeaderMenuItem 
-                        href="/signals" 
-                        onClick={(e: React.MouseEvent) => { e.preventDefault(); router.push('/signals'); }}
-                        aria-current={pathname === '/signals' ? 'page' : undefined}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Activity size={16} /> Signals</div>
-                      </HeaderMenuItem>
-                      <HeaderMenuItem 
-                        href="/transactions" 
-                        onClick={(e: React.MouseEvent) => { e.preventDefault(); router.push('/transactions'); }}
-                        aria-current={pathname === '/transactions' ? 'page' : undefined}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><CurrencyDollar size={16} /> Transactions</div>
-                      </HeaderMenuItem>
-                      <HeaderMenuItem 
-                        href="/analytics" 
-                        onClick={(e: React.MouseEvent) => { e.preventDefault(); router.push('/analytics'); }}
-                        aria-current={pathname === '/analytics' ? 'page' : undefined}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><ChartBar size={16} /> Analytics</div>
-                      </HeaderMenuItem>
-                    </HeaderNavigation>
-                  </Column>
-                </Grid>
-              </div>
-              
-              {/* Actions positioned absolutely to the right */}
-              <HeaderGlobalBar style={{ position: 'absolute', right: 0, zIndex: 10, height: '100%' }}>
+
+              {/* Group 1 — starts flush after brand, aligns with page content */}
+              <HeaderNavigation aria-label="Main" style={{ border: 'none' }}>
+                {navItem('/', 'Dashboard', Dashboard)}
+                {navItem('/signals', 'Signals', Activity)}
+                {navItem('/transactions', 'Transactions', CurrencyDollar)}
+                {navItem('/thresholds', 'Thresholds', SettingsAdjust)}
+              </HeaderNavigation>
+
+              {/* Spacer — pushes Group 2 toward the right */}
+              <div style={{ flex: 1 }} />
+
+              {/* Group 2 — sits just before the global action icons */}
+              <HeaderNavigation aria-label="Tools" style={{ border: 'none' }}>
+                {navItem('/models', 'Models', MachineLearningModel)}
+                {navItem('/simulation', 'Simulation', Analytics)}
+                {navItem('/analytics', 'Analytics', ChartBar)}
+              </HeaderNavigation>
+
+              {/* Global actions */}
+              <HeaderGlobalBar>
                 <HeaderGlobalAction aria-label="Notifications" tooltipAlignment="end">
                   <Notification size={20} />
                 </HeaderGlobalAction>

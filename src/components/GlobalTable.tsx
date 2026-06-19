@@ -16,7 +16,7 @@ import {
   Pagination,
   Button
 } from '@carbon/react';
-import { View } from '@carbon/icons-react';
+import { View, ChevronUp, ChevronDown } from '@carbon/icons-react';
 
 interface GlobalTableProps {
   title: React.ReactNode;
@@ -29,6 +29,8 @@ interface GlobalTableProps {
   onViewDetails?: (rowId: any) => void;
   hideSearch?: boolean;
   hidePagination?: boolean;
+  collapsible?: boolean;
+  defaultCollapsed?: boolean;
 }
 
 export default function GlobalTable({
@@ -41,12 +43,15 @@ export default function GlobalTable({
   toolbarActions,
   onViewDetails,
   hideSearch = false,
-  hidePagination = false
+  hidePagination = false,
+  collapsible = false,
+  defaultCollapsed = false
 }: GlobalTableProps) {
   // State
   const [data, setData] = useState<any[]>([]);
   const [totalItems, setTotalItems] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(defaultCollapsed);
   
   // Pagination & Filter & Sort state
   const [page, setPage] = useState(1);
@@ -161,7 +166,19 @@ export default function GlobalTable({
     <div style={{ position: 'relative' }}>
       <DataTable rows={processedData} headers={headers}>
         {({ rows, headers: tableHeaders, getHeaderProps, getTableProps }: any) => (
-          <TableContainer title={title} description={description}>
+          <TableContainer 
+            title={
+              collapsible ? (
+                <div style={{ display: 'flex', justifyContent: 'space-between', cursor: 'pointer', alignItems: 'center', width: '100%' }} onClick={() => setIsCollapsed(!isCollapsed)}>
+                  <span>{title}</span>
+                  {isCollapsed ? <ChevronDown size={20} /> : <ChevronUp size={20} />}
+                </div>
+              ) : title
+            } 
+            description={description}
+          >
+            {!isCollapsed && (
+              <>
             {(!hideSearch || toolbarActions) && (
               <TableToolbar>
                 <TableToolbarContent>
@@ -244,11 +261,13 @@ export default function GlobalTable({
                 )}
               </TableBody>
             </Table>
+              </>
+            )}
           </TableContainer>
         )}
       </DataTable>
 
-      {!hidePagination && (
+      {!isCollapsed && !hidePagination && (
         <Pagination
           totalItems={totalItems}
           page={page}

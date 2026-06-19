@@ -134,6 +134,8 @@ export default function GlobalJobsTable({ target, refreshTrigger, openJobDetails
         initialData={formattedData} 
         title={`History ${target.charAt(0).toUpperCase() + target.slice(1)} Jobs`} 
         formatCell={(cellId, value) => formatCell(cellId, value, formattedData)}
+        collapsible
+        defaultCollapsed
       />
     </>
   );

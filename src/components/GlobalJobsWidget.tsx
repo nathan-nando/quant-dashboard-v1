@@ -14,7 +14,7 @@ interface GlobalJobsWidgetProps {
 
 export default function GlobalJobsWidget({ target, refreshTrigger, onJobComplete, openJobDetails, onLogLine }: GlobalJobsWidgetProps) {
   const [activeJobs, setActiveJobs] = useState<any[]>([]);
-  const [isWidgetCollapsed, setIsWidgetCollapsed] = useState(false);
+  const [isWidgetCollapsed, setIsWidgetCollapsed] = useState(true);
   const [progressData, setProgressData] = useState<Record<string, { label: string, value: number }>>({});
   const activeSSERef = useRef<Record<string, EventSource>>({});
   const [notification, setNotification] = useState<{kind: "success" | "error" | "info", title: string, subtitle: string} | null>(null);

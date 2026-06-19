@@ -61,6 +61,7 @@ function ModelsContent() {
 
   // Detail Modal
   const [detailModel, setDetailModel] = useState<any>(null);
+  const [detailDataset, setDetailDataset] = useState<any>(null);
 
   // Detail Logs Modal for jobs
   const [detailJobId, setDetailJobId] = useState<string | null>(null);
@@ -318,6 +319,7 @@ function ModelsContent() {
       const dataset = datasets.find(d => d.id === rowId);
       return (
         <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <Button size="sm" kind="ghost" renderIcon={View} iconDescription="Details" hasIconOnly onClick={() => setDetailDataset(dataset)} />
           <Button size="sm" kind="ghost" renderIcon={Edit} iconDescription="Edit" hasIconOnly onClick={() => openEditDatasetModal(dataset)} />
           <Button size="sm" kind="danger--ghost" renderIcon={TrashCan} iconDescription="Delete" hasIconOnly onClick={() => deleteDataset(rowId)} />
         </div>
@@ -563,6 +565,14 @@ function ModelsContent() {
              type="model"
              dataObj={detailModel} 
              onClose={() => setDetailModel(null)} 
+          />
+      )}
+
+      {detailDataset && (
+          <GlobalDetailTable 
+             type="dataset"
+             dataObj={detailDataset} 
+             onClose={() => setDetailDataset(null)} 
           />
       )}
 

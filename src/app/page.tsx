@@ -139,8 +139,8 @@ export default function Home() {
       </Column>
 
       {/* --- ROW 1: STATIC LIVE STATE METRICS --- */}
-      <div style={{ marginBottom: "1rem", width: '100%' }}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "0.25rem" }}>
+      <div style={{ marginBottom: "0.2rem", width: '100%' }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "0.2rem" }}>
           <Tile style={{ padding: "1rem", height: "100%" }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: "0.25rem" }}>
               <CurrencyDollar size={16} color="#a8a8a8" />
@@ -201,7 +201,8 @@ export default function Home() {
         cols={{ lg: 16, md: 8, sm: 4, xs: 2 }}
         rowHeight={90}
         draggableHandle=".panel-drag-handle"
-        margin={[4, 4]} // 0.25rem gap equivalent, matching metrics
+        margin={[3, 3]} // 0.2rem gap
+        containerPadding={[0, 0]}
         onLayoutChange={handleLayoutChange}
       >
         <div key="chart">
@@ -230,7 +231,7 @@ export default function Home() {
             }}
           >
              <div style={{ height: "100%", overflow: "hidden", position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}>
-               <CandlestickChart symbol="XAUUSD" onHistoryUpdate={(data) => chartHistoryRef.current = data} />
+               <CandlestickChart symbol="XAUUSD" onHistoryUpdate={(data) => chartHistoryRef.current = data} signals={signals} />
              </div>
           </DashboardPanel>
         </div>

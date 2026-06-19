@@ -56,7 +56,7 @@ const CollapsibleJSON = ({ displayValue }: { displayValue: string }) => {
 
 interface GlobalDetailTableProps {
   id?: number | string | null;
-  type?: 'signal' | 'model';
+  type?: 'signal' | 'model' | 'dataset';
   dataObj?: any;
   onClose: () => void;
 }
@@ -67,7 +67,7 @@ export default function GlobalDetailTable({ id, type = 'signal', dataObj, onClos
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (type === 'model') {
+    if (type === 'model' || type === 'dataset') {
       if (dataObj) setData(dataObj);
       else setData(null);
       return;
@@ -106,7 +106,7 @@ export default function GlobalDetailTable({ id, type = 'signal', dataObj, onClos
     <Modal
       open={(id !== null && id !== undefined) || !!dataObj}
       onRequestClose={onClose}
-      modalHeading={type === 'signal' ? `Signal Details #${id}` : `Model Details`}
+      modalHeading={type === 'signal' ? `Signal Details #${id}` : type === 'dataset' ? `Dataset Details` : `Model Details`}
       primaryButtonText="Close"
       onRequestSubmit={onClose}
       size="lg"
@@ -155,7 +155,7 @@ export default function GlobalDetailTable({ id, type = 'signal', dataObj, onClos
         </div>
       )}
 
-      {data && type === 'model' && (
+      {data && (type === 'model' || type === 'dataset') && (
         <div style={{ maxHeight: "60vh", overflowY: "auto" }}>
           <StructuredListWrapper isCondensed style={{ marginBottom: "2rem" }}>
             <StructuredListHead>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { createChart, ColorType, IChartApi, ISeriesApi, Time, CandlestickSeries, HistogramSeries } from "lightweight-charts";
+import { createChart, ColorType, IChartApi, ISeriesApi, Time, CandlestickSeries, HistogramSeries, createSeriesMarkers } from "lightweight-charts";
 
 const TIMEFRAMES: Record<string, number> = {
   "M1": 60,
@@ -13,12 +13,14 @@ const TIMEFRAMES: Record<string, number> = {
   "D1": 86400
 };
 
-export default function CandlestickChart({ symbol = "XAUUSD", onHistoryUpdate }: { symbol?: string, onHistoryUpdate?: (data: any[]) => void }) {
+export default function CandlestickChart({ symbol = "XAUUSD", onHistoryUpdate, signals = [] }: { symbol?: string, onHistoryUpdate?: (data: any[]) => void, signals?: any[] }) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
   const volumeSeriesRef = useRef<ISeriesApi<"Histogram"> | null>(null);
   const lastCandleRef = useRef<any>(null);
+  const dataRef = useRef<any[]>([]);
+  const markersRef = useRef<any>(null);
   const [isInitialized, setIsInitialized] = useState(false);
   const [timeframe, setTimeframe] = useState<string>("H1");
 
@@ -135,6 +137,7 @@ export default function CandlestickChart({ symbol = "XAUUSD", onHistoryUpdate }:
                   
                   seriesRef.current.setData(history);
                   volumeSeriesRef.current.setData(volumeHistory);
+                  dataRef.current = history;
                   lastCandleRef.current = history[history.length - 1];
                   setIsInitialized(true);
                   if (onHistoryUpdate) onHistoryUpdate(history);
@@ -154,6 +157,79 @@ export default function CandlestickChart({ symbol = "XAUUSD", onHistoryUpdate }:
       
       return () => { isMounted = false; };
   }, [timeframe, symbol]);
+
+  // Handle Signals Markers (lightweight-charts v5 API)
+  useEffect(() => {
+    if (!seriesRef.current || !isInitialized) return;
+
+    // Remove previous markers instance
+    if (markersRef.current) {
+        try { markersRef.current.detachPrimitive(markersRef.current); } catch (_) {}
+        markersRef.current = null;
+    }
+
+    if (!signals || signals.length === 0) return;
+    if (dataRef.current.length === 0) return;
+
+    const markerData = signals
+        .map(s => {
+            const timeRaw = new Date(s.timestamp).getTime() / 1000;
+            const tfSeconds = TIMEFRAMES[timeframe] || 3600;
+            const currentCandleTimeRaw = Math.floor(timeRaw / tfSeconds) * tfSeconds;
+            const tzOffsetSeconds = new Date().getTimezoneOffset() * 60;
+            let markerTime = Math.floor(currentCandleTimeRaw - tzOffsetSeconds);
+            
+            // Snap to nearest existing candle time
+            let closest = dataRef.current[0];
+            let minDiff = Math.abs(closest.time - markerTime);
+            for (const c of dataRef.current) {
+                const diff = Math.abs((c.time as number) - markerTime);
+                if (diff < minDiff) { minDiff = diff; closest = c; }
+            }
+            markerTime = closest.time as number;
+            
+            let color = '#e8e8e8';
+            let shape = 'circle';
+            let position = 'aboveBar';
+            let text = 'N';
+            
+            if (s.direction === "BUY") {
+                color = '#24a148';
+                shape = 'arrowUp';
+                position = 'belowBar';
+                text = 'BUY';
+            } else if (s.direction === "SELL") {
+                color = '#fa4d56';
+                shape = 'arrowDown';
+                position = 'aboveBar';
+                text = 'SELL';
+            }
+
+            return {
+                time: markerTime as Time,
+                position: position as any,
+                color: color,
+                shape: shape as any,
+                text: text,
+                size: 2,
+            };
+        })
+        .sort((a, b) => (a.time as number) - (b.time as number));
+
+    // Deduplicate — keep latest signal per candle time
+    const seen = new Map<number, any>();
+    for (const m of markerData) {
+        seen.set(m.time as number, m);
+    }
+    const uniqueMarkers = Array.from(seen.values()).sort((a, b) => (a.time as number) - (b.time as number));
+
+    try {
+        // v5 API: createSeriesMarkers returns a primitive that holds the markers
+        markersRef.current = createSeriesMarkers(seriesRef.current, uniqueMarkers as any);
+    } catch (e) {
+        console.error("Failed to set markers on CandlestickChart", e);
+    }
+  }, [signals, isInitialized]);
 
   // Real-time updates via SSE (Server-Sent Events)
   useEffect(() => {
@@ -186,11 +262,16 @@ export default function CandlestickChart({ symbol = "XAUUSD", onHistoryUpdate }:
                  low: currentPrice,
                  close: currentPrice
               };
+              dataRef.current.push(candle);
            } else {
               // Update current candle
               candle.close = currentPrice;
               if (currentPrice > candle.high) candle.high = currentPrice;
               if (currentPrice < candle.low) candle.low = currentPrice;
+              
+              if (dataRef.current.length > 0) {
+                 dataRef.current[dataRef.current.length - 1] = candle;
+              }
            }
            
            seriesRef.current.update(candle);
