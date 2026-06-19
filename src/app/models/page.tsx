@@ -1,11 +1,13 @@
 "use client";
 
-import { Grid, Column, Tile, Form, FormGroup, TextInput, Select, SelectItem, Button, Modal, Tabs, TabList, Tab, TabPanels, TabPanel, ProgressBar, DatePicker, DatePickerInput, NumberInput, CodeSnippet, ToastNotification, Toggle, InlineLoading, Tag } from "@carbon/react";
-import { Add, Edit, TrashCan, Play, Save, View, Stop, Document, ChevronDown, ChevronUp, Close, ArrowUpRight, ArrowDownRight, Activity, Lightning } from "@carbon/icons-react";
-import { useState, useEffect, Suspense, useRef } from "react";
+import { Grid, Column, Tile, Form, FormGroup, TextInput, Select, SelectItem, Button, Modal, Tabs, TabList, Tab, TabPanels, TabPanel, ProgressBar, NumberInput, CodeSnippet, ToastNotification, Toggle } from "@carbon/react";
+import { Add, Edit, TrashCan, Play, Save, View, ArrowUpRight, ArrowDownRight, Activity, Lightning, Information, Close } from "@carbon/icons-react";
+import { useState, useEffect, Suspense, useRef, useCallback } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import GlobalTable from "../../components/GlobalTable";
 import GlobalDetailTable from "../../components/GlobalDetailTable";
+import GlobalJobsWidget from "../../components/GlobalJobsWidget";
+import GlobalJobsTable from "../../components/GlobalJobsTable";
 
 function ModelsContent() {
   const router = useRouter();
@@ -13,8 +15,8 @@ function ModelsContent() {
   const searchParams = useSearchParams();
   
   const currentTab = searchParams.get("tab") || "routes";
-  const tabIndexMap: Record<string, number> = { "routes": 0, "train": 1, "registry": 2 };
-  const indexToTabMap = ["routes", "train", "registry"];
+  const tabIndexMap: Record<string, number> = { "routes": 0, "train": 1, "registry": 2, "datasets": 3 };
+  const indexToTabMap = ["routes", "train", "registry", "datasets"];
 
   const handleTabChange = (e: any) => {
     const newTab = indexToTabMap[e.selectedIndex];
@@ -22,6 +24,7 @@ function ModelsContent() {
   };
 
   const [models, setModels] = useState<any[]>([]);
+  const [datasets, setDatasets] = useState<any[]>([]);
   const [initialModelRouting, setInitialModelRouting] = useState<any>(null);
   const [modelRouting, setModelRouting] = useState<any>({
     TREND_BULL: { champion: "NONE", challenger: "NONE" },
@@ -31,15 +34,18 @@ function ModelsContent() {
   });
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [savingRouting, setSavingRouting] = useState(false);
+  const [refreshJobsTrigger, setRefreshJobsTrigger] = useState(0);
 
   // Modal states
   const [isModelModalOpen, setModelModalOpen] = useState(false);
   const [editingModel, setEditingModel] = useState<any>(null);
   const [modelForm, setModelForm] = useState({ id: "", name: "", algorithm_type: "", accuracy: "", status: "Inactive" });
 
-  // Delete confirmation state
-  const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [modelToDelete, setModelToDelete] = useState<string | null>(null);
+  const [isDatasetModalOpen, setDatasetModalOpen] = useState(false);
+  const [isEditDatasetModalOpen, setEditDatasetModalOpen] = useState(false);
+  const [editingDataset, setEditingDataset] = useState<any>(null);
+  const [datasetForm, setDatasetForm] = useState({ id: "", name: "", description: "", timeframe: "H1", count: 10000, start_date: "", end_date: "", file_name: "" });
+  const [datasetMode, setDatasetMode] = useState("count"); // count or date
 
   // Train states
   const initEnd = new Date().toISOString().split('T')[0];
@@ -48,15 +54,12 @@ function ModelsContent() {
 
   const [isTrainModalOpen, setTrainModalOpen] = useState(false);
   const [trainRegime, setTrainRegime] = useState<string>("");
-  const [trainForm, setTrainForm] = useState({ algorithm: "XGBoost", model_name: "", start_date: initStart, end_date: initEnd, optuna_trials: 10, skip_ingestion: true });
-  const [trainProgress, setTrainProgress] = useState<Record<string, {label: string, value: number}>>({});
-  const [activeJobs, setActiveJobs] = useState<any[]>([]);
-  const [historyJobs, setHistoryJobs] = useState<any[]>([]);
-  const activeSSERef = useRef<Record<string, EventSource>>({});
-
+  const [trainForm, setTrainForm] = useState({ algorithm: "XGBoost", model_name: "", optuna_trials: 10, skip_ingestion: true, dataset_id: "" });
+  const [showDatasetInfo, setShowDatasetInfo] = useState(false);
+  
   const [notification, setNotification] = useState<{kind: "success" | "error" | "info", title: string, subtitle: string} | null>(null);
 
-  // Detail Modal for models
+  // Detail Modal
   const [detailModel, setDetailModel] = useState<any>(null);
 
   // Detail Logs Modal for jobs
@@ -65,17 +68,28 @@ function ModelsContent() {
   useEffect(() => { detailJobIdRef.current = detailJobId; }, [detailJobId]);
   const [detailLogs, setDetailLogs] = useState<string>("");
   const [isDetailModalOpen, setDetailModalOpen] = useState(false);
-  const [isWidgetCollapsed, setIsWidgetCollapsed] = useState(false);
+
+  const handleLogLine = useCallback((taskId: string, line: string) => {
+      if (taskId === detailJobIdRef.current) {
+          setDetailLogs(prev => {
+              if (!prev || prev === "Loading logs..." || prev === "No logs available.") return line;
+              if (prev.endsWith(line)) return prev;
+              return prev + "\n" + line;
+          });
+      }
+  }, []);
 
   const fetchData = async () => {
     setIsLoadingData(true);
     try {
-      const [modRes, routeRes] = await Promise.all([
+      const [modRes, routeRes, dsRes] = await Promise.all([
         fetch("http://127.0.0.1:8000/api/models"),
-        fetch("http://127.0.0.1:8000/api/configurations/model-routing")
+        fetch("http://127.0.0.1:8000/api/configurations/model-routing"),
+        fetch("http://127.0.0.1:8000/api/datasets")
       ]);
       const modData = await modRes.json();
       const routeData = await routeRes.json();
+      const dsData = await dsRes.json();
       
       const formattedRouting = {...modelRouting};
       for(const k in routeData) {
@@ -87,6 +101,7 @@ function ModelsContent() {
       }
       
       setModels(modData);
+      setDatasets(dsData);
       setModelRouting(formattedRouting);
       setInitialModelRouting(formattedRouting);
     } catch (err) {
@@ -99,42 +114,6 @@ function ModelsContent() {
   useEffect(() => {
     fetchData();
   }, []);
-
-  useEffect(() => {
-    if (currentTab === "train") {
-      fetchActiveJobs();
-      fetchHistoryJobs();
-    }
-  }, [currentTab]);
-
-  const fetchHistoryJobs = async () => {
-    try {
-      const res = await fetch("http://127.0.0.1:8000/api/models/train/history");
-      if (res.ok) {
-        const data = await res.json();
-        setHistoryJobs(data.jobs.map((j: any) => ({ ...j, id: j.task_id })));
-      }
-    } catch (e) {
-      console.error("Failed to fetch history jobs", e);
-    }
-  };
-
-  const fetchActiveJobs = async () => {
-    try {
-      const res = await fetch("http://127.0.0.1:8000/api/models/train/jobs");
-      if (res.ok) {
-        const data = await res.json();
-        setActiveJobs(data.jobs.map((j: any) => ({ ...j, id: j.task_id })));
-        data.jobs.forEach((job: any) => {
-          if (job.status === "running") {
-            connectToSSE(job.task_id, job.regime);
-          }
-        });
-      }
-    } catch (e) {
-      console.error("Failed to fetch active jobs", e);
-    }
-  };
 
   const openModelModal = (model: any = null) => {
     if (model) {
@@ -161,21 +140,76 @@ function ModelsContent() {
     setModelModalOpen(false);
   };
 
-  const confirmDeleteModel = (id: string) => {
-    setModelToDelete(id);
-    setDeleteModalOpen(true);
-  };
-
-  const deleteModel = async () => {
-    if (modelToDelete) {
+  const deleteModel = async (id: string) => {
+    if (confirm("Are you sure you want to delete this model?")) {
       try {
-        await fetch(`http://127.0.0.1:8000/api/models/${modelToDelete}`, { method: "DELETE" });
+        await fetch(`http://127.0.0.1:8000/api/models/${id}`, { method: "DELETE" });
         fetchData();
         setNotification({ kind: "success", title: "Model Deleted", subtitle: "Model was successfully deleted." });
       } catch(e) { console.error(e); }
     }
-    setDeleteModalOpen(false);
-    setModelToDelete(null);
+  };
+
+  const openDatasetModal = () => {
+    setDatasetForm({ id: "", name: "", description: "", timeframe: "H1", count: 10000, start_date: initStart, end_date: initEnd, file_name: "" });
+    setDatasetModalOpen(true);
+  };
+
+  const openEditDatasetModal = (dataset: any) => {
+    setEditingDataset(dataset);
+    setDatasetForm({ id: dataset.id, name: dataset.name, description: dataset.description, timeframe: dataset.timeframe, count: 10000, start_date: initStart, end_date: initEnd, file_name: dataset.file_name || "" });
+    setEditDatasetModalOpen(true);
+  };
+
+  const startIngest = async () => {
+    setDatasetModalOpen(false);
+    try {
+      const payload: any = {
+        name: datasetForm.name,
+        description: datasetForm.description,
+        timeframe: datasetForm.timeframe,
+        file_name: datasetForm.file_name
+      };
+      if (datasetMode === "count") {
+        payload.count = datasetForm.count;
+      } else {
+        payload.start_date = datasetForm.start_date;
+        payload.end_date = datasetForm.end_date;
+      }
+      
+      const res = await fetch("http://127.0.0.1:8000/api/datasets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      if(res.ok) {
+        setNotification({ kind: "info", title: "Ingestion Started", subtitle: "Dataset ingestion job has been queued." });
+        setRefreshJobsTrigger(prev => prev + 1);
+      }
+    } catch(e) { console.error(e); }
+  };
+
+  const updateDataset = async () => {
+    try {
+      await fetch(`http://127.0.0.1:8000/api/datasets/${datasetForm.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: datasetForm.name, description: datasetForm.description })
+      });
+      fetchData();
+      setEditDatasetModalOpen(false);
+      setNotification({ kind: "success", title: "Dataset Updated", subtitle: "Dataset metadata was successfully updated." });
+    } catch(e) { console.error(e); }
+  };
+
+  const deleteDataset = async (id: string) => {
+    if (confirm("Are you sure you want to delete this dataset? Physical file will also be deleted.")) {
+      try {
+        await fetch(`http://127.0.0.1:8000/api/datasets/${id}`, { method: "DELETE" });
+        fetchData();
+        setNotification({ kind: "success", title: "Dataset Deleted", subtitle: "Dataset was successfully deleted." });
+      } catch(e) { console.error(e); }
+    }
   };
 
   const handleRouteChange = (regime: string, type: 'champion'|'challenger', val: string) => {
@@ -201,69 +235,19 @@ function ModelsContent() {
     } catch(e) { console.error(e); }
     setSavingRouting(false);
   };
-  
-  const handleRetryJob = async (job: any) => {
-      try {
-        const payload = {
-          task_id: job.id,
-          regime: job.regime,
-          algorithm: job.algorithm || "XGBoost",
-          model_name: job.model_name || "",
-          start_date: job.start_date || "2023-01-01",
-          end_date: job.end_date || "2024-01-01",
-          optuna_trials: job.optuna_trials || 10
-        };
-        const res = await fetch("http://127.0.0.1:8000/api/models/train", {
-          method: "POST",
-          headers: {"Content-Type": "application/json"},
-          body: JSON.stringify(payload)
-        });
-        if(res.ok){
-          setNotification({ kind: "success", title: "Retry Started", subtitle: "Training queued successfully." });
-          fetchActiveJobs();
-        }
-      } catch(e) {
-          setNotification({ kind: "error", title: "Error", subtitle: "Failed to retry job." });
-      }
-  };
-
-  const handleCancelJob = async (jobId: string) => {
-      try {
-          const res = await fetch(`http://127.0.0.1:8000/api/models/train/cancel/${jobId}`, { method: 'POST' });
-          if(res.ok) {
-              setNotification({ kind: 'info', title: 'Job Cancelled', subtitle: 'Sent cancellation signal to backend.' });
-              fetchActiveJobs();
-          }
-      } catch(e) { }
-  };
-
-  const handleDeleteJob = async (jobId: string) => {
-      if (confirm("Are you sure you want to completely delete this job? This will stop any running processes and remove all logs from Redis and the database.")) {
-          try {
-              const res = await fetch(`http://127.0.0.1:8000/api/models/train/jobs/${jobId}`, { method: 'DELETE' });
-              if(res.ok) {
-                  setNotification({ kind: 'success', title: 'Job Deleted', subtitle: 'Job has been completely removed.' });
-                  fetchActiveJobs();
-                  fetchHistoryJobs();
-              }
-          } catch(e) { 
-              console.error("Failed to delete job", e);
-          }
-      }
-  };
 
   const openJobDetails = async (jobId: string) => {
-      setDetailJobId(jobId);
       setDetailLogs("Loading logs...");
       setDetailModalOpen(true);
       try {
-          const res = await fetch(`http://127.0.0.1:8000/api/models/train/logs/${jobId}`);
-          if(res.ok) {
-              const data = await res.json();
-              setDetailLogs(data.logs || "No logs available.");
-          } else {
-              setDetailLogs("Failed to load logs.");
-          }
+        const res = await fetch(`http://127.0.0.1:8000/api/jobs/logs/${jobId}`);
+        if(res.ok) {
+            const data = await res.json();
+            setDetailLogs(data.logs || "No logs available.");
+            setDetailJobId(jobId);
+        } else {
+            setDetailLogs("Failed to load logs.");
+        }
       } catch(e) {
           setDetailLogs("Failed to load logs.");
       }
@@ -271,113 +255,29 @@ function ModelsContent() {
 
   const openTrainModal = (regime: string) => {
     setTrainRegime(regime);
-    
-    const d = new Date();
-    const endStr = d.toISOString().split('T')[0];
-    d.setFullYear(d.getFullYear() - 3);
-    const startStr = d.toISOString().split('T')[0];
-
-    setTrainForm({ algorithm: "XGBoost", model_name: "", start_date: startStr, end_date: endStr, optuna_trials: 10, skip_ingestion: true });
+    setTrainForm({ algorithm: "XGBoost", model_name: "", optuna_trials: 10, skip_ingestion: true, dataset_id: datasets.length > 0 ? datasets[0].id : "" });
+    setShowDatasetInfo(false);
     setTrainModalOpen(true);
   };
 
   const startTraining = async () => {
     setTrainModalOpen(false);
-    const targetRegime = trainRegime;
-    
-    setTrainProgress(prev => ({...prev, [targetRegime]: {label: "Starting...", value: 0}}));
     
     try {
       const res = await fetch("http://127.0.0.1:8000/api/models/train", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ regime: targetRegime, ...trainForm })
+        body: JSON.stringify({ regime: trainRegime, ...trainForm })
       });
       if(res.ok) {
-        const data = await res.json();
-        const taskId = data.task_id;
-        
-        connectToSSE(taskId, targetRegime);
-        fetchActiveJobs();
+        setNotification({ kind: "info", title: "Training Started", subtitle: "Training job queued." });
+        setRefreshJobsTrigger(prev => prev + 1);
       } else {
          setNotification({ kind: "error", title: "Request Failed", subtitle: "Server responded with an error." });
-         setTimeout(() => setNotification(null), 5000);
-          setTrainProgress(prev => {
-             const newP = {...prev};
-             delete newP[targetRegime];
-             return newP;
-          });
       }
     } catch(e) { 
-      console.error(e); 
-      setNotification({ kind: "error", title: "Request Failed", subtitle: "Could not connect to training engine." });
-      setTimeout(() => setNotification(null), 5000);
-      setTrainProgress(prev => {
-         const newP = {...prev};
-         delete newP[targetRegime];
-         return newP;
-      });
+      setNotification({ kind: "error", title: "Request Failed", subtitle: "Could not connect to engine." });
     }
-  };
-
-  const connectToSSE = (taskId: string, targetRegime: string) => {
-    if (activeSSERef.current[targetRegime]) return;
-
-    setTrainProgress(prev => ({...prev, [targetRegime]: prev[targetRegime] || {label: "Reconnecting...", value: 0}}));
-
-    const eventSource = new EventSource(`http://127.0.0.1:8000/api/models/train/stream/${taskId}`);
-    activeSSERef.current[targetRegime] = eventSource;
-    
-    let hasError = false;
-
-    eventSource.onmessage = (event) => {
-      const msg = event.data;
-      if (detailJobIdRef.current === taskId) {
-        setDetailLogs(prev => prev + (prev ? "\n" : "") + msg);
-      }
-      
-      if (msg.includes("ERROR:")) {
-         hasError = true;
-      }
-
-      if(msg.includes("[DONE]")) {
-        eventSource.close();
-        delete activeSSERef.current[targetRegime];
-        setTrainProgress(prev => {
-          const newP = {...prev};
-          delete newP[targetRegime];
-          return newP;
-        });
-        fetchData(); // Refresh registry
-        fetchActiveJobs(); // Refresh jobs table
-        fetchHistoryJobs(); // Refresh history
-        setNotification({
-           kind: hasError ? "error" : "success",
-           title: hasError ? "Training Failed" : "Training Complete",
-           subtitle: hasError ? "Check terminal logs for Python traceback." : `Model for ${targetRegime} trained successfully.`
-        });
-        setTimeout(() => setNotification(null), 8000);
-      } else {
-        let val = 0;
-        const match = msg.match(/PROGRESS:\s*(\d+)%/);
-        if(match) val = parseInt(match[1]);
-        const cleanedMsg = msg.replace(/PROGRESS:\s*\d+%\s*-\s*/, '');
-        const displayMsg = cleanedMsg.length > 45 ? cleanedMsg.substring(0, 45) + '...' : cleanedMsg;
-        setTrainProgress(prev => ({...prev, [targetRegime]: {label: displayMsg, value: val || prev[targetRegime]?.value || 0}}));
-      }
-    };
-    eventSource.onerror = (e) => {
-        console.error("SSE Error", e);
-        eventSource.close();
-        delete activeSSERef.current[targetRegime];
-        setNotification({ kind: "error", title: "Connection Error", subtitle: "Failed to read progress stream." });
-        setTimeout(() => setNotification(null), 5000);
-        setTrainProgress(prev => {
-           const newP = {...prev};
-           delete newP[targetRegime];
-           return newP;
-        });
-    };
   };
 
   const modelHeaders = [
@@ -388,87 +288,14 @@ function ModelsContent() {
     { key: "actions", header: "Actions" },
   ];
 
-  const ongoingJobHeaders = [
-    { key: "task_id", header: "ID" },
-    { key: "regime", header: "Regime" },
-    { key: "model_name", header: "Nama Model" },
-    { key: "created_date", header: "Created Date" },
-    { key: "finished_date", header: "Finished Date" },
-    { key: "progress", header: "Progress" },
+  const datasetHeaders = [
+    { key: "name", header: "Dataset Name" },
+    { key: "timeframe", header: "Timeframe" },
+    { key: "file_name", header: "File Name" },
+    { key: "total_rows", header: "Total Rows" },
     { key: "status", header: "Status" },
     { key: "actions", header: "Actions" },
   ];
-
-  const historyJobHeaders = [
-    { key: "task_id", header: "ID" },
-    { key: "regime", header: "Regime" },
-    { key: "model_name", header: "Nama Model" },
-    { key: "created_date", header: "Created Date" },
-    { key: "finished_date", header: "Finished Date" },
-    { key: "status", header: "Status" },
-    { key: "actions", header: "Actions" },
-  ];
-
-  const formatJobCell = (cellId: string, value: any) => {
-    if (cellId.endsWith(':actions')) {
-      const rowId = cellId.split(':')[0];
-      const job = activeJobs.find(j => j.id === rowId) || historyJobs.find(j => j.id === rowId);
-      if(!job) return "-";
-      return (
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <Button kind="ghost" size="sm" renderIcon={Document} iconDescription="Details" hasIconOnly onClick={() => openJobDetails(job.id)} />
-              {job.status === 'running' ? (
-                  <Button kind="danger--ghost" size="sm" renderIcon={Stop} iconDescription="Cancel" hasIconOnly onClick={() => handleCancelJob(job.id)} />
-              ) : job.status?.toLowerCase() !== 'done' && job.status?.toLowerCase() !== 'success' ? (
-                  <Button kind="ghost" size="sm" renderIcon={Play} iconDescription="Retry" hasIconOnly onClick={() => handleRetryJob(job)} />
-              ) : null}
-              {job.status?.toLowerCase() !== 'done' && job.status?.toLowerCase() !== 'success' && job.status?.toLowerCase() !== 'running' && (
-                  <Button kind="danger--ghost" size="sm" renderIcon={TrashCan} iconDescription="Delete" hasIconOnly onClick={() => handleDeleteJob(job.id)} />
-              )}
-          </div>
-      );
-    }
-    if (cellId.endsWith(':created_date') || cellId.endsWith(':finished_date')) {
-       if (!value) return "-";
-       const dateStr = value.endsWith('Z') || value.includes('+') ? value : value + 'Z';
-       const d = new Date(dateStr);
-       const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-       const day = d.getDate().toString().padStart(2, '0');
-       const month = months[d.getMonth()];
-       const year = d.getFullYear().toString().slice(-2);
-       const time = d.toTimeString().split(' ')[0];
-       return (
-         <div style={{ display: 'flex', flexDirection: 'column', lineHeight: '1.2' }}>
-           <span>{`${day} ${month} ${year}`}</span>
-           <span style={{ color: '#a8a8a8', fontSize: '0.9em' }}>{time}</span>
-         </div>
-       );
-    }
-    if (cellId.endsWith(':model_name')) {
-       return value || "-";
-    }
-    if (cellId.endsWith(':progress')) {
-      const rowId = cellId.split(':')[0];
-      const job = activeJobs.find(j => j.id === rowId);
-      if (job && job.status === 'running' && trainProgress[job.regime]) {
-         return (
-             <div style={{ maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                 <div style={{ width: '100%', minWidth: '100px' }}>
-                     <ProgressBar label={trainProgress[job.regime].label} value={trainProgress[job.regime].value} />
-                 </div>
-             </div>
-         );
-      }
-      return "-";
-    }
-    if (cellId.endsWith(':status')) {
-       return <span style={{ textTransform: 'uppercase', fontWeight: 600, color: value?.toLowerCase() === 'failed' || value?.toLowerCase() === 'error' ? '#da1e28' : value?.toLowerCase() === 'done' || value?.toLowerCase() === 'success' ? '#24a148' : '#0f62fe' }}>{value}</span>;
-    }
-    if (cellId.endsWith(':task_id')) {
-       return <span style={{ fontFamily: 'monospace' }}>{value.split('-')[0]}...</span>;
-    }
-    return value;
-  };
 
   const formatModelCell = (cellId: string, value: any) => {
     if (cellId.endsWith(':actions')) {
@@ -478,7 +305,21 @@ function ModelsContent() {
         <div style={{ display: 'flex', gap: '0.5rem' }}>
           <Button size="sm" kind="ghost" renderIcon={View} iconDescription="Details" hasIconOnly onClick={() => setDetailModel(model)} />
           <Button size="sm" kind="ghost" renderIcon={Edit} iconDescription="Edit" hasIconOnly onClick={() => openModelModal(model)} />
-          <Button size="sm" kind="danger--ghost" renderIcon={TrashCan} iconDescription="Delete" hasIconOnly onClick={() => confirmDeleteModel(rowId)} />
+          <Button size="sm" kind="danger--ghost" renderIcon={TrashCan} iconDescription="Delete" hasIconOnly onClick={() => deleteModel(rowId)} />
+        </div>
+      );
+    }
+    return value;
+  };
+
+  const formatDatasetCell = (cellId: string, value: any) => {
+    if (cellId.endsWith(':actions')) {
+      const rowId = cellId.split(':')[0];
+      const dataset = datasets.find(d => d.id === rowId);
+      return (
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <Button size="sm" kind="ghost" renderIcon={Edit} iconDescription="Edit" hasIconOnly onClick={() => openEditDatasetModal(dataset)} />
+          <Button size="sm" kind="danger--ghost" renderIcon={TrashCan} iconDescription="Delete" hasIconOnly onClick={() => deleteDataset(rowId)} />
         </div>
       );
     }
@@ -490,11 +331,12 @@ function ModelsContent() {
       {notification && (
         <div style={{ position: "fixed", top: "4rem", right: "1rem", zIndex: 9999 }}>
           <ToastNotification
+            timeout={5000}
             kind={notification.kind as any}
             title={notification.title}
             subtitle={notification.subtitle}
             caption={new Date().toLocaleTimeString()}
-            onClose={() => setNotification(null)}
+            onClose={() => { setNotification(null); return false; }}
           />
         </div>
       )}
@@ -510,6 +352,7 @@ function ModelsContent() {
               <Tab>Routes</Tab>
               <Tab>Train</Tab>
               <Tab>Registry</Tab>
+              <Tab>Datasets</Tab>
             </TabList>
             <TabPanels>
               {/* TAB 1: ROUTES */}
@@ -559,18 +402,9 @@ function ModelsContent() {
                                  {regime === 'VOLATILE_CHOP' && <Lightning size={24} style={{ color: '#f1c21b' }} />}
                                  <h4 style={{fontWeight: 400, margin: 0}}>{regime.split('_').map(w => w.charAt(0) + w.slice(1).toLowerCase()).join(' ')}</h4>
                                </div>
-                               {trainProgress[regime] ? (
-                                   <div style={{ width: '100px' }}>
-                                      <ProgressBar label={trainProgress[regime].label} value={trainProgress[regime].value} />
-                                   </div>
-                               ) : (
-                                   <Button 
-                                      kind="primary" size="sm" renderIcon={Play} 
-                                      onClick={() => openTrainModal(regime)}
-                                   >
-                                      Train
-                                   </Button>
-                               )}
+                               <Button kind="primary" size="sm" renderIcon={Play} onClick={() => openTrainModal(regime)}>
+                                  Train
+                               </Button>
                              </div>
                           </Tile>
                         ))}
@@ -579,12 +413,7 @@ function ModelsContent() {
                 </Grid>
                 <Grid condensed style={{ marginTop: '.2rem' }}>
                   <Column lg={16} md={8} sm={4}>
-                    <GlobalTable 
-                      headers={historyJobHeaders} 
-                      initialData={historyJobs} 
-                      title="History Model Jobs" 
-                      formatCell={formatJobCell}
-                    />
+                    <GlobalJobsTable target="model" refreshTrigger={refreshJobsTrigger} openJobDetails={openJobDetails} onJobChange={fetchData} />
                   </Column>
                 </Grid>
               </TabPanel>
@@ -603,11 +432,31 @@ function ModelsContent() {
                   }
                 />
               </TabPanel>
+              
+              {/* TAB 4: DATASETS */}
+              <TabPanel style={{ paddingTop: '1rem' }}>
+                <GlobalTable 
+                  headers={datasetHeaders} 
+                  initialData={datasets} 
+                  title="Datasets" 
+                  formatCell={formatDatasetCell}
+                  toolbarActions={
+                    <Button renderIcon={Add} onClick={() => openDatasetModal()} size="sm">
+                      Ingest New Dataset
+                    </Button>
+                  }
+                />
+                
+                <div style={{ marginTop: '.2rem' }}>
+                    <GlobalJobsTable target="dataset" refreshTrigger={refreshJobsTrigger} openJobDetails={openJobDetails} onJobChange={fetchData} />
+                </div>
+              </TabPanel>
             </TabPanels>
           </Tabs>
         </Column>
       </Grid>
 
+      {/* MODALS */}
       <Modal open={isModelModalOpen} onRequestClose={() => setModelModalOpen(false)} onRequestSubmit={saveModel} modalHeading={editingModel ? "Edit Model" : "Register External Model"} primaryButtonText="Save" secondaryButtonText="Cancel">
         <FormGroup legendText="">
           <TextInput id="model-name" labelText="Model Name" value={modelForm.name} onChange={e => setModelForm({...modelForm, name: e.target.value})} style={{ marginBottom: "1rem" }} />
@@ -621,16 +470,37 @@ function ModelsContent() {
         </FormGroup>
       </Modal>
 
-      <Modal 
-        open={isDeleteModalOpen} 
-        onRequestClose={() => { setDeleteModalOpen(false); setModelToDelete(null); }} 
-        onRequestSubmit={deleteModel} 
-        modalHeading="Delete Model" 
-        primaryButtonText="Delete" 
-        secondaryButtonText="Cancel"
-        danger
-      >
-        <p>Are you sure you want to delete this model? This action cannot be undone.</p>
+      <Modal open={isDatasetModalOpen} onRequestClose={() => setDatasetModalOpen(false)} onRequestSubmit={startIngest} modalHeading="Ingest New Dataset" primaryButtonText="Start Ingestion" secondaryButtonText="Cancel">
+        <FormGroup legendText="">
+          <TextInput id="ds-name" labelText="Dataset Name (Mandatory)" placeholder="e.g. XAUUSD_H1_2023" value={datasetForm.name} onChange={e => setDatasetForm({...datasetForm, name: e.target.value})} style={{ marginBottom: "1rem" }} />
+          <TextInput id="ds-desc" labelText="Description (Optional)" value={datasetForm.description} onChange={e => setDatasetForm({...datasetForm, description: e.target.value})} style={{ marginBottom: "1rem" }} />
+          <TextInput id="ds-file" labelText="File Name (Optional)" placeholder="Auto-generated if left blank" value={datasetForm.file_name} onChange={e => setDatasetForm({...datasetForm, file_name: e.target.value})} style={{ marginBottom: "1rem" }} />
+          <Select id="ds-tf" labelText="Timeframe" value={datasetForm.timeframe} onChange={e => setDatasetForm({...datasetForm, timeframe: e.target.value})} style={{ marginBottom: "1rem" }}>
+            <SelectItem value="M15" text="15 Minutes" />
+            <SelectItem value="H1" text="1 Hour" />
+            <SelectItem value="H4" text="4 Hours" />
+            <SelectItem value="D1" text="Daily" />
+          </Select>
+          
+          <Toggle id="ds-mode" labelText="Ingestion Method" labelA="By Date Range" labelB="By Row Count" toggled={datasetMode === "count"} onToggle={(toggled) => setDatasetMode(toggled ? "count" : "date")} style={{ marginBottom: "1rem" }} />
+          
+          {datasetMode === "count" ? (
+             <NumberInput id="ds-count" label="Total Rows to Pull" value={datasetForm.count} onChange={(e, {value}) => setDatasetForm({...datasetForm, count: Number(value)})} min={100} max={1000000} />
+          ) : (
+             <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+                <TextInput id="ds-start" type="date" labelText="Start Date" value={datasetForm.start_date} onChange={e => setDatasetForm({...datasetForm, start_date: e.target.value})} />
+                <TextInput id="ds-end" type="date" labelText="End Date" value={datasetForm.end_date} onChange={e => setDatasetForm({...datasetForm, end_date: e.target.value})} />
+             </div>
+          )}
+        </FormGroup>
+      </Modal>
+
+      <Modal open={isEditDatasetModalOpen} onRequestClose={() => setEditDatasetModalOpen(false)} onRequestSubmit={updateDataset} modalHeading="Edit Dataset" primaryButtonText="Save" secondaryButtonText="Cancel">
+        <FormGroup legendText="">
+          <TextInput id="edit-ds-name" labelText="Dataset Name" value={datasetForm.name} onChange={e => setDatasetForm({...datasetForm, name: e.target.value})} style={{ marginBottom: "1rem" }} />
+          <TextInput id="edit-ds-desc" labelText="Description" value={datasetForm.description} onChange={e => setDatasetForm({...datasetForm, description: e.target.value})} style={{ marginBottom: "1rem" }} />
+          <TextInput id="edit-ds-file" labelText="File Name" value={datasetForm.file_name} readOnly style={{ marginBottom: "1rem" }} />
+        </FormGroup>
       </Modal>
 
       {/* TRAIN SETTINGS MODAL */}
@@ -640,102 +510,68 @@ function ModelsContent() {
              <SelectItem value="XGBoost" text="XGBoost Ensemble" />
           </Select>
           <TextInput id="model-name-train" labelText="Custom Model Name (Optional)" placeholder="e.g. xgboost_bull_v2" value={trainForm.model_name} onChange={e => setTrainForm({...trainForm, model_name: e.target.value})} style={{ marginBottom: "1rem" }} />
-          <Toggle id="skip-ingestion-toggle" labelText="Skip Data Ingestion (Use Existing CSV)" toggled={trainForm.skip_ingestion} onToggle={val => setTrainForm({...trainForm, skip_ingestion: val})} style={{ marginBottom: "1rem" }} />
-          {!trainForm.skip_ingestion && (
-            <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
-                <TextInput id="start-date" type="date" labelText="Start Date" value={trainForm.start_date} onChange={e => setTrainForm({...trainForm, start_date: e.target.value})} />
-                <TextInput id="end-date" type="date" labelText="End Date" value={trainForm.end_date} onChange={e => setTrainForm({...trainForm, end_date: e.target.value})} />
-            </div>
-          )}
+          
+          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: "1rem" }}>
+              <div style={{ flex: 1 }}>
+                  <Select id="train-dataset" labelText="Dataset" value={trainForm.dataset_id} onChange={e => setTrainForm({...trainForm, dataset_id: e.target.value})}>
+                     {datasets.length === 0 ? <SelectItem value="" text="No datasets available" disabled /> : null}
+                     {datasets.map(ds => <SelectItem key={ds.id} value={ds.id} text={`${ds.name} (${ds.total_rows} rows)`} />)}
+                  </Select>
+              </div>
+              {trainForm.dataset_id && (
+                  <div style={{ position: 'relative' }}>
+                      <Button
+                        size="sm"
+                        kind="ghost"
+                        renderIcon={Information}
+                        iconDescription="Dataset Info"
+                        tooltipPosition="left"
+                        hasIconOnly
+                        onClick={() => setShowDatasetInfo(!showDatasetInfo)}
+                      />
+                      {showDatasetInfo && (
+                          <div style={{ position: 'absolute', bottom: '100%', right: 0, marginBottom: '0.5rem', backgroundColor: 'var(--cds-layer-02, #393939)', padding: '1rem', zIndex: 10000, width: '280px', color: 'var(--cds-text-primary, #f4f4f4)' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                                 <strong style={{ fontSize: '0.875rem' }}>Dataset Info</strong>
+                                 <Button kind="ghost" size="sm" hasIconOnly renderIcon={Close} iconDescription="Close" onClick={() => setShowDatasetInfo(false)} style={{ minHeight: 'auto', padding: 0, width: '24px', height: '24px' }} />
+                              </div>
+                              {(() => {
+                                  const ds = datasets.find(d => d.id === trainForm.dataset_id);
+                                  if (!ds) return <p>No data</p>;
+                                  return (
+                                      <div style={{ fontSize: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                          <div><span style={{ color: 'var(--cds-text-secondary, #c6c6c6)' }}>Name:</span><br/>{ds.name}</div>
+                                          <div><span style={{ color: 'var(--cds-text-secondary, #c6c6c6)' }}>Total Rows:</span><br/>{ds.total_rows}</div>
+                                          <div><span style={{ color: 'var(--cds-text-secondary, #c6c6c6)' }}>Timeframe:</span><br/>{ds.timeframe}</div>
+                                          <div><span style={{ color: 'var(--cds-text-secondary, #c6c6c6)' }}>Description:</span><br/>{ds.description || '-'}</div>
+                                          <div><span style={{ color: 'var(--cds-text-secondary, #c6c6c6)' }}>File:</span><br/>{ds.file_name}</div>
+                                      </div>
+                                  );
+                              })()}
+                          </div>
+                      )}
+                  </div>
+              )}
+          </div>
+          
           <NumberInput id="optuna-trials" label="Optuna Tuning Trials" value={trainForm.optuna_trials} onChange={(e, {value}) => setTrainForm({...trainForm, optuna_trials: Number(value)})} min={1} max={500} />
         </FormGroup>
       </Modal>
 
-      {/* MODEL DETAILS MODAL */}
-        {detailModel && (
+      {detailModel && (
           <GlobalDetailTable 
              type="model"
              dataObj={detailModel} 
              onClose={() => setDetailModel(null)} 
           />
-        )}
-
-      {/* FLOATING JOBS WIDGET */}
-      {(() => {
-         if (currentTab !== "train" && currentTab !== "registry") return null;
-         const widgetJobs = activeJobs.filter(job => job.status?.toLowerCase() !== 'done' && job.status?.toLowerCase() !== 'success');
-         
-         return (
-         <div style={{ position: 'fixed', bottom: '2rem', right: '2rem', width: '380px', backgroundColor: 'var(--cds-layer-01, #262626)', boxShadow: 'none', zIndex: 9999, border: '1px solid var(--cds-border-subtle, #393939)', display: 'flex', flexDirection: 'column' }}>
-            {/* Header */}
-            <div style={{ backgroundColor: 'var(--cds-layer-02, #393939)', color: 'var(--cds-text-primary, #f4f4f4)', padding: '0.75rem 1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }} onClick={() => setIsWidgetCollapsed(!isWidgetCollapsed)}>
-               <span style={{ fontSize: '0.875rem', fontWeight: 600 }}>Active Training</span>
-               <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                  {isWidgetCollapsed ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-               </div>
-            </div>
-            
-            {/* Body */}
-            {!isWidgetCollapsed && (
-            <div style={{ padding: '0', maxHeight: '400px', overflowY: 'auto', overflowX: 'hidden' }}>
-               {widgetJobs.length > 0 ? widgetJobs.map(job => (
-                  <div key={job.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1rem', borderBottom: '1px solid var(--cds-border-subtle, #393939)' }}>
-                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, overflow: 'hidden' }}>
-                        <div style={{ color: 'var(--cds-icon-secondary, #c6c6c6)', display: 'flex', alignItems: 'center' }}>
-                           <Document size={24} />
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
-                           <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
-                              <span style={{ fontSize: '0.875rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--cds-text-primary, #f4f4f4)' }}>{job.model_name || job.regime}</span>
-                              <span style={{ fontSize: '0.65rem', color: 'var(--cds-text-secondary, #c6c6c6)', textTransform: 'uppercase' }}>{job.algorithm || "XGBoost"}</span>
-                           </div>
-                           {job.status === 'running' ? (
-                               <div style={{ marginTop: '0.5rem', width: '100%', minWidth: 0 }}>
-                                   <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '230px' }}>
-                                      <ProgressBar 
-                                          label={trainProgress[job.regime] ? trainProgress[job.regime].label : "Starting..."} 
-                                          value={trainProgress[job.regime] ? trainProgress[job.regime].value : undefined} 
-                                      />
-                                   </div>
-                               </div>
-                           ) : (
-                               <span style={{ fontSize: '0.75rem', color: job.status?.toLowerCase() === 'failed' || job.status?.toLowerCase() === 'error' ? '#da1e28' : '#24a148' }}>
-                                   {job.status}
-                               </span>
-                           )}
-                        </div>
-                     </div>
-                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', paddingLeft: '0.5rem' }}>
-                        {job.status === 'running' ? (
-                            <>
-                              <Button kind="ghost" size="sm" renderIcon={View} hasIconOnly iconDescription="Logs" onClick={() => openJobDetails(job.id)} />
-                              <Button kind="ghost" size="sm" renderIcon={Stop} hasIconOnly iconDescription="Cancel" onClick={() => handleCancelJob(job.id)} />
-                            </>
-                        ) : (
-                            <>
-                               <Button kind="ghost" size="sm" renderIcon={View} hasIconOnly iconDescription="Logs" onClick={() => openJobDetails(job.id)} />
-                               <Button kind="ghost" size="sm" renderIcon={TrashCan} hasIconOnly iconDescription="Dismiss" onClick={() => handleDeleteJob(job.id)} />
-                            </>
-                        )}
-                     </div>
-                  </div>
-               )) : (
-                  <div style={{ padding: '1rem', color: 'var(--cds-text-secondary, #c6c6c6)', fontSize: '0.875rem', textAlign: 'center' }}>
-                     No active training
-                  </div>
-               )}
-            </div>
-            )}
-         </div>
-         );
-      })()}
+      )}
 
       {/* Logs Modal */}
       <Modal 
           open={isDetailModalOpen} 
-          onRequestClose={() => setDetailModalOpen(false)} 
+          onRequestClose={() => { setDetailModalOpen(false); setDetailJobId(null); }} 
           passiveModal 
-          modalHeading="Training Logs" 
+          modalHeading="Job Logs" 
       >
          <div style={{ height: "75vh", overflowY: "auto", overflowX: "hidden", display: "flex", flexDirection: "column" }}>
              <div style={{ flexGrow: 1, minHeight: "100%" }}>
@@ -745,6 +581,8 @@ function ModelsContent() {
              </div>
          </div>
       </Modal>
+      
+      <GlobalJobsWidget target={currentTab === "datasets" ? "dataset" : "model"} refreshTrigger={refreshJobsTrigger} onJobComplete={() => { fetchData(); setRefreshJobsTrigger(prev => prev + 1); }} openJobDetails={openJobDetails} onLogLine={handleLogLine} />
     </>
   );
 }

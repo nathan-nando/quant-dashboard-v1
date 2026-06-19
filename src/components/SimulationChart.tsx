@@ -111,8 +111,7 @@ export default function SimulationChart({ equityData, trades }: SimulationChartP
             time: (new Date(t.entry_time).getTime() / 1000) as Time,
             position: t.direction === 'BUY' ? 'belowBar' : 'aboveBar',
             color: t.direction === 'BUY' ? '#24a148' : '#fa4d56',
-            shape: t.direction === 'BUY' ? 'arrowUp' : 'arrowDown',
-            text: 'Entry'
+            shape: t.direction === 'BUY' ? 'arrowUp' : 'arrowDown'
           });
         }
         if (t.exit_time) {
@@ -120,8 +119,7 @@ export default function SimulationChart({ equityData, trades }: SimulationChartP
             time: (new Date(t.exit_time).getTime() / 1000) as Time,
             position: 'inBar',
             color: t.pnl_money > 0 ? '#24a148' : '#fa4d56',
-            shape: 'circle',
-            text: 'Exit'
+            shape: 'circle'
           });
         }
       });
@@ -193,6 +191,22 @@ export default function SimulationChart({ equityData, trades }: SimulationChartP
         <div style={{ display: 'flex', alignItems: 'center' }}>
           <div style={{ width: '16px', height: '2px', backgroundColor: '#0f62fe', marginRight: '8px' }}></div>
           <span>Equity (Right Axis)</span>
+        </div>
+        <div style={{ display: 'flex', gap: '12px', marginTop: '4px', fontSize: '11px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <span style={{ color: '#24a148' }}>▲</span> Buy Entry
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <span style={{ color: '#fa4d56' }}>▼</span> Sell Entry
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: '12px', fontSize: '11px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <span style={{ color: '#24a148' }}>●</span> Win Exit
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <span style={{ color: '#fa4d56' }}>●</span> Loss Exit
+          </div>
         </div>
       </div>
       <div ref={chartContainerRef} style={{ width: '100%', height: '100%' }} />

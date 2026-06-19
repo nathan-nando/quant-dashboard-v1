@@ -138,7 +138,7 @@ export default function SimulationPage() {
         .then(res => res.json())
         .then(data => {
           // Also fetch trades
-          fetch(`http://127.0.0.1:8000/api/simulation/runs/${selectedRunId}/trades`)
+          fetch(`http://127.0.0.1:8000/api/simulation/runs/${selectedRunId}/trades?limit=10000`)
             .then(res => res.json())
             .then(trades => {
               setActiveRunData({ ...data, tradeList: trades });
@@ -229,7 +229,7 @@ export default function SimulationPage() {
       });
       const data = await res.json();
       
-      if (data.run_id) {
+      if (res.ok && data.run_id) {
         const source = new EventSource(`http://127.0.0.1:8000/api/simulation/stream/${data.run_id}`);
         source.onmessage = (event) => {
           const streamData = JSON.parse(event.data);
@@ -244,9 +244,14 @@ export default function SimulationPage() {
               fetch('http://127.0.0.1:8000/api/simulation/runs')
                 .then(res => res.json())
                 .then(r => { if (Array.isArray(r)) setRuns(r); });
+            } else {
+               alert(`Simulation failed: ${streamData.error || 'Unknown error'}`);
             }
           }
         };
+      } else {
+        setIsRunning(false);
+        alert(`Failed to launch simulation: ${data.detail || 'Unknown error'}`);
       }
     } catch (err) {
       console.error(err);
