@@ -731,7 +731,7 @@ export default function SimulationPage() {
                     titleText="Simulation Runs"
                     items={runs.filter(r => r.status === 'COMPLETED').map(r => ({ id: r.id, text: `${r.name} (${new Date(r.created_at).toLocaleDateString()})` }))}
                     itemToString={(item: any) => (item ? item.text : '')}
-                    onChange={({ selectedItems }) => setSelectedCompareRunIds(selectedItems.map((item: any) => item.id))}
+                    onChange={({ selectedItems }) => setSelectedCompareRunIds(selectedItems ? selectedItems.map((item: any) => item.id) : [])}
                   />
                 </div>
 

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { createChart, ColorType, IChartApi, ISeriesApi, LineData, Time, LineSeries, AreaSeries, LineType } from 'lightweight-charts';
+import { createChart, ColorType, IChartApi, ISeriesApi, LineData, Time, LineSeries, AreaSeries, LineType, createSeriesMarkers } from 'lightweight-charts';
 
 interface SimulationChartProps {
   equityData: { timestamp: string; equity: number; drawdown: number; balance: number; price?: number }[];
@@ -132,7 +132,7 @@ export default function SimulationChart({ equityData, trades }: SimulationChartP
       // We can only set markers if times exist in the series data exactly
       // For lightweight-charts, markers often need exact time matches
       try {
-        equitySeries.setMarkers(markers);
+        createSeriesMarkers(equitySeries, markers);
       } catch (e) {
         console.warn("Could not set markers exactly on series times", e);
       }
