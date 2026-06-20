@@ -18,6 +18,7 @@ export default function ThresholdsPage() {
     rsi_buy_threshold: 30,
     rsi_sell_threshold: 70,
     ml_confidence_threshold: 0.6,
+    meta_confidence_threshold: 0.65,
     adx_trend_threshold: 25,
     bb_width_volatility_threshold: 5.0,
     sl_mult_trend: 1.5,
@@ -84,7 +85,7 @@ export default function ThresholdsPage() {
   };
 
   const riskKeys = ["auto_execution_enabled", "use_equity_kill_switch", "max_drawdown_equity_pct", "use_daily_kill_switch", "max_daily_drawdown_pct", "risk_per_trade_pct", "max_open_positions"];
-  const alphaKeys = ["rsi_buy_threshold", "rsi_sell_threshold", "ml_confidence_threshold"];
+  const alphaKeys = ["rsi_buy_threshold", "rsi_sell_threshold", "ml_confidence_threshold", "meta_confidence_threshold"];
   const regimeKeys = ["adx_trend_threshold", "bb_width_volatility_threshold"];
   const sltpKeys = ["use_ai_sl_tp", "sl_mult_trend", "tp_mult_trend", "sl_mult_mean_reverting", "tp_mult_mean_reverting", "sl_mult_volatile", "tp_mult_volatile"];
   const systemKeys = ["engine_active", "cron_interval_minutes"];
@@ -209,6 +210,12 @@ export default function ThresholdsPage() {
                 <NumberInput 
                   id="ml_conf" label="ML Confidence Threshold" value={config.ml_confidence_threshold} 
                   min={0.1} max={1.0} step={0.05} onChange={(e: any, { value }: any) => updateConfig("ml_confidence_threshold", Number(value))}
+                />
+              </div>
+              <div style={{marginTop: "1rem"}}>
+                <NumberInput 
+                  id="meta_conf" label="Meta-Model Confidence Threshold" value={config.meta_confidence_threshold ?? 0.65} 
+                  min={0.1} max={1.0} step={0.05} onChange={(e: any, { value }: any) => updateConfig("meta_confidence_threshold", Number(value))}
                 />
               </div>
             </FormGroup>

@@ -16,7 +16,7 @@ import {
   Pagination,
   Button
 } from '@carbon/react';
-import { View, ChevronUp, ChevronDown } from '@carbon/icons-react';
+import { View, ChevronUp, ChevronDown, Renew } from '@carbon/icons-react';
 
 interface GlobalTableProps {
   title: React.ReactNode;
@@ -32,6 +32,8 @@ interface GlobalTableProps {
   hidePagination?: boolean;
   collapsible?: boolean;
   defaultCollapsed?: boolean;
+  onReload?: () => void | Promise<void>;
+  hideReload?: boolean;
 }
 
 export default function GlobalTable({
@@ -47,7 +49,9 @@ export default function GlobalTable({
   hideSearch = false,
   hidePagination = false,
   collapsible = false,
-  defaultCollapsed = false
+  defaultCollapsed = false,
+  onReload,
+  hideReload = false
 }: GlobalTableProps) {
   // State
   const [data, setData] = useState<any[]>([]);
@@ -195,6 +199,22 @@ export default function GlobalTable({
                       onChange={handleSearch} 
                       placeholder="Search records..." 
                       persistent 
+                    />
+                  )}
+                  {(!hideReload && (isServerSide || onReload)) && (
+                    <Button 
+                      kind="ghost" 
+                      size="sm" 
+                      renderIcon={Renew} 
+                      iconDescription="Reload" 
+                      hasIconOnly 
+                      onClick={async () => {
+                        if (isServerSide) {
+                          await fetchData();
+                        } else if (onReload) {
+                          await onReload();
+                        }
+                      }} 
                     />
                   )}
                   {toolbarActions}

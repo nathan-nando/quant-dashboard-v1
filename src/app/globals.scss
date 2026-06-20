@@ -234,3 +234,22 @@ main {
   font-weight: 600;
 }
 
+/* Model Health Grid */
+.model-health-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.2rem;
+}
+
+@media (min-width: 672px) {
+  .model-health-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1056px) {
+  .model-health-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+

@@ -1,11 +1,11 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { ProgressBar, Button, ToastNotification } from "@carbon/react";
-import { Document, ChevronUp, ChevronDown, View, Stop, TrashCan } from "@carbon/icons-react";
+import { ProgressBar, Button, ToastNotification, Modal } from "@carbon/react";
+import { Document, ChevronUp, ChevronDown, View, Stop, TrashCan, Play } from "@carbon/icons-react";
 
 interface GlobalJobsWidgetProps {
-  target: string;
+  target?: string;
   refreshTrigger?: number;
   onJobComplete?: () => void;
   openJobDetails: (id: string) => void;
@@ -18,10 +18,22 @@ export default function GlobalJobsWidget({ target, refreshTrigger, onJobComplete
   const [progressData, setProgressData] = useState<Record<string, { label: string, value: number }>>({});
   const activeSSERef = useRef<Record<string, EventSource>>({});
   const [notification, setNotification] = useState<{kind: "success" | "error" | "info", title: string, subtitle: string} | null>(null);
+  const [confirmModalConfig, setConfirmModalConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    body: string;
+    onConfirm: () => void | Promise<void>;
+  }>({
+    isOpen: false,
+    title: '',
+    body: '',
+    onConfirm: () => {}
+  });
 
   const fetchActiveJobs = async () => {
     try {
-      const res = await fetch(`http://127.0.0.1:8000/api/jobs/active?target=${target}`);
+      const url = `http://127.0.0.1:8000/api/jobs/active${target ? `?target=${target}` : ''}`;
+      const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
         setActiveJobs(data.jobs);
@@ -44,6 +56,16 @@ export default function GlobalJobsWidget({ target, refreshTrigger, onJobComplete
       Object.values(activeSSERef.current).forEach(source => source.close());
     };
   }, [target, refreshTrigger]);
+
+  useEffect(() => {
+    const handleJobStart = () => {
+      fetchActiveJobs();
+    };
+    window.addEventListener('job-start', handleJobStart);
+    return () => {
+      window.removeEventListener('job-start', handleJobStart);
+    };
+  }, [target]);
 
   const connectToSSE = (taskId: string) => {
     if (activeSSERef.current[taskId]) return;
@@ -77,6 +99,7 @@ export default function GlobalJobsWidget({ target, refreshTrigger, onJobComplete
         
         fetchActiveJobs();
         if (onJobComplete) onJobComplete();
+        window.dispatchEvent(new CustomEvent('job-complete'));
         
         setNotification({
            kind: hasError ? "error" : "success",
@@ -102,29 +125,48 @@ export default function GlobalJobsWidget({ target, refreshTrigger, onJobComplete
     };
   };
 
+  const handleRetryJob = async (jobId: string) => {
+    try {
+      const res = await fetch(`http://127.0.0.1:8000/api/jobs/retry/${jobId}`, { method: 'POST' });
+      if(res.ok) {
+        setNotification({ kind: 'success', title: 'Retry Started', subtitle: 'Job has been restarted.' });
+        fetchActiveJobs();
+        if (onJobComplete) onJobComplete();
+      }
+    } catch(e) {}
+  };
+
   const handleCancelJob = async (jobId: string) => {
     try {
         const res = await fetch(`http://127.0.0.1:8000/api/jobs/cancel/${jobId}`, { method: 'POST' });
         if(res.ok) {
-            setNotification({ kind: 'info', title: 'Job Cancelled', subtitle: 'Sent cancellation signal.' });
-            fetchActiveJobs();
+             setNotification({ kind: 'info', title: 'Job Cancelled', subtitle: 'Sent cancellation signal.' });
+             fetchActiveJobs();
+             window.dispatchEvent(new CustomEvent('job-complete'));
         }
     } catch(e) { }
   };
 
-  const handleDeleteJob = async (jobId: string) => {
-    if (confirm("Are you sure you want to completely delete this job record?")) {
+  const handleDeleteJob = (jobId: string) => {
+    setConfirmModalConfig({
+      isOpen: true,
+      title: "Delete Job Record",
+      body: "Are you sure you want to completely delete this job record?",
+      onConfirm: async () => {
         try {
             const res = await fetch(`http://127.0.0.1:8000/api/jobs/${jobId}`, { method: 'DELETE' });
             if(res.ok) {
-                setNotification({ kind: 'success', title: 'Job Deleted', subtitle: 'Job has been completely removed.' });
-                fetchActiveJobs();
-                if(onJobComplete) onJobComplete();
+                 setNotification({ kind: 'success', title: 'Job Deleted', subtitle: 'Job has been completely removed.' });
+                 fetchActiveJobs();
+                 if(onJobComplete) onJobComplete();
+                 window.dispatchEvent(new CustomEvent('job-complete'));
             }
         } catch(e) { 
             console.error("Failed to delete job", e);
         }
-    }
+        setConfirmModalConfig(prev => ({ ...prev, isOpen: false }));
+      }
+    });
   };
 
   const widgetJobs = activeJobs.filter(job => job.status?.toLowerCase() !== 'done' && job.status?.toLowerCase() !== 'success');
@@ -145,9 +187,9 @@ export default function GlobalJobsWidget({ target, refreshTrigger, onJobComplete
         </div>
       )}
       
-      <div style={{ position: 'fixed', bottom: '2rem', right: '2rem', width: '380px', backgroundColor: 'var(--cds-layer-01, #262626)', boxShadow: '0 4px 8px rgba(0,0,0,0.5)', zIndex: 9999, border: '1px solid var(--cds-border-subtle, #393939)', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ position: 'fixed', bottom: '2rem', right: '2rem', width: '380px', backgroundColor: 'var(--cds-layer-01, #262626)', boxShadow: 'none', zIndex: 9999, border: 'none', display: 'flex', flexDirection: 'column' }}>
         <div style={{ backgroundColor: 'var(--cds-layer-02, #393939)', color: 'var(--cds-text-primary, #f4f4f4)', padding: '0.75rem 1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }} onClick={() => setIsWidgetCollapsed(!isWidgetCollapsed)}>
-            <span style={{ fontSize: '0.875rem', fontWeight: 600 }}>Active Jobs ({target})</span>
+             <span style={{ fontSize: '0.875rem', fontWeight: 600 }}>Active Jobs ({widgetJobs.length}){target ? ` - ${target}` : ''}</span>
             <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
               {isWidgetCollapsed ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
             </div>
@@ -192,6 +234,9 @@ export default function GlobalJobsWidget({ target, refreshTrigger, onJobComplete
                     ) : (
                         <>
                             <Button kind="ghost" size="sm" renderIcon={View} hasIconOnly iconDescription="Logs" onClick={() => openJobDetails(job.task_id)} />
+                            {job.status?.toLowerCase() !== 'running' && (
+                                <Button kind="ghost" size="sm" renderIcon={Play} hasIconOnly iconDescription="Retry" onClick={() => handleRetryJob(job.task_id)} />
+                            )}
                             <Button kind="ghost" size="sm" renderIcon={TrashCan} hasIconOnly iconDescription="Dismiss" onClick={() => handleDeleteJob(job.task_id)} />
                         </>
                     )}
@@ -201,6 +246,17 @@ export default function GlobalJobsWidget({ target, refreshTrigger, onJobComplete
         </div>
         )}
       </div>
+
+      <Modal
+        open={confirmModalConfig.isOpen}
+        modalHeading={confirmModalConfig.title}
+        primaryButtonText="Confirm"
+        secondaryButtonText="Cancel"
+        onRequestClose={() => setConfirmModalConfig(prev => ({ ...prev, isOpen: false }))}
+        onRequestSubmit={confirmModalConfig.onConfirm}
+      >
+        <p style={{ padding: '1rem 0', fontSize: '0.875rem' }}>{confirmModalConfig.body}</p>
+      </Modal>
     </>
   );
 }

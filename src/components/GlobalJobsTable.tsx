@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Button, ToastNotification } from "@carbon/react";
+import { Button, ToastNotification, Modal } from "@carbon/react";
 import { Document, TrashCan, Play } from "@carbon/icons-react";
 import GlobalTable from "./GlobalTable";
 
@@ -15,6 +15,17 @@ interface GlobalJobsTableProps {
 export default function GlobalJobsTable({ target, refreshTrigger, openJobDetails, onJobChange }: GlobalJobsTableProps) {
   const [historyJobs, setHistoryJobs] = useState<any[]>([]);
   const [notification, setNotification] = useState<any>(null);
+  const [confirmModalConfig, setConfirmModalConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    body: string;
+    onConfirm: () => void | Promise<void>;
+  }>({
+    isOpen: false,
+    title: '',
+    body: '',
+    onConfirm: () => {}
+  });
 
   const fetchHistoryJobs = async () => {
     try {
@@ -32,8 +43,12 @@ export default function GlobalJobsTable({ target, refreshTrigger, openJobDetails
     fetchHistoryJobs();
   }, [target, refreshTrigger]);
 
-  const handleDeleteJob = async (jobId: string) => {
-    if (confirm("Are you sure you want to completely delete this job record?")) {
+  const handleDeleteJob = (jobId: string) => {
+    setConfirmModalConfig({
+      isOpen: true,
+      title: "Delete Job Record",
+      body: "Are you sure you want to completely delete this job record?",
+      onConfirm: async () => {
         try {
             const res = await fetch(`http://127.0.0.1:8000/api/jobs/${jobId}`, { method: 'DELETE' });
             if(res.ok) {
@@ -42,7 +57,9 @@ export default function GlobalJobsTable({ target, refreshTrigger, openJobDetails
                 onJobChange();
             }
         } catch(e) {}
-    }
+        setConfirmModalConfig(prev => ({ ...prev, isOpen: false }));
+      }
+    });
   };
 
   const handleRetryJob = async (jobId: string) => {
@@ -137,6 +154,17 @@ export default function GlobalJobsTable({ target, refreshTrigger, openJobDetails
         collapsible
         defaultCollapsed
       />
+
+      <Modal
+        open={confirmModalConfig.isOpen}
+        modalHeading={confirmModalConfig.title}
+        primaryButtonText="Confirm"
+        secondaryButtonText="Cancel"
+        onRequestClose={() => setConfirmModalConfig(prev => ({ ...prev, isOpen: false }))}
+        onRequestSubmit={confirmModalConfig.onConfirm}
+      >
+        <p style={{ padding: '1rem 0', fontSize: '0.875rem' }}>{confirmModalConfig.body}</p>
+      </Modal>
     </>
   );
 }

@@ -28,7 +28,8 @@ import {
   Checkbox,
   Toggle,
   InlineNotification,
-  MultiSelect
+  MultiSelect,
+  ToastNotification
 } from '@carbon/react';
 import { Play, ChartLineData, Compare, Maximize, Minimize, Settings as SettingsIcon } from '@carbon/icons-react';
 
@@ -69,6 +70,7 @@ function SimulationPageContent() {
 
   const [isIngesting, setIsIngesting] = useState(false);
   const [ingestStatus, setIngestStatus] = useState<{type: 'success' | 'error', message: string} | null>(null);
+  const [notification, setNotification] = useState<{kind: "success" | "error" | "info", title: string, subtitle: string} | null>(null);
   const [ingestForm, setIngestForm] = useState({ 
     start_date: '2015-01-01', 
     end_date: (() => {
@@ -79,6 +81,7 @@ function SimulationPageContent() {
   });
   
   const [config, setConfig] = useState({
+    name: "",
     mode: "BACKTEST",
     models: {
       bull_trend: "xbull_5years",
@@ -213,11 +216,18 @@ function SimulationPageContent() {
     setIsRunning(true);
     setProgress(0);
     
+    const requestPayload: any = { ...config };
+    if (!requestPayload.name || !requestPayload.name.trim()) {
+      delete requestPayload.name;
+    } else {
+      requestPayload.name = requestPayload.name.trim();
+    }
+    
     try {
       const res = await fetch('http://127.0.0.1:8000/api/simulation/backtest', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(config)
+        body: JSON.stringify(requestPayload)
       });
       const data = await res.json();
       
@@ -237,13 +247,13 @@ function SimulationPageContent() {
                 .then(res => res.json())
                 .then(r => { if (Array.isArray(r)) setRuns(r); });
             } else {
-               alert(`Simulation failed: ${streamData.error || 'Unknown error'}`);
+               setNotification({ kind: "error", title: "Simulation Failed", subtitle: streamData.error || 'Unknown error' });
             }
           }
         };
       } else {
         setIsRunning(false);
-        alert(`Failed to launch simulation: ${data.detail || 'Unknown error'}`);
+        setNotification({ kind: "error", title: "Launch Failed", subtitle: data.detail || 'Unknown error' });
       }
     } catch (err) {
       console.error(err);
@@ -252,9 +262,23 @@ function SimulationPageContent() {
   };
 
   return (
-    <Grid fullWidth>
-      <Column lg={16} md={8} sm={4} className="landing-page__banner">
-        <h3 style={{ marginBottom: "1rem", fontWeight: 400 }}>Simulation Engine</h3>
+    <>
+      {notification && (
+        <div style={{ position: "fixed", top: "4rem", right: "1rem", zIndex: 9999 }}>
+          <ToastNotification
+            timeout={5000}
+            kind={notification.kind as any}
+            title={notification.title}
+            subtitle={notification.subtitle}
+            caption={new Date().toLocaleTimeString()}
+            onClose={() => { setNotification(null); return false; }}
+          />
+        </div>
+      )}
+
+      <Grid fullWidth>
+        <Column lg={16} md={8} sm={4} className="landing-page__banner">
+          <h3 style={{ marginBottom: "1rem", fontWeight: 400 }}>Simulation Engine</h3>
       </Column>
 
       <Column lg={16} md={8} sm={4}>
@@ -288,6 +312,15 @@ function SimulationPageContent() {
               <Tile style={{ padding: '2rem' }}>
                     <h3 style={{ marginBottom: '1.5rem' }}>Configure Simulation</h3>
                     <Form onSubmit={handleLaunch}>
+                      <div style={{ marginBottom: '2rem', maxWidth: '400px' }}>
+                        <TextInput 
+                          id="simulation-name" 
+                          labelText="Simulation Name (Optional)" 
+                          placeholder="e.g., AI SL/TP Baseline, High Spread Stress Test"
+                          value={config.name || ""}
+                          onChange={(e) => setConfig({...config, name: e.target.value})}
+                        />
+                      </div>
                       <Grid style={{ padding: 0, marginLeft: '-1rem', marginRight: '-1rem', marginBottom: '2rem' }}>
                         {/* Row 1: Left */}
                         <Column lg={8} md={4} sm={4}>
@@ -939,6 +972,7 @@ function SimulationPageContent() {
       </div>
       </Column>
     </Grid>
+    </>
   );
 }
 

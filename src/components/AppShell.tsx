@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   Header,
@@ -12,16 +12,67 @@ import {
   HeaderGlobalAction,
   SkipToContent,
   Theme,
+  Modal,
+  CodeSnippet
 } from '@carbon/react';
 import { Settings, Notification, Dashboard, SettingsAdjust, Activity, MachineLearningModel, Analytics, User } from '@carbon/icons-react';
 import MarketClock from './MarketClock';
 import HeaderMetrics from './HeaderMetrics';
+import GlobalJobsWidget from './GlobalJobsWidget';
 
 const HeaderAny = Header as any;
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+
+  // Job Logs Modal States
+  const [detailLogs, setDetailLogs] = useState<string>("");
+  const [isDetailModalOpen, setDetailModalOpen] = useState(false);
+  const [detailJobId, setDetailJobId] = useState<string | null>(null);
+  
+  const detailJobIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    detailJobIdRef.current = detailJobId;
+  }, [detailJobId]);
+
+  useEffect(() => {
+    const handleOpenDetails = (e: Event) => {
+      const jobId = (e as CustomEvent).detail?.jobId;
+      if (jobId) openJobDetails(jobId);
+    };
+    window.addEventListener('open-job-details', handleOpenDetails);
+    return () => {
+      window.removeEventListener('open-job-details', handleOpenDetails);
+    };
+  }, []);
+
+  const handleLogLine = useCallback((taskId: string, line: string) => {
+    if (taskId === detailJobIdRef.current) {
+      setDetailLogs(prev => {
+        if (!prev || prev === "Loading logs..." || prev === "No logs available.") return line;
+        if (prev.endsWith(line)) return prev;
+        return prev + "\n" + line;
+      });
+    }
+  }, []);
+
+  const openJobDetails = async (jobId: string) => {
+    setDetailLogs("Loading logs...");
+    setDetailModalOpen(true);
+    try {
+      const res = await fetch(`http://127.0.0.1:8000/api/jobs/logs/${jobId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setDetailLogs(data.logs || "No logs available.");
+        setDetailJobId(jobId);
+      } else {
+        setDetailLogs("Failed to load logs.");
+      }
+    } catch (e) {
+      setDetailLogs("Failed to load logs.");
+    }
+  };
 
   const navItem = (href: string, label: string, Icon: any) => (
     <HeaderMenuItem
@@ -90,6 +141,27 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <main style={{ marginTop: '3rem', padding: '1rem 0', minHeight: 'calc(100vh - 3rem)' }}>
           {children}
         </main>
+      </Theme>
+
+      <Theme theme="g100">
+        {/* Logs Modal */}
+        <Modal 
+            open={isDetailModalOpen} 
+            onRequestClose={() => { setDetailModalOpen(false); setDetailJobId(null); }} 
+            passiveModal 
+            modalHeading="Job Logs" 
+        >
+            <div style={{ height: "75vh", overflowY: "auto", overflowX: "hidden", display: "flex", flexDirection: "column" }}>
+                <div style={{ flexGrow: 1, minHeight: "100%" }}>
+                    <CodeSnippet type="multi" feedback="Copied to clipboard" maxCollapsedNumberOfRows={0} maxExpandedNumberOfRows={0}>
+                        {detailLogs}
+                    </CodeSnippet>
+                </div>
+            </div>
+        </Modal>
+
+        {/* Global Jobs Widget (monitoring all active dataset & training jobs) */}
+        <GlobalJobsWidget openJobDetails={openJobDetails} onLogLine={handleLogLine} />
       </Theme>
     </>
   );

@@ -8,6 +8,7 @@ import GlobalTable from "../../components/GlobalTable";
 import GlobalDetailTable from "../../components/GlobalDetailTable";
 import GlobalJobsWidget from "../../components/GlobalJobsWidget";
 import GlobalJobsTable from "../../components/GlobalJobsTable";
+import GlobalHealthWidget from "../../components/GlobalHealthWidget";
 
 function ModelsContent() {
   const router = useRouter();
@@ -22,6 +23,7 @@ function ModelsContent() {
 
   const navItems = [
     { id: 'routes', label: 'Routes', icon: Fork },
+    { id: 'health', label: 'Health', icon: Activity },
     { id: 'train', label: 'Train', icon: Play },
     { id: 'registry', label: 'Registry', icon: MachineLearningModel },
     { id: 'datasets', label: 'Datasets', icon: DataSet }
@@ -58,31 +60,26 @@ function ModelsContent() {
 
   const [isTrainModalOpen, setTrainModalOpen] = useState(false);
   const [trainRegime, setTrainRegime] = useState<string>("");
-  const [trainForm, setTrainForm] = useState({ algorithm: "XGBoost", model_name: "", optuna_trials: 10, skip_ingestion: true, dataset_id: "" });
+  const [trainForm, setTrainForm] = useState({ algorithm: "XGBoost", model_name: "", optuna_trials: 10, skip_ingestion: true, dataset_id: "", use_meta_labeling: true });
   const [showDatasetInfo, setShowDatasetInfo] = useState(false);
   
   const [notification, setNotification] = useState<{kind: "success" | "error" | "info", title: string, subtitle: string} | null>(null);
 
+  const [confirmModalConfig, setConfirmModalConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    body: string;
+    onConfirm: () => void | Promise<void>;
+  }>({
+    isOpen: false,
+    title: '',
+    body: '',
+    onConfirm: () => {}
+  });
+
   // Detail Modal
   const [detailModel, setDetailModel] = useState<any>(null);
   const [detailDataset, setDetailDataset] = useState<any>(null);
-
-  // Detail Logs Modal for jobs
-  const [detailJobId, setDetailJobId] = useState<string | null>(null);
-  const detailJobIdRef = useRef<string | null>(null);
-  useEffect(() => { detailJobIdRef.current = detailJobId; }, [detailJobId]);
-  const [detailLogs, setDetailLogs] = useState<string>("");
-  const [isDetailModalOpen, setDetailModalOpen] = useState(false);
-
-  const handleLogLine = useCallback((taskId: string, line: string) => {
-      if (taskId === detailJobIdRef.current) {
-          setDetailLogs(prev => {
-              if (!prev || prev === "Loading logs..." || prev === "No logs available.") return line;
-              if (prev.endsWith(line)) return prev;
-              return prev + "\n" + line;
-          });
-      }
-  }, []);
 
   const fetchData = async () => {
     setIsLoadingData(true);
@@ -118,6 +115,14 @@ function ModelsContent() {
 
   useEffect(() => {
     fetchData();
+
+    const handleJobComplete = () => {
+      fetchData();
+    };
+    window.addEventListener('job-complete', handleJobComplete);
+    return () => {
+      window.removeEventListener('job-complete', handleJobComplete);
+    };
   }, []);
 
   const openModelModal = (model: any = null) => {
@@ -145,13 +150,36 @@ function ModelsContent() {
     setModelModalOpen(false);
   };
 
-  const deleteModel = async (id: string) => {
-    if (confirm("Are you sure you want to delete this model?")) {
-      try {
-        await fetch(`http://127.0.0.1:8000/api/models/${id}`, { method: "DELETE" });
-        fetchData();
-        setNotification({ kind: "success", title: "Model Deleted", subtitle: "Model was successfully deleted." });
-      } catch(e) { console.error(e); }
+  const deleteModel = (id: string) => {
+    setConfirmModalConfig({
+      isOpen: true,
+      title: "Delete Model",
+      body: "Are you sure you want to delete this model?",
+      onConfirm: async () => {
+        try {
+          await fetch(`http://127.0.0.1:8000/api/models/${id}`, { method: "DELETE" });
+          fetchData();
+          setNotification({ kind: "success", title: "Model Deleted", subtitle: "Model was successfully deleted." });
+        } catch(e) { console.error(e); }
+        setConfirmModalConfig(prev => ({ ...prev, isOpen: false }));
+      }
+    });
+  };
+
+  const toggleModelStatus = async (model: any, checked: boolean) => {
+    const newStatus = checked ? "Active" : "Inactive";
+    const updatedModel = { ...model, status: newStatus };
+    try {
+      await fetch("http://127.0.0.1:8000/api/models", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updatedModel)
+      });
+      fetchData();
+      setNotification({ kind: "success", title: "Status Updated", subtitle: `Model status changed to ${newStatus}.` });
+    } catch(e) { 
+      console.error(e); 
+      setNotification({ kind: "error", title: "Update Failed", subtitle: "Failed to update model status." });
     }
   };
 
@@ -190,6 +218,7 @@ function ModelsContent() {
       if(res.ok) {
         setNotification({ kind: "info", title: "Ingestion Started", subtitle: "Dataset ingestion job has been queued." });
         setRefreshJobsTrigger(prev => prev + 1);
+        window.dispatchEvent(new CustomEvent('job-start'));
       }
     } catch(e) { console.error(e); }
   };
@@ -207,14 +236,20 @@ function ModelsContent() {
     } catch(e) { console.error(e); }
   };
 
-  const deleteDataset = async (id: string) => {
-    if (confirm("Are you sure you want to delete this dataset? Physical file will also be deleted.")) {
-      try {
-        await fetch(`http://127.0.0.1:8000/api/datasets/${id}`, { method: "DELETE" });
-        fetchData();
-        setNotification({ kind: "success", title: "Dataset Deleted", subtitle: "Dataset was successfully deleted." });
-      } catch(e) { console.error(e); }
-    }
+  const deleteDataset = (id: string) => {
+    setConfirmModalConfig({
+      isOpen: true,
+      title: "Delete Dataset",
+      body: "Are you sure you want to delete this dataset? Physical file will also be deleted.",
+      onConfirm: async () => {
+        try {
+          await fetch(`http://127.0.0.1:8000/api/datasets/${id}`, { method: "DELETE" });
+          fetchData();
+          setNotification({ kind: "success", title: "Dataset Deleted", subtitle: "Dataset was successfully deleted." });
+        } catch(e) { console.error(e); }
+        setConfirmModalConfig(prev => ({ ...prev, isOpen: false }));
+      }
+    });
   };
 
   const handleRouteChange = (regime: string, type: 'champion'|'challenger', val: string) => {
@@ -235,32 +270,19 @@ function ModelsContent() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(modelRouting)
       });
-      alert("Model routing saved successfully!");
+      setNotification({ kind: "success", title: "Routing Saved", subtitle: "Model routing saved successfully!" });
       setInitialModelRouting(modelRouting);
     } catch(e) { console.error(e); }
     setSavingRouting(false);
   };
 
-  const openJobDetails = async (jobId: string) => {
-      setDetailLogs("Loading logs...");
-      setDetailModalOpen(true);
-      try {
-        const res = await fetch(`http://127.0.0.1:8000/api/jobs/logs/${jobId}`);
-        if(res.ok) {
-            const data = await res.json();
-            setDetailLogs(data.logs || "No logs available.");
-            setDetailJobId(jobId);
-        } else {
-            setDetailLogs("Failed to load logs.");
-        }
-      } catch(e) {
-          setDetailLogs("Failed to load logs.");
-      }
+  const openJobDetails = (jobId: string) => {
+    window.dispatchEvent(new CustomEvent('open-job-details', { detail: { jobId } }));
   };
 
   const openTrainModal = (regime: string) => {
     setTrainRegime(regime);
-    setTrainForm({ algorithm: "XGBoost", model_name: "", optuna_trials: 10, skip_ingestion: true, dataset_id: datasets.length > 0 ? datasets[0].id : "" });
+    setTrainForm({ algorithm: "XGBoost", model_name: "", optuna_trials: 10, skip_ingestion: true, dataset_id: datasets.length > 0 ? datasets[0].id : "", use_meta_labeling: true });
     setShowDatasetInfo(false);
     setTrainModalOpen(true);
   };
@@ -277,6 +299,7 @@ function ModelsContent() {
       if(res.ok) {
         setNotification({ kind: "info", title: "Training Started", subtitle: "Training job queued." });
         setRefreshJobsTrigger(prev => prev + 1);
+        window.dispatchEvent(new CustomEvent('job-start'));
       } else {
          setNotification({ kind: "error", title: "Request Failed", subtitle: "Server responded with an error." });
       }
@@ -289,13 +312,17 @@ function ModelsContent() {
     { key: "name", header: "Model Name" },
     { key: "algorithm_type", header: "Algorithm Type" },
     { key: "accuracy", header: "Accuracy" },
+    { key: "dataset", header: "Dataset" },
     { key: "status", header: "Status" },
+    { key: "uses_meta", header: "Meta Labeling" },
     { key: "actions", header: "Actions" },
   ];
 
   const datasetHeaders = [
     { key: "name", header: "Dataset Name" },
     { key: "timeframe", header: "Timeframe" },
+    { key: "start_date", header: "Start Date" },
+    { key: "end_date", header: "End Date" },
     { key: "file_name", header: "File Name" },
     { key: "total_rows", header: "Total Rows" },
     { key: "status", header: "Status" },
@@ -314,6 +341,34 @@ function ModelsContent() {
         </div>
       );
     }
+    if (cellId.endsWith(':uses_meta')) {
+      return value ? "Yes" : "No";
+    }
+    if (cellId.endsWith(':dataset')) {
+      const rowId = cellId.split(':')[0];
+      const model = models.find(m => m.id === rowId);
+      if (!model || !model.dataset_id) return "-";
+      const dataset = datasets.find(d => d.id === model.dataset_id);
+      return dataset ? dataset.name : "-";
+    }
+    if (cellId.endsWith(':status')) {
+      const rowId = cellId.split(':')[0];
+      const model = models.find(m => m.id === rowId);
+      if (!model) return value;
+      return (
+        <Toggle
+          id={`status-toggle-${model.id}`}
+          size="sm"
+          labelText=""
+          labelA=""
+          labelB=""
+          toggled={model.status === "Active"}
+          onToggle={(checked) => toggleModelStatus(model, checked)}
+          hideLabel
+          style={{ margin: 0 }}
+        />
+      );
+    }
     return value;
   };
 
@@ -328,6 +383,19 @@ function ModelsContent() {
           <Button size="sm" kind="danger--ghost" renderIcon={TrashCan} iconDescription="Delete" hasIconOnly onClick={() => deleteDataset(rowId)} />
         </div>
       );
+    }
+    if (cellId.endsWith(':start_date') || cellId.endsWith(':end_date')) {
+      if (!value) return "-";
+      const dateStr = value.endsWith('Z') || value.includes('+') ? value : value + 'Z';
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return value;
+      
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const day = d.getDate().toString().padStart(2, '0');
+      const month = months[d.getMonth()];
+      const year = d.getFullYear().toString().slice(-2);
+      
+      return `${day} ${month} ${year}`;
     }
     return value;
   };
@@ -407,6 +475,11 @@ function ModelsContent() {
               </Form>
             )}
 
+            {/* TAB 1.5: HEALTH */}
+            {currentTab === 'health' && (
+              <GlobalHealthWidget models={models} />
+            )}
+
             {/* TAB 2: TRAIN */}
             {currentTab === 'train' && (
               <>
@@ -441,6 +514,7 @@ function ModelsContent() {
                 initialData={models} 
                 title="Models Registry" 
                 formatCell={formatModelCell}
+                onReload={fetchData}
                 toolbarActions={
                   <Button renderIcon={Add} onClick={() => openModelModal()} size="sm">
                     Register External Model
@@ -457,6 +531,7 @@ function ModelsContent() {
                   initialData={datasets} 
                   title="Datasets" 
                   formatCell={formatDatasetCell}
+                  onReload={fetchData}
                   toolbarActions={
                     <Button renderIcon={Add} onClick={() => openDatasetModal()} size="sm">
                       Ingest New Dataset
@@ -572,7 +647,8 @@ function ModelsContent() {
               )}
           </div>
           
-          <NumberInput id="optuna-trials" label="Optuna Tuning Trials" value={trainForm.optuna_trials} onChange={(e, {value}) => setTrainForm({...trainForm, optuna_trials: Number(value)})} min={1} max={500} />
+          <NumberInput id="optuna-trials" label="Optuna Tuning Trials" value={trainForm.optuna_trials} onChange={(e, {value}) => setTrainForm({...trainForm, optuna_trials: Number(value)})} min={1} max={500} style={{ marginBottom: "1rem" }} />
+        <Toggle id="use-meta-labeling" labelText="Use Meta Labeling (The Hakim)" toggled={trainForm.use_meta_labeling} onToggle={(val) => setTrainForm({...trainForm, use_meta_labeling: val})} />
         </FormGroup>
       </Modal>
 
@@ -592,23 +668,17 @@ function ModelsContent() {
           />
       )}
 
-      {/* Logs Modal */}
-      <Modal 
-          open={isDetailModalOpen} 
-          onRequestClose={() => { setDetailModalOpen(false); setDetailJobId(null); }} 
-          passiveModal 
-          modalHeading="Job Logs" 
+      {/* Confirmation Modal */}
+      <Modal
+        open={confirmModalConfig.isOpen}
+        modalHeading={confirmModalConfig.title}
+        primaryButtonText="Confirm"
+        secondaryButtonText="Cancel"
+        onRequestClose={() => setConfirmModalConfig(prev => ({ ...prev, isOpen: false }))}
+        onRequestSubmit={confirmModalConfig.onConfirm}
       >
-         <div style={{ height: "75vh", overflowY: "auto", overflowX: "hidden", display: "flex", flexDirection: "column" }}>
-             <div style={{ flexGrow: 1, minHeight: "100%" }}>
-                 <CodeSnippet type="multi" feedback="Copied to clipboard" maxCollapsedNumberOfRows={0} maxExpandedNumberOfRows={0}>
-                     {detailLogs}
-                 </CodeSnippet>
-             </div>
-         </div>
+        <p style={{ padding: '1rem 0', fontSize: '0.875rem' }}>{confirmModalConfig.body}</p>
       </Modal>
-      
-      <GlobalJobsWidget target={currentTab === "datasets" ? "dataset" : "model"} refreshTrigger={refreshJobsTrigger} onJobComplete={() => { fetchData(); setRefreshJobsTrigger(prev => prev + 1); }} openJobDetails={openJobDetails} onLogLine={handleLogLine} />
     </>
   );
 }
