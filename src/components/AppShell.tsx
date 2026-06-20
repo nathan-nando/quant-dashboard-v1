@@ -13,7 +13,9 @@ import {
   SkipToContent,
   Theme,
 } from '@carbon/react';
-import { Settings, Notification, Dashboard, SettingsAdjust, Activity, CurrencyDollar, ChartBar, MachineLearningModel, Analytics } from '@carbon/icons-react';
+import { Settings, Notification, Dashboard, SettingsAdjust, Activity, MachineLearningModel, Analytics, User } from '@carbon/icons-react';
+import MarketClock from './MarketClock';
+import HeaderMetrics from './HeaderMetrics';
 
 const HeaderAny = Header as any;
 
@@ -55,35 +57,37 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               <HeaderNavigation aria-label="Main" style={{ border: 'none' }}>
                 {navItem('/', 'Dashboard', Dashboard)}
                 {navItem('/signals', 'Signals', Activity)}
-                {navItem('/transactions', 'Transactions', CurrencyDollar)}
+                {navItem('/account', 'Account', User)}
                 {navItem('/thresholds', 'Thresholds', SettingsAdjust)}
               </HeaderNavigation>
 
               {/* Spacer — pushes Group 2 toward the right */}
-              <div style={{ flex: 1 }} />
+              <MarketClock />
 
               {/* Group 2 — sits just before the global action icons */}
               <HeaderNavigation aria-label="Tools" style={{ border: 'none' }}>
                 {navItem('/models', 'Models', MachineLearningModel)}
                 {navItem('/simulation', 'Simulation', Analytics)}
-                {navItem('/analytics', 'Analytics', ChartBar)}
               </HeaderNavigation>
 
               {/* Global actions */}
-              <HeaderGlobalBar>
-                <HeaderGlobalAction aria-label="Notifications" tooltipAlignment="end">
-                  <Notification size={20} />
-                </HeaderGlobalAction>
-                <HeaderGlobalAction aria-label="Settings" tooltipAlignment="end" onClick={() => router.push('/settings')}>
-                  <Settings size={20} />
-                </HeaderGlobalAction>
-              </HeaderGlobalBar>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <HeaderMetrics />
+                <HeaderGlobalBar>
+                  <HeaderGlobalAction aria-label="Notifications" tooltipAlignment="end">
+                    <Notification size={20} />
+                  </HeaderGlobalAction>
+                  <HeaderGlobalAction aria-label="Settings" tooltipAlignment="end" onClick={() => router.push('/settings')}>
+                    <Settings size={20} />
+                  </HeaderGlobalAction>
+                </HeaderGlobalBar>
+              </div>
             </HeaderAny>
           )}
         />
       </Theme>
       <Theme theme="g100" className="main-theme-wrapper">
-        <main style={{ marginTop: '3rem', padding: '2rem 0', minHeight: 'calc(100vh - 3rem)' }}>
+        <main style={{ marginTop: '3rem', padding: '1rem 0', minHeight: 'calc(100vh - 3rem)' }}>
           {children}
         </main>
       </Theme>

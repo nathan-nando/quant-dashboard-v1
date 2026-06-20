@@ -1,7 +1,7 @@
 "use client";
 
 import { Grid, Column, Tile, Form, FormGroup, TextInput, Select, SelectItem, Button, Modal, Tabs, TabList, Tab, TabPanels, TabPanel, ProgressBar, NumberInput, CodeSnippet, ToastNotification, Toggle } from "@carbon/react";
-import { Add, Edit, TrashCan, Play, Save, View, ArrowUpRight, ArrowDownRight, Activity, Lightning, Information, Close } from "@carbon/icons-react";
+import { Add, Edit, TrashCan, Play, Save, View, ArrowUpRight, ArrowDownRight, Activity, Lightning, Information, Close, Fork, DataSet, MachineLearningModel } from "@carbon/icons-react";
 import { useState, useEffect, Suspense, useRef, useCallback } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import GlobalTable from "../../components/GlobalTable";
@@ -15,13 +15,17 @@ function ModelsContent() {
   const searchParams = useSearchParams();
   
   const currentTab = searchParams.get("tab") || "routes";
-  const tabIndexMap: Record<string, number> = { "routes": 0, "train": 1, "registry": 2, "datasets": 3 };
-  const indexToTabMap = ["routes", "train", "registry", "datasets"];
 
-  const handleTabChange = (e: any) => {
-    const newTab = indexToTabMap[e.selectedIndex];
-    router.push(`${pathname}?tab=${newTab}`);
+  const handleTabChange = (tabId: string) => {
+    router.push(`${pathname}?tab=${tabId}`);
   };
+
+  const navItems = [
+    { id: 'routes', label: 'Routes', icon: Fork },
+    { id: 'train', label: 'Train', icon: Play },
+    { id: 'registry', label: 'Registry', icon: MachineLearningModel },
+    { id: 'datasets', label: 'Datasets', icon: DataSet }
+  ];
 
   const [models, setModels] = useState<any[]>([]);
   const [datasets, setDatasets] = useState<any[]>([]);
@@ -343,100 +347,111 @@ function ModelsContent() {
         </div>
       )}
 
-      <Grid>
+      <Grid fullWidth>
       <Column lg={16} md={8} sm={4} className="landing-page__banner">
         <h3 style={{ marginBottom: "1rem", fontWeight: 400 }}>Models & AI Lifecycle</h3>
       </Column>
 
       <Column lg={16} md={8} sm={4}>
-        <Tabs selectedIndex={tabIndexMap[currentTab] || 0} onChange={handleTabChange}>
-            <TabList aria-label="Model Configuration Tabs">
-              <Tab>Routes</Tab>
-              <Tab>Train</Tab>
-              <Tab>Registry</Tab>
-              <Tab>Datasets</Tab>
-            </TabList>
-            <TabPanels>
-              {/* TAB 1: ROUTES */}
-              <TabPanel style={{ paddingTop: '1rem' }}>
-                <Grid>
-                  <Column lg={16} md={8} sm={4}>
-                    <Form>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '2px', marginBottom: '2rem' }}>
-                        {['TREND_BULL', 'TREND_BEAR', 'MEAN_REVERTING', 'VOLATILE_CHOP'].map(regime => (
-                          <Tile key={regime} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                                 {regime === 'TREND_BULL' && <ArrowUpRight size={20} style={{ color: '#24a148' }} />}
-                                 {regime === 'TREND_BEAR' && <ArrowDownRight size={20} style={{ color: '#da1e28' }} />}
-                                 {regime === 'MEAN_REVERTING' && <Activity size={20} style={{ color: '#4589ff' }} />}
-                                 {regime === 'VOLATILE_CHOP' && <Lightning size={20} style={{ color: '#f1c21b' }} />}
-                                 <h4 style={{fontWeight: 400, margin: 0}}>{regime.split('_').map(w => w.charAt(0) + w.slice(1).toLowerCase()).join(' ')}</h4>
-                              </div>
-                              <Select id={`route_${regime}_champ`} labelText="👑 Champion" value={modelRouting[regime]?.champion || "NONE"} onChange={e => handleRouteChange(regime, 'champion', e.target.value)}>
-                                <SelectItem value="NONE" text="-- None (Disable) --" />
-                                {models.map(m => <SelectItem key={`${m.id}-champ`} value={m.name} text={m.name} />)}
-                              </Select>
-                              <Select id={`route_${regime}_chall`} labelText="🔬 Challenger" value={modelRouting[regime]?.challenger || "NONE"} onChange={e => handleRouteChange(regime, 'challenger', e.target.value)}>
-                                <SelectItem value="NONE" text="-- None --" />
-                                {models.map(m => <SelectItem key={`${m.id}-chall`} value={m.name} text={m.name} />)}
-                              </Select>
-                          </Tile>
-                        ))}
-                      </div>
-                      <Button type="button" size="sm" renderIcon={Save} onClick={saveRouting} disabled={savingRouting || JSON.stringify(modelRouting) === JSON.stringify(initialModelRouting)}>{savingRouting ? "Saving..." : "Save"}</Button>
-                    </Form>
-                  </Column>
-                </Grid>
-              </TabPanel>
+        <div style={{ display: 'flex', gap: '2rem', marginTop: '0.5rem' }}>
+          {/* Sidebar Navigation */}
+          <div style={{ width: '220px', display: 'flex', flexDirection: 'column', gap: '0.25rem', flexShrink: 0 }}>
+            {navItems.map(item => {
+              const isActive = currentTab === item.id;
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => handleTabChange(item.id)}
+                  className={isActive ? "settings-sidebar-item active" : "settings-sidebar-item"}
+                >
+                  <Icon size={16} style={{ marginRight: '0.5rem' }} />
+                  {item.label}
+                </button>
+              );
+            })}
+          </div>
 
-              {/* TAB 2: TRAIN */}
-              <TabPanel style={{ paddingTop: '1rem' }}>
-                 <Grid condensed>
-                  <Column lg={16} md={8} sm={4}>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '2px' }}>
-                        {['TREND_BULL', 'TREND_BEAR', 'MEAN_REVERTING', 'VOLATILE_CHOP'].map(regime => (
-                          <Tile key={regime}>
-                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                 {regime === 'TREND_BULL' && <ArrowUpRight size={24} style={{ color: '#24a148' }} />}
-                                 {regime === 'TREND_BEAR' && <ArrowDownRight size={24} style={{ color: '#da1e28' }} />}
-                                 {regime === 'MEAN_REVERTING' && <Activity size={24} style={{ color: '#4589ff' }} />}
-                                 {regime === 'VOLATILE_CHOP' && <Lightning size={24} style={{ color: '#f1c21b' }} />}
-                                 <h4 style={{fontWeight: 400, margin: 0}}>{regime.split('_').map(w => w.charAt(0) + w.slice(1).toLowerCase()).join(' ')}</h4>
-                               </div>
-                               <Button kind="primary" size="sm" renderIcon={Play} onClick={() => openTrainModal(regime)}>
-                                  Train
-                               </Button>
-                             </div>
-                          </Tile>
-                        ))}
-                    </div>
-                  </Column>
-                </Grid>
-                <Grid condensed style={{ marginTop: '.2rem' }}>
-                  <Column lg={16} md={8} sm={4}>
-                    <GlobalJobsTable target="model" refreshTrigger={refreshJobsTrigger} openJobDetails={openJobDetails} onJobChange={fetchData} />
-                  </Column>
-                </Grid>
-              </TabPanel>
+          {/* Tab Content Panels */}
+          <div style={{ flex: 1 }}>
+            {/* TAB 1: ROUTES */}
+            {currentTab === 'routes' && (
+              <Form style={{ padding: 0 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 320px)', gap: '2px', marginBottom: '2rem' }}>
+                  {['TREND_BULL', 'TREND_BEAR', 'MEAN_REVERTING', 'VOLATILE_CHOP'].map(regime => (
+                    <Tile key={regime} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '320px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                           {regime === 'TREND_BULL' && <ArrowUpRight size={20} style={{ color: '#24a148' }} />}
+                           {regime === 'TREND_BEAR' && <ArrowDownRight size={20} style={{ color: '#da1e28' }} />}
+                           {regime === 'MEAN_REVERTING' && <Activity size={20} style={{ color: '#4589ff' }} />}
+                           {regime === 'VOLATILE_CHOP' && <Lightning size={20} style={{ color: '#f1c21b' }} />}
+                           <h4 style={{fontWeight: 400, margin: 0}}>{regime.split('_').map(w => w.charAt(0) + w.slice(1).toLowerCase()).join(' ')}</h4>
+                        </div>
+                        <div style={{ width: '280px' }}>
+                          <Select id={`route_${regime}_champ`} labelText="👑 Champion" value={modelRouting[regime]?.champion || "NONE"} onChange={e => handleRouteChange(regime, 'champion', e.target.value)}>
+                            <SelectItem value="NONE" text="-- None (Disable) --" />
+                            {models.map(m => <SelectItem key={`${m.id}-champ`} value={m.name} text={m.name} />)}
+                          </Select>
+                        </div>
+                        <div style={{ width: '280px' }}>
+                          <Select id={`route_${regime}_chall`} labelText="🔬 Challenger" value={modelRouting[regime]?.challenger || "NONE"} onChange={e => handleRouteChange(regime, 'challenger', e.target.value)}>
+                            <SelectItem value="NONE" text="-- None --" />
+                            {models.map(m => <SelectItem key={`${m.id}-chall`} value={m.name} text={m.name} />)}
+                          </Select>
+                        </div>
+                    </Tile>
+                  ))}
+                </div>
+                <Button type="button" size="sm" renderIcon={Save} onClick={saveRouting} disabled={savingRouting || JSON.stringify(modelRouting) === JSON.stringify(initialModelRouting)}>{savingRouting ? "Saving..." : "Save"}</Button>
+              </Form>
+            )}
 
-              {/* TAB 3: REGISTRY */}
-              <TabPanel style={{ paddingTop: '1rem' }}>
-                <GlobalTable 
-                  headers={modelHeaders} 
-                  initialData={models} 
-                  title="Models Registry" 
-                  formatCell={formatModelCell}
-                  toolbarActions={
-                    <Button renderIcon={Add} onClick={() => openModelModal()} size="sm">
-                      Register External Model
-                    </Button>
-                  }
-                />
-              </TabPanel>
-              
-              {/* TAB 4: DATASETS */}
-              <TabPanel style={{ paddingTop: '1rem' }}>
+            {/* TAB 2: TRAIN */}
+            {currentTab === 'train' && (
+              <>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '2px' }}>
+                    {['TREND_BULL', 'TREND_BEAR', 'MEAN_REVERTING', 'VOLATILE_CHOP'].map(regime => (
+                      <Tile key={regime}>
+                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                             {regime === 'TREND_BULL' && <ArrowUpRight size={24} style={{ color: '#24a148' }} />}
+                             {regime === 'TREND_BEAR' && <ArrowDownRight size={24} style={{ color: '#da1e28' }} />}
+                             {regime === 'MEAN_REVERTING' && <Activity size={24} style={{ color: '#4589ff' }} />}
+                             {regime === 'VOLATILE_CHOP' && <Lightning size={24} style={{ color: '#f1c21b' }} />}
+                             <h4 style={{fontWeight: 400, margin: 0}}>{regime.split('_').map(w => w.charAt(0) + w.slice(1).toLowerCase()).join(' ')}</h4>
+                           </div>
+                           <Button kind="primary" size="sm" renderIcon={Play} onClick={() => openTrainModal(regime)}>
+                              Train
+                           </Button>
+                         </div>
+                      </Tile>
+                    ))}
+                </div>
+                <div style={{ marginTop: '.2rem' }}>
+                  <GlobalJobsTable target="model" refreshTrigger={refreshJobsTrigger} openJobDetails={openJobDetails} onJobChange={fetchData} />
+                </div>
+              </>
+            )}
+
+            {/* TAB 3: REGISTRY */}
+            {currentTab === 'registry' && (
+              <GlobalTable 
+                headers={modelHeaders} 
+                initialData={models} 
+                title="Models Registry" 
+                formatCell={formatModelCell}
+                toolbarActions={
+                  <Button renderIcon={Add} onClick={() => openModelModal()} size="sm">
+                    Register External Model
+                  </Button>
+                }
+              />
+            )}
+            
+            {/* TAB 4: DATASETS */}
+            {currentTab === 'datasets' && (
+              <>
                 <GlobalTable 
                   headers={datasetHeaders} 
                   initialData={datasets} 
@@ -452,11 +467,12 @@ function ModelsContent() {
                 <div style={{ marginTop: '.2rem' }}>
                     <GlobalJobsTable target="dataset" refreshTrigger={refreshJobsTrigger} openJobDetails={openJobDetails} onJobChange={fetchData} />
                 </div>
-              </TabPanel>
-            </TabPanels>
-          </Tabs>
-        </Column>
-      </Grid>
+              </>
+            )}
+          </div>
+        </div>
+      </Column>
+    </Grid>
 
       {/* MODALS */}
       <Modal open={isModelModalOpen} onRequestClose={() => setModelModalOpen(false)} onRequestSubmit={saveModel} modalHeading={editingModel ? "Edit Model" : "Register External Model"} primaryButtonText="Save" secondaryButtonText="Cancel">

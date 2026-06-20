@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { 
   Tabs, 
@@ -39,18 +39,19 @@ import TradeHistoryTable from '../../components/TradeHistoryTable';
 import GlobalTable from '../../components/GlobalTable';
 import ComparisonChart from '../../components/ComparisonChart';
 
-export default function SimulationPage() {
+function SimulationPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const tabParam = searchParams.get('tab');
+  const currentTab = tabParam || 'launch';
   const runIdParam = searchParams.get('run_id');
   
-  const [defaultTabIndex, setDefaultTabIndex] = useState(() => {
-    if (tabParam === 'results') return 1;
-    if (tabParam === 'compare') return 2;
-    if (tabParam === 'settings') return 3;
-    return 0;
-  });
+  const navItems = [
+    { id: 'launch', label: 'Launch', icon: Play },
+    { id: 'results', label: 'Results', icon: ChartLineData },
+    { id: 'compare', label: 'Compare', icon: Compare },
+    { id: 'settings', label: 'Settings', icon: SettingsIcon }
+  ];
   const [models, setModels] = useState<any[]>([]);
   const [isRunning, setIsRunning] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -99,12 +100,7 @@ export default function SimulationPage() {
     max_daily_drawdown_pct: 5.0
   });
 
-  useEffect(() => {
-    if (tabParam === 'results') setDefaultTabIndex(1);
-    else if (tabParam === 'compare') setDefaultTabIndex(2);
-    else if (tabParam === 'settings') setDefaultTabIndex(3);
-    else setDefaultTabIndex(0);
-  }, [tabParam]);
+  // Tab state synchronized via URL
 
   useEffect(() => {
     fetch('http://127.0.0.1:8000/api/models')
@@ -165,12 +161,8 @@ export default function SimulationPage() {
       .catch(console.error);
   }, [selectedCompareRunIds]);
 
-  const handleTabChange = (index: number) => {
-    let tabName = 'launch';
-    if (index === 1) tabName = 'results';
-    if (index === 2) tabName = 'compare';
-    if (index === 3) tabName = 'settings';
-    router.push(`/simulation?tab=${tabName}${selectedRunId ? `&run_id=${selectedRunId}` : ''}`);
+  const handleTabChange = (tabId: string) => {
+    router.push(`/simulation?tab=${tabId}${selectedRunId ? `&run_id=${selectedRunId}` : ''}`);
   };
 
   const handleReingest = async (e: React.FormEvent) => {
@@ -260,85 +252,40 @@ export default function SimulationPage() {
   };
 
   return (
-    <Grid>
+    <Grid fullWidth>
+      <Column lg={16} md={8} sm={4} className="landing-page__banner">
+        <h3 style={{ marginBottom: "1rem", fontWeight: 400 }}>Simulation Engine</h3>
+      </Column>
+
       <Column lg={16} md={8} sm={4}>
-        <div style={{ marginBottom: '1rem' }}>
-          <h3 style={{ fontSize: '1.5rem', fontWeight: 400 }}>Simulation Engine</h3>
-        </div>
-
         <div style={{ position: 'relative' }}>
-          {defaultTabIndex === 1 && activeRunData && (
-            <div style={{ position: 'absolute', top: '-3.5rem', right: 0, zIndex: 10, backgroundColor: '#262626', padding: '0.75rem 1.25rem', borderRadius: '4px', border: '1px solid #393939', fontSize: '0.75rem', width: 'max-content', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', borderBottom: '1px solid #393939', paddingBottom: '0.5rem' }}>
-                <div>
-                  <div style={{ color: '#a8a8a8', marginBottom: '2px' }}>SL/TP Control</div>
-                  <strong style={{ color: '#ffffff' }}>{activeRunData.config?.use_ai_sl_tp ? 'Fully AI Driven' : 'Manual Thresholds'}</strong>
-                </div>
-                <div>
-                  <div style={{ color: '#a8a8a8', marginBottom: '2px' }}>Risk Per Trade</div>
-                  <strong style={{ color: '#ffffff' }}>{activeRunData.config?.use_custom_risk ? `${activeRunData.config.custom_risk_pct}%` : 'System Default'}</strong>
-                </div>
-                <div>
-                  <div style={{ color: '#a8a8a8', marginBottom: '2px' }}>Halt Equity</div>
-                  <strong style={{ color: activeRunData.config?.use_equity_kill_switch ? '#ffffff' : '#a8a8a8' }}>{activeRunData.config?.use_equity_kill_switch ? `${activeRunData.config.max_drawdown_equity_pct}%` : 'OFF'}</strong>
-                </div>
-                <div>
-                  <div style={{ color: '#a8a8a8', marginBottom: '2px' }}>Halt Daily</div>
-                  <strong style={{ color: activeRunData.config?.use_daily_kill_switch ? '#ffffff' : '#a8a8a8' }}>{activeRunData.config?.use_daily_kill_switch ? `${activeRunData.config.max_daily_drawdown_pct}%` : 'OFF'}</strong>
-                </div>
-              </div>
-              
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  <div>
-                    <div style={{ color: '#a8a8a8', marginBottom: '2px' }}>Bull Model</div>
-                    <strong style={{ color: '#ffffff' }}>{activeRunData.config?.models?.bull_trend || 'NONE'}</strong>
-                  </div>
-                  <div>
-                    <div style={{ color: '#a8a8a8', marginBottom: '2px' }}>Spread</div>
-                    <strong style={{ color: '#ffffff' }}>{activeRunData.config?.spread_pips} pips</strong>
-                  </div>
-                </div>
-                
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  <div>
-                    <div style={{ color: '#a8a8a8', marginBottom: '2px' }}>Bear Model</div>
-                    <strong style={{ color: '#ffffff' }}>{activeRunData.config?.models?.bear_trend || 'NONE'}</strong>
-                  </div>
-                  <div>
-                    <div style={{ color: '#a8a8a8', marginBottom: '2px' }}>Slippage</div>
-                    <strong style={{ color: '#ffffff' }}>{activeRunData.config?.slippage_pips} pips</strong>
-                  </div>
-                </div>
-                
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  <div>
-                    <div style={{ color: '#a8a8a8', marginBottom: '2px' }}>Mean Rev Model</div>
-                    <strong style={{ color: '#ffffff' }}>{activeRunData.config?.models?.mean_reverting || 'NONE'}</strong>
-                  </div>
-                  <div>
-                    <div style={{ color: '#a8a8a8', marginBottom: '2px' }}>Commission</div>
-                    <strong style={{ color: '#ffffff' }}>${activeRunData.config?.commission_per_lot} / lot</strong>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
 
-          <Tabs selectedIndex={defaultTabIndex} onChange={(e) => handleTabChange(e.selectedIndex)}>
-            <TabList aria-label="Simulation Tabs">
-              <Tab><div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Play size={16} /> Launch</div></Tab>
-              <Tab><div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><ChartLineData size={16} /> Results</div></Tab>
-              <Tab><div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Compare size={16} /> Compare</div></Tab>
-              <Tab><div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><SettingsIcon size={16} /> Settings</div></Tab>
-            </TabList>
-          
-          <TabPanels>
+
+          <div style={{ display: 'flex', gap: '2rem', marginTop: '0.5rem' }}>
+            {/* Sidebar Navigation */}
+            <div style={{ width: '220px', display: 'flex', flexDirection: 'column', gap: '0.25rem', flexShrink: 0 }}>
+              {navItems.map(item => {
+                const isActive = currentTab === item.id;
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => handleTabChange(item.id)}
+                    className={isActive ? "settings-sidebar-item active" : "settings-sidebar-item"}
+                  >
+                    <Icon size={16} style={{ marginRight: '0.5rem' }} />
+                    {item.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Tab Content Panels */}
+            <div style={{ flex: 1 }}>
             {/* Tab 1: Launch */}
-            <TabPanel style={{ padding: '1rem 0' }}>
-              <Grid>
-                <Column lg={16} md={8} sm={4}>
-                  <Tile style={{ padding: '2rem' }}>
+            {currentTab === 'launch' && (
+              <Tile style={{ padding: '2rem' }}>
                     <h3 style={{ marginBottom: '1.5rem' }}>Configure Simulation</h3>
                     <Form onSubmit={handleLaunch}>
                       <Grid style={{ padding: 0, marginLeft: '-1rem', marginRight: '-1rem', marginBottom: '2rem' }}>
@@ -571,37 +518,83 @@ export default function SimulationPage() {
                       </Button>
                     </Form>
                   </Tile>
-                </Column>
-              </Grid>
-            </TabPanel>
+            )}
             
             {/* Tab 2: Results */}
-            <TabPanel style={{ padding: '1rem 0' }}>
-              <div style={{ marginBottom: '1.5rem', width: 'max-content' }}>
-                <Select 
-                  id="run-selector" 
-                  labelText="Choose Simulation" 
-                  value={selectedRunId}
-                  onChange={(e) => {
-                    setSelectedRunId(e.target.value);
-                    router.push(`/simulation?tab=results&run_id=${e.target.value}`);
-                  }}
-                >
-                  <SelectItem value="" text="Select a run..." />
-                  {runs.map(r => (
-                    <SelectItem 
-                      key={r.id} 
-                      value={r.id} 
-                      text={`${r.name} (${new Date(r.created_at).toLocaleDateString()}) - ${r.status}`} 
-                    />
-                  ))}
-                </Select>
-              </div>
+            {currentTab === 'results' && (
+              <>
+                <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'flex-start', marginBottom: '0.25rem' }}>
+                  {/* Select Dropdown */}
+                  <div style={{ width: '320px', flexShrink: 0 }}>
+                    <Select 
+                      id="run-selector" 
+                      labelText="Choose Simulation" 
+                      value={selectedRunId}
+                      onChange={(e) => {
+                        setSelectedRunId(e.target.value);
+                        router.push(`/simulation?tab=results&run_id=${e.target.value}`);
+                      }}
+                    >
+                      <SelectItem value="" text="Select a run..." />
+                      {runs.map(r => (
+                        <SelectItem 
+                          key={r.id} 
+                          value={r.id} 
+                          text={`${r.name} (${new Date(r.created_at).toLocaleDateString()}) - ${r.status}`} 
+                        />
+                      ))}
+                    </Select>
+                  </div>
 
-              {activeRunData && activeRunData.status === 'COMPLETED' ? (
-                <>
-                  <div style={{ display: 'flex', gap: '0.25rem', marginBottom: '0.25rem' }}>
-                    <Tile style={{ flex: 1 }}>
+                  {/* Configuration Summary Card */}
+                  {activeRunData && activeRunData.status === 'COMPLETED' && (
+                    <Tile style={{ padding: '0.75rem 1rem', flex: 1, backgroundColor: '#353535', border: 'none', marginBottom: 0 }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.75rem', fontSize: '0.75rem' }}>
+                        <div>
+                          <div style={{ color: '#a8a8a8', fontSize: '10px', marginBottom: '2px' }}>SL/TP Control</div>
+                          <strong style={{ color: '#ffffff' }}>{activeRunData.config?.use_ai_sl_tp ? 'Fully AI Driven' : 'Manual Thresholds'}</strong>
+                        </div>
+                        <div>
+                          <div style={{ color: '#a8a8a8', fontSize: '10px', marginBottom: '2px' }}>Risk Per Trade</div>
+                          <strong style={{ color: '#ffffff' }}>{activeRunData.config?.use_custom_risk ? `${activeRunData.config.custom_risk_pct}%` : 'System Default'}</strong>
+                        </div>
+                        <div>
+                          <div style={{ color: '#a8a8a8', fontSize: '10px', marginBottom: '2px' }}>Halt Equity</div>
+                          <strong style={{ color: activeRunData.config?.use_equity_kill_switch ? '#ffffff' : '#a8a8a8' }}>{activeRunData.config?.use_equity_kill_switch ? `${activeRunData.config.max_drawdown_equity_pct}%` : 'OFF'}</strong>
+                        </div>
+                        <div>
+                          <div style={{ color: '#a8a8a8', fontSize: '10px', marginBottom: '2px' }}>Halt Daily</div>
+                          <strong style={{ color: activeRunData.config?.use_daily_kill_switch ? '#ffffff' : '#a8a8a8' }}>{activeRunData.config?.use_daily_kill_switch ? `${activeRunData.config.max_daily_drawdown_pct}%` : 'OFF'}</strong>
+                        </div>
+                        <div>
+                          <div style={{ color: '#a8a8a8', fontSize: '10px', marginBottom: '2px' }}>Bull Model</div>
+                          <strong style={{ color: '#ffffff' }}>{activeRunData.config?.models?.bull_trend || 'NONE'}</strong>
+                        </div>
+                        <div>
+                          <div style={{ color: '#a8a8a8', fontSize: '10px', marginBottom: '2px' }}>Bear Model</div>
+                          <strong style={{ color: '#ffffff' }}>{activeRunData.config?.models?.bear_trend || 'NONE'}</strong>
+                        </div>
+                        <div>
+                          <div style={{ color: '#a8a8a8', fontSize: '10px', marginBottom: '2px' }}>Mean Rev Model</div>
+                          <strong style={{ color: '#ffffff' }}>{activeRunData.config?.models?.mean_reverting || 'NONE'}</strong>
+                        </div>
+                        <div>
+                          <div style={{ color: '#a8a8a8', fontSize: '10px', marginBottom: '2px' }}>Spread & Slippage</div>
+                          <strong style={{ color: '#ffffff' }}>Sp: {activeRunData.config?.spread_pips} | Sl: {activeRunData.config?.slippage_pips} pips</strong>
+                        </div>
+                        <div>
+                          <div style={{ color: '#a8a8a8', fontSize: '10px', marginBottom: '2px' }}>Commission</div>
+                          <strong style={{ color: '#ffffff' }}>${activeRunData.config?.commission_per_lot} / lot</strong>
+                        </div>
+                      </div>
+                    </Tile>
+                  )}
+                </div>
+
+                {activeRunData && activeRunData.status === 'COMPLETED' ? (
+                  <>
+                    <div style={{ display: 'flex', gap: '0.25rem', marginBottom: '0.25rem' }}>
+                      <Tile style={{ flex: 1 }}>
                       <h6 style={{ color: '#c6c6c6', marginBottom: '0.5rem' }}>Invested</h6>
                       <h2>${activeRunData.config?.initial_capital?.toLocaleString() || '0'}</h2>
                     </Tile>
@@ -654,7 +647,7 @@ export default function SimulationPage() {
                       borderRadius: 0,
                       display: 'flex',
                       flexDirection: 'column',
-                      backgroundColor: '#161616',
+                      backgroundColor: '#262626',
                       padding: '2rem'
                     } : { flex: 2, display: 'flex', flexDirection: 'column' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
@@ -721,10 +714,11 @@ export default function SimulationPage() {
               ) : (
                 <Tile><p>Select a run from the dropdown above.</p></Tile>
               )}
-            </TabPanel>
+              </>
+            )}
             
             {/* Tab 3: Compare */}
-            <TabPanel style={{ padding: '1rem 0' }}>
+            {currentTab === 'compare' && (
               <Tile>
                 <h4>Compare Simulations</h4>
                 <p style={{ marginBottom: '1rem' }}>Select multiple simulation runs to compare metrics side-by-side.</p>
@@ -872,10 +866,10 @@ export default function SimulationPage() {
                   </>
                 )}
               </Tile>
-            </TabPanel>
+            )}
 
             {/* Tab 4: Settings */}
-            <TabPanel style={{ padding: '1rem 0' }}>
+            {currentTab === 'settings' && (
               <Tile>
                 <h3 style={{ marginBottom: '0.5rem' }}>Simulation Settings</h3>
                 <p style={{ marginBottom: '2rem', color: '#a8a8a8' }}>Manage global simulation configurations and base datasets.</p>
@@ -939,11 +933,19 @@ export default function SimulationPage() {
                   </Form>
                 </div>
               </Tile>
-            </TabPanel>
-          </TabPanels>
-        </Tabs>
+            )}
+          </div>
+        </div>
       </div>
       </Column>
     </Grid>
+  );
+}
+
+export default function SimulationPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: '2rem' }}>Loading simulation...</div>}>
+      <SimulationPageContent />
+    </Suspense>
   );
 }

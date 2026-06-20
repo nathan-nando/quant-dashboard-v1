@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "@carbon/styles/css/styles.min.css";
 import "./globals.scss";
 import AppShell from "@/components/AppShell";
+import { GlobalStateProvider } from "@/contexts/GlobalStateContext";
 
 export const metadata: Metadata = {
   title: "QuantV1",
@@ -16,7 +17,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <AppShell>{children}</AppShell>
+        <GlobalStateProvider>
+          <AppShell>{children}</AppShell>
+        </GlobalStateProvider>
       </body>
     </html>
   );

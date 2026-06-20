@@ -39,7 +39,7 @@ main {
 /* Base style for header items */
 .cds--header {
   border-bottom: none !important;
-  height: 4rem !important; /* Reduced vertical padding */
+  height: 3rem !important; /* Reduced vertical padding */
   background-color: #161616 !important; /* Dark gray approaching black */
 }
 
@@ -48,11 +48,11 @@ main {
 .cds--header__menu-title,
 .cds--header__action {
   font-size: 1.05rem !important; /* Decreased font size for navbar */
-  padding: 0 1.5rem !important; 
+  padding: 0 1rem !important; /* Reduced horizontal padding */
   border: none !important; 
   color: #f4f4f4 !important; /* Light text for dark mode */
   text-decoration: none !important;
-  height: 4rem !important; /* Match header height */
+  height: 3rem !important; /* Match header height */
   display: inline-flex !important;
   align-items: center !important;
 }
@@ -173,3 +173,64 @@ main {
 .cds--data-table tbody tr:hover td {
   background-color: #454545 !important; /* Slightly lighter gray on hover */
 }
+
+/* Custom Page Header Font Size & Spacing */
+.landing-page__banner {
+  margin-bottom: 0.5rem !important;
+  padding-bottom: 0 !important;
+}
+
+.landing-page__banner h1,
+.landing-page__banner h2,
+.landing-page__banner h3 {
+  font-size: 1rem !important;
+  margin-bottom: 0.25rem !important;
+}
+
+.landing-page__banner h1:last-child,
+.landing-page__banner h2:last-child,
+.landing-page__banner h3:last-child,
+.landing-page__banner p:last-child {
+  margin-bottom: 0 !important;
+}
+
+/* Align Tab Content and Headers to the far left (padding 0) */
+.cds--tab-content {
+  padding-left: 0 !important;
+}
+
+.cds--tab:first-child,
+.cds--tabs__nav-item:first-child,
+.cds--tabs__nav-link:first-child {
+  padding-left: 0 !important;
+}
+
+/* Settings Vertical Sidebar Menu */
+.settings-sidebar-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-left: 4px solid transparent;
+  color: #a8a8a8;
+  font-weight: 400;
+  cursor: pointer;
+  font-size: 1.05rem;
+  transition: all 0.15s ease;
+}
+
+.settings-sidebar-item:hover {
+  background-color: #262626 !important;
+  color: #ffffff !important;
+}
+
+.settings-sidebar-item.active {
+  background-color: #353535 !important;
+  border-left: 4px solid #0f62fe !important;
+  color: #ffffff !important;
+  font-weight: 600;
+}
+

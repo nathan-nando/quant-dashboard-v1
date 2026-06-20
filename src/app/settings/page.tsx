@@ -11,6 +11,16 @@ function SettingsContent() {
   const router = useRouter();
   const pathname = usePathname();
 
+  const currentTab = searchParams.get("tab") || "general";
+  const navItems = [
+    { id: 'general', label: 'General' },
+    { id: 'configuration', label: 'Configuration' }
+  ];
+
+  const handleTabChange = (tabId: string) => {
+    router.push(`${pathname}?tab=${tabId}`);
+  };
+
   const [configs, setConfigs] = useState<any[]>([]);
       const [isLoadingData, setIsLoadingData] = useState(true);
   
@@ -101,22 +111,52 @@ function SettingsContent() {
 
   
   return (
-    <Grid fullWidth style={{ maxWidth: '100%', padding: '0 2rem' }}>
+    <Grid>
       <Column lg={16} md={8} sm={4} className="landing-page__banner">
-        <h1 style={{ marginBottom: "1rem" }}>System Settings</h1>
-        <p style={{ marginBottom: "2rem", color: "#a8a8a8" }}>Manage your global configurations and parameters.</p>
+        <h3 style={{ marginBottom: "1rem", fontWeight: 400 }}>System Settings</h3>
       </Column>
 
       <Column lg={16} md={8} sm={4}>
-        <GlobalTable 
-          title={<span style={{ fontSize: "16px", fontWeight: "bold" }}>Global Configurations</span>}
-          headers={configHeaders}
-          initialData={configs}
-          formatCell={formatConfigCell}
-          toolbarActions={
-            <Button size="sm" renderIcon={Add} onClick={() => openConfigModal()}>Add Configuration</Button>
-          }
-        />
+        <div style={{ display: 'flex', gap: '2rem', marginTop: '0.5rem' }}>
+          {/* Sidebar Navigation */}
+          <div style={{ width: '220px', display: 'flex', flexDirection: 'column', gap: '0.25rem', flexShrink: 0 }}>
+            {navItems.map(item => {
+              const isActive = currentTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => handleTabChange(item.id)}
+                  className={isActive ? "settings-sidebar-item active" : "settings-sidebar-item"}
+                >
+                  {item.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Tab Content Panels */}
+          <div style={{ flex: 1 }}>
+            {currentTab === 'general' && (
+              <Tile style={{ backgroundColor: '#353535', border: 'none' }}>
+                <h4 style={{ marginBottom: '0.5rem', fontWeight: 600 }}>General Settings</h4>
+                <p style={{ color: '#c6c6c6' }}>Placeholder for general system settings.</p>
+              </Tile>
+            )}
+
+            {currentTab === 'configuration' && (
+              <GlobalTable 
+                title="Global Configurations"
+                headers={configHeaders}
+                initialData={configs}
+                formatCell={formatConfigCell}
+                toolbarActions={
+                  <Button size="sm" renderIcon={Add} onClick={() => openConfigModal()}>Add Configuration</Button>
+                }
+              />
+            )}
+          </div>
+        </div>
       </Column>
 
       {/* --- MODALS --- */}

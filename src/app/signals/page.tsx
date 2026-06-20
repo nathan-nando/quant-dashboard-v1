@@ -21,18 +21,6 @@ export default function SignalsPage() {
   const [selectedSignal, setSelectedSignal] = useState<number | null>(null);
   const [signals, setSignals] = useState<any[]>([]);
 
-  // Fetch & poll signals so chart markers stay live
-  useEffect(() => {
-    const load = () =>
-      fetch("http://127.0.0.1:8000/api/dashboard/signals?limit=100")
-        .then(r => r.json())
-        .then(d => setSignals(Array.isArray(d) ? d : d?.data ?? []))
-        .catch(() => {});
-    load();
-    const id = setInterval(load, 10_000);
-    return () => clearInterval(id);
-  }, []);
-
   const headers = [
     { key: "timestamp", header: "Time" },
     { key: "direction", header: "Signal", width: "1%" },
@@ -164,6 +152,7 @@ export default function SignalsPage() {
               fetchUrl="http://127.0.0.1:8000/api/dashboard/signals"
               onViewDetails={(id) => setSelectedSignal(Number(id))}
               formatCell={formatCell}
+              onPageDataChange={setSignals}
             />
           </div>
 

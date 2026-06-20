@@ -11,6 +11,9 @@ import { Responsive, WidthProvider } from 'react-grid-layout/legacy';
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 const CandlestickChart = dynamic(() => import('../components/CandlestickChart'), { ssr: false });
+import MarketSummaryWidget from '../components/MarketSummaryWidget';
+
+import { useGlobalState } from '../contexts/GlobalStateContext';
 
 const getRegimeFormat = (regime: string) => {
   if (!regime) return { text: 'UNKNOWN', color: '#f4f4f4' };
@@ -22,64 +25,10 @@ const getRegimeFormat = (regime: string) => {
 };
 
 export default function Home() {
-  const [state, setState] = useState<any>(null);
-  const [signals, setSignals] = useState<any[]>([]);
-  const [analytics, setAnalytics] = useState<any>(null);
+  const { state, signals, analytics } = useGlobalState();
 
   const latestSignalIdRef = useRef<number | null>(null);
   const chartHistoryRef = useRef<any[]>([]);
-
-  useEffect(() => {
-    // 1. Subscribe to lightning-fast SSE for ALL live state
-    const eventSource = new EventSource("http://127.0.0.1:8000/api/dashboard/stream");
-    eventSource.onmessage = (event) => {
-      try {
-        const payload = JSON.parse(event.data);
-        setState(payload);
-        if (payload.recent_signals && payload.recent_signals.length > 0) {
-          const topSignal = payload.recent_signals[0];
-          
-          if (latestSignalIdRef.current !== null && latestSignalIdRef.current !== topSignal.id) {
-            let msgKind = "info";
-            if (topSignal.direction === "BUY") msgKind = "success";
-            if (topSignal.direction === "SELL") msgKind = "error";
-            
-            const readableDirection = topSignal.direction ? topSignal.direction.charAt(0).toUpperCase() + topSignal.direction.slice(1).toLowerCase() : '';
-            const format = getRegimeFormat(topSignal.regime);
-
-            setToastMsg({ 
-              kind: msgKind, 
-              title: "🔔 New Live Signal", 
-              subtitle: (
-                <div style={{ marginTop: '0.25rem', lineHeight: '1.4' }}>
-                  <strong>{topSignal.symbol}</strong> &mdash; <strong style={{ color: format.color }}>{readableDirection}</strong> @ <strong>{topSignal.entry_price?.toFixed(2) || '-'}</strong><br/>
-                  Confidence: {(topSignal.confidence * 100).toFixed(2)}%<br/>
-                  SL: <strong>{topSignal.sl_price?.toFixed(2) || '-'}</strong> ({topSignal.sl_pips}p) | TP: <strong>{topSignal.tp_price?.toFixed(2) || '-'}</strong> ({topSignal.tp_pips}p) (R:R {topSignal.rr_ratio})<br/>
-                  Regime: <strong>{format.text}</strong>
-                </div>
-              ),
-              caption: new Date().toLocaleTimeString()
-            });
-          }
-          
-          latestSignalIdRef.current = topSignal.id;
-          setSignals(payload.recent_signals);
-        }
-      } catch (err) {
-        console.error("Failed to parse SSE state data", err);
-      }
-    };
-
-    // 2. Fetch Analytics snapshot
-    fetch("http://127.0.0.1:8000/api/dashboard/analytics")
-      .then(res => res.json())
-      .then(data => setAnalytics(data))
-      .catch(err => console.error("Failed to load analytics", err));
-
-    return () => {
-      eventSource.close();
-    };
-  }, []);
 
   const signalHeaders = [
     { key: "timestamp", header: "Time" },
@@ -94,7 +43,6 @@ export default function Home() {
     { key: "status", header: "Status" },
   ];
 
-  const [toastMsg, setToastMsg] = useState<{ kind: any, title: string, subtitle: React.ReactNode, caption?: string } | null>(null);
   const [selectedSignal, setSelectedSignal] = useState<number | null>(null);
 
   const defaultLayout = [
@@ -104,7 +52,7 @@ export default function Home() {
   const [layouts, setLayouts] = useState<any>({ lg: defaultLayout });
 
   useEffect(() => {
-    const saved = localStorage.getItem("quantDashboardLayout");
+    const saved = localStorage.getItem("quantDashboardLayout_v6");
     if (saved) {
       try {
         setLayouts(JSON.parse(saved));
@@ -114,28 +62,14 @@ export default function Home() {
 
   const handleLayoutChange = (layout: any, allLayouts: any) => {
     setLayouts(allLayouts);
-    localStorage.setItem("quantDashboardLayout", JSON.stringify(allLayouts));
+    localStorage.setItem("quantDashboardLayout_v6", JSON.stringify(allLayouts));
   };
 
   return (
     <div style={{ maxWidth: '100%', padding: '0 2rem', position: 'relative' }}>
-      {/* --- FLASH MESSAGE --- */}
-      {toastMsg && (
-        <div style={{ position: "fixed", top: "4rem", right: "2rem", zIndex: 9999 }}>
-          <ToastNotification
-            key={Date.now()}
-            kind={toastMsg.kind}
-            title={toastMsg.title}
-            subtitle={toastMsg.subtitle as any}
-            caption={toastMsg.caption}
-            timeout={5000}
-            onClose={() => setToastMsg(null)}
-          />
-        </div>
-      )}
 
       <Column lg={16} md={8} sm={4} className="landing-page__banner">
-        <h3 style={{ marginBottom: "1rem", fontWeight: 400 }}>Dashboard</h3>
+        <h3 style={{ marginBottom: ".5rem", fontWeight: 400 }}>Dashboard</h3>
       </Column>
 
       {/* --- ROW 1: STATIC LIVE STATE METRICS --- */}
@@ -230,7 +164,25 @@ export default function Home() {
               document.body.removeChild(link);
             }}
           >
-             <div style={{ height: "100%", overflow: "hidden", position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}>
+             <div style={{ height: "100%", overflow: "hidden", position: "absolute", top: 0, left: 0, right: 0, bottom: 0, background: '#262626' }}>
+               {/* Legend */}
+               <div style={{
+                 position: 'absolute', top: 10, right: 16, zIndex: 20,
+                 display: 'flex', gap: '16px', alignItems: 'center', fontSize: '11px', color: '#a8a8a8'
+               }}>
+                 <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                   <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: '#24a148' }}/>
+                   BUY
+                 </span>
+                 <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                   <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: '#fa4d56' }}/>
+                   SELL
+                 </span>
+                 <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                   <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: '#e8e8e8' }}/>
+                   Neutral
+                 </span>
+               </div>
                <CandlestickChart symbol="XAUUSD" onHistoryUpdate={(data) => chartHistoryRef.current = data} signals={signals} />
              </div>
           </DashboardPanel>
@@ -269,8 +221,9 @@ export default function Home() {
               <GlobalTable 
                 title=""
                 headers={signalHeaders}
-                initialData={signals.slice(0, 5)}
+                initialData={signals.slice(0, 10)}
                 hidePagination
+                hideSearch
                 onViewDetails={(id) => setSelectedSignal(Number(id))}
                 formatCell={(cellId, value) => {
                   const col = cellId.split('__')[1] || cellId.split(':').pop() || '';
@@ -341,6 +294,20 @@ export default function Home() {
           </DashboardPanel>
         </div>
       </ResponsiveGridLayout>
+
+      {/* --- ROW 3: STATIC MARKET SUMMARY --- */}
+      <div style={{ marginTop: '0.2rem', display: 'flex' }}>
+        <div style={{ width: 'fit-content' }}>
+          <DashboardPanel 
+            title="Market Summary" 
+            tooltipInfo="Daily market statistics and current trading session overlap."
+          >
+            <div style={{ paddingBottom: '0.2rem' }}>
+              <MarketSummaryWidget />
+            </div>
+          </DashboardPanel>
+        </div>
+      </div>
       
       {/* --- SIGNAL DETAIL MODAL --- */}
       <GlobalDetailTable 

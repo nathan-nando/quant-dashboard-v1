@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createChart, ColorType, IChartApi, ISeriesApi, Time, CandlestickSeries, HistogramSeries, createSeriesMarkers } from "lightweight-charts";
+import { useGlobalState } from '../contexts/GlobalStateContext';
 
 const TIMEFRAMES: Record<string, number> = {
   "M1": 60,
@@ -21,8 +22,10 @@ export default function CandlestickChart({ symbol = "XAUUSD", onHistoryUpdate, s
   const lastCandleRef = useRef<any>(null);
   const dataRef = useRef<any[]>([]);
   const markersRef = useRef<any>(null);
+  const { state } = useGlobalState();
   const [isInitialized, setIsInitialized] = useState(false);
   const [timeframe, setTimeframe] = useState<string>("H1");
+  const [marketStatus, setMarketStatus] = useState<string>("OPEN");
 
   // Reset chart and markers when timeframe changes
   useEffect(() => {
@@ -102,7 +105,7 @@ export default function CandlestickChart({ symbol = "XAUUSD", onHistoryUpdate, s
     const resizeObserver = new ResizeObserver((entries) => {
       if (entries.length === 0 || entries[0].target !== chartContainerRef.current) return;
       const newRect = entries[0].contentRect;
-      chart.applyOptions({ width: newRect.width, height: newRect.height });
+      chart.resize(newRect.width, newRect.height);
     });
     resizeObserver.observe(chartContainerRef.current);
 
@@ -119,7 +122,23 @@ export default function CandlestickChart({ symbol = "XAUUSD", onHistoryUpdate, s
       const fetchHistory = async () => {
           setIsInitialized(false);
           try {
-              const res = await fetch(`http://127.0.0.1:8000/api/dashboard/history?symbol=${symbol}&timeframe=${timeframe}&limit=100`);
+              const tfSeconds = TIMEFRAMES[timeframe] || 3600;
+              let limit = 150; // Default minimum 150 candles
+              
+              if (signals && signals.length > 0) {
+                  const minTimestamp = Math.min(...signals.map(s => new Date(s.timestamp).getTime()));
+                  const timeSinceEarliestSignal = Math.floor(Date.now() / 1000) - Math.floor(minTimestamp / 1000);
+                  const candlesNeeded = Math.ceil(timeSinceEarliestSignal / tfSeconds) + 20; // + 20 candles padding
+                  
+                  if (candlesNeeded > limit) {
+                      limit = candlesNeeded;
+                  }
+              }
+
+              // Use 'limit' instead of time range to automatically skip weekend gaps in MT5
+              const url = `http://127.0.0.1:8000/api/dashboard/history?symbol=${symbol}&timeframe=${timeframe}&limit=${limit}`;
+              
+              const res = await fetch(url);
               if (!res.ok) throw new Error("Failed to fetch history");
               const data = await res.json();
               
@@ -130,8 +149,8 @@ export default function CandlestickChart({ symbol = "XAUUSD", onHistoryUpdate, s
                   const volumeHistory = [];
                   
                   for (const row of data) {
-                      // Adjust time for local timezone display
-                      const t = row.time - tzOffsetSeconds;
+                      // Add timezone offset so Lightweight Charts displays the native broker time
+                      const t = row.time + tzOffsetSeconds;
                       history.push({ time: t as Time, open: row.open, high: row.high, low: row.low, close: row.close });
                       volumeHistory.push({ 
                           time: t as Time, 
@@ -224,76 +243,85 @@ export default function CandlestickChart({ symbol = "XAUUSD", onHistoryUpdate, s
     }
   }, [signals, isInitialized, timeframe]);
 
-  // Real-time updates via SSE (Server-Sent Events)
+  // Real-time updates via Global Context
   useEffect(() => {
-    const eventSource = new EventSource("http://127.0.0.1:8000/api/dashboard/stream");
-    
-    eventSource.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        const currentPrice = data.price.last > 0 ? data.price.last : data.price.ask;
-        const currentVolume = data.price.volume || Math.floor(Math.random() * 50) + 10; 
-        
-        // Only update if history has been initialized
-        if (isInitialized && currentPrice && seriesRef.current && volumeSeriesRef.current && lastCandleRef.current) {
-           const now = Math.floor(Date.now() / 1000);
-           const tfSeconds = TIMEFRAMES[timeframe] || 3600;
-           const currentCandleTimeRaw = now - (now % tfSeconds);
-           
-           // Apply timezone offset
-           const tzOffsetSeconds = new Date().getTimezoneOffset() * 60;
-           const currentCandleTime = currentCandleTimeRaw - tzOffsetSeconds;
-           
-           let candle = lastCandleRef.current;
-           
-           if (currentCandleTime > candle.time) {
-              // New candle
-              candle = {
-                 time: currentCandleTime as Time,
-                 open: currentPrice,
-                 high: currentPrice,
-                 low: currentPrice,
-                 close: currentPrice
-              };
-              dataRef.current.push(candle);
-           } else {
-              // Update current candle
-              candle.close = currentPrice;
-              if (currentPrice > candle.high) candle.high = currentPrice;
-              if (currentPrice < candle.low) candle.low = currentPrice;
-              
-              if (dataRef.current.length > 0) {
-                 dataRef.current[dataRef.current.length - 1] = candle;
-              }
-           }
-           
-           seriesRef.current.update(candle);
-           volumeSeriesRef.current.update({
-               time: candle.time,
-               value: currentVolume, // note: live ticks don't accumulate volume perfectly here yet, but it's okay for live indicator
-               color: candle.close >= candle.open ? "rgba(36, 161, 72, 0.8)" : "rgba(250, 77, 86, 0.8)"
-           });
-           lastCandleRef.current = candle;
-        }
-      } catch (e) {
-        console.error("Failed to parse SSE live price", e);
-      }
-    };
-    
-    eventSource.onerror = (e) => {
-      console.error("SSE connection error", e);
-      eventSource.close();
-    };
+    if (!state) return;
 
-    return () => {
-      eventSource.close();
-    };
-  }, [timeframe, isInitialized]);
+    try {
+      const data = state;
+      
+      if (data.market_status) {
+         setMarketStatus(data.market_status);
+      }
+      
+      const currentPrice = data.price?.last > 0 ? data.price.last : data.price?.ask;
+      const currentVolume = data.price?.volume || Math.floor(Math.random() * 50) + 10; 
+      
+      // Only update if history has been initialized
+      if (isInitialized && currentPrice && seriesRef.current && volumeSeriesRef.current && lastCandleRef.current) {
+         const rawTick = data.timestamp ? data.timestamp : Math.floor(Date.now() / 1000);
+         const tzOffsetSeconds = new Date().getTimezoneOffset() * 60;
+         
+         // Align MT5 Broker time with Local History time
+         const alignedTickTime = rawTick + tzOffsetSeconds;
+         
+         const tfSeconds = TIMEFRAMES[timeframe] || 3600;
+         const currentCandleTime = alignedTickTime - (alignedTickTime % tfSeconds);
+         
+         let candle = lastCandleRef.current;
+         
+         if (currentCandleTime > candle.time) {
+            // New candle
+            candle = {
+               time: currentCandleTime as Time,
+               open: currentPrice,
+               high: currentPrice,
+               low: currentPrice,
+               close: currentPrice
+            };
+            dataRef.current.push(candle);
+         } else {
+            // Update current candle
+            candle.close = currentPrice;
+            if (currentPrice > candle.high) candle.high = currentPrice;
+            if (currentPrice < candle.low) candle.low = currentPrice;
+            
+            if (dataRef.current.length > 0) {
+               dataRef.current[dataRef.current.length - 1] = candle;
+            }
+         }
+         
+         seriesRef.current.update(candle);
+         volumeSeriesRef.current.update({
+             time: candle.time,
+             value: currentVolume, // note: live ticks don't accumulate volume perfectly here yet, but it's okay for live indicator
+             color: candle.close >= candle.open ? "rgba(36, 161, 72, 0.8)" : "rgba(250, 77, 86, 0.8)"
+         });
+         lastCandleRef.current = candle;
+      }
+    } catch (e) {
+      console.error("Failed to parse live price from global state", e);
+    }
+  }, [state, timeframe, isInitialized]);
 
   return (
     <div style={{ width: "100%", height: "100%", minHeight: "300px", position: "relative" }}>
       <h4 style={{ position: "absolute", top: 10, left: 20, zIndex: 10, color: "#f4f4f4", display: "flex", alignItems: "center", gap: "15px" }}>
           {!isInitialized && <span style={{ fontSize: "12px", color: "#a8a8a8" }}>(Waiting for market tick...)</span>}
+          
+          {marketStatus !== "OPEN" && (
+              <span style={{ 
+                  background: marketStatus === "CLOSED" ? "rgba(250, 77, 86, 0.2)" : "rgba(241, 194, 27, 0.2)", 
+                  color: marketStatus === "CLOSED" ? "#fa4d56" : "#f1c21b", 
+                  padding: "2px 8px", 
+                  borderRadius: "4px", 
+                  fontSize: "12px", 
+                  fontWeight: "bold",
+                  border: `1px solid ${marketStatus === "CLOSED" ? "#fa4d56" : "#f1c21b"}`
+              }}>
+                  {marketStatus === "CLOSED" ? "MARKET CLOSED" : "MAINTENANCE"}
+              </span>
+          )}
           
           <select 
              value={timeframe} 

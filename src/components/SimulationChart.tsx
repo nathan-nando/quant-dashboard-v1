@@ -15,7 +15,7 @@ export default function SimulationChart({ equityData, trades }: SimulationChartP
 
     const chart = createChart(chartContainerRef.current, {
       layout: {
-        background: { type: ColorType.Solid, color: '#161616' },
+        background: { type: ColorType.Solid, color: '#262626' },
         textColor: '#c6c6c6',
       },
       grid: {
@@ -160,20 +160,20 @@ export default function SimulationChart({ equityData, trades }: SimulationChartP
 
   if (equityData.length === 0) {
     return (
-      <div style={{ height: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#161616', border: '1px solid #393939' }}>
+      <div style={{ height: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#262626', border: '1px solid #393939' }}>
         <span style={{ color: '#8d8d8d' }}>No equity data to display</span>
       </div>
     );
   }
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100%', border: '1px solid #393939', overflow: 'hidden' }}>
+    <div style={{ position: 'relative', width: '100%', height: '100%', border: '1px solid #393939', overflow: 'hidden', backgroundColor: '#262626' }}>
       <div style={{
         position: 'absolute',
         top: '12px',
         left: '12px',
         zIndex: 10,
-        backgroundColor: 'rgba(22, 22, 22, 0.8)',
+        backgroundColor: 'rgba(38, 38, 38, 0.8)',
         padding: '8px 12px',
         borderRadius: '4px',
         border: '1px solid #393939',

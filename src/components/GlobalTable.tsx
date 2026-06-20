@@ -27,6 +27,7 @@ interface GlobalTableProps {
   formatCell?: (cellId: string, value: any) => React.ReactNode;
   toolbarActions?: React.ReactNode; // Extra buttons for toolbar
   onViewDetails?: (rowId: any) => void;
+  onPageDataChange?: (currentData: any[]) => void;
   hideSearch?: boolean;
   hidePagination?: boolean;
   collapsible?: boolean;
@@ -42,6 +43,7 @@ export default function GlobalTable({
   formatCell,
   toolbarActions,
   onViewDetails,
+  onPageDataChange,
   hideSearch = false,
   hidePagination = false,
   collapsible = false,
@@ -147,6 +149,12 @@ export default function GlobalTable({
     return filteredData.slice(skip, skip + pageSize);
   }, [isServerSide, data, filteredData, page, pageSize]);
 
+  useEffect(() => {
+    if (onPageDataChange) {
+      onPageDataChange(processedData);
+    }
+  }, [processedData, onPageDataChange]);
+
   const handleSort = (key: string) => {
     if (sortKey === key) {
       setSortDesc(!sortDesc); // Toggle direction
@@ -194,7 +202,7 @@ export default function GlobalTable({
               </TableToolbar>
             )}
             
-            <Table {...getTableProps()} size="sm">
+            <Table {...getTableProps()} size="xs">
               <TableHead>
                 <TableRow>
                   {tableHeaders.map((header: any) => {
