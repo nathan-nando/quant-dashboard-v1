@@ -307,7 +307,6 @@ export default function ThresholdsPage() {
                 {saving ? "Saving..." : "Save"}
               </Button>
             </div>
-            <p style={{marginBottom: "1.5rem", marginTop: "0.5rem", fontSize: "12px", color: "#525252"}}>Multipliers: Dikalikan ke Prediksi MAE/MFE AI (Fully AI Driven) ATAU nilai indikator ATR (Manual Fallback)</p>
             <div style={{marginBottom: "1.5rem"}}>
               <Toggle 
                 id="use_ai_sl_tp" 

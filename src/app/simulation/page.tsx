@@ -29,7 +29,10 @@ import {
   Toggle,
   InlineNotification,
   MultiSelect,
-  ToastNotification
+  ToastNotification,
+  Modal,
+  RadioButtonGroup,
+  RadioButton
 } from '@carbon/react';
 import { Play, ChartLineData, Compare, Maximize, Minimize, Settings as SettingsIcon, Renew, Catalog, TrashCan, Document } from '@carbon/icons-react';
 
@@ -58,31 +61,51 @@ function SimulationPageContent() {
   const [models, setModels] = useState<any[]>([]);
   const [isChartFullscreen, setIsChartFullscreen] = useState(false);
   const [refreshJobsTrigger, setRefreshJobsTrigger] = useState(0);
+  const [confirmModalConfig, setConfirmModalConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    body: string;
+    onConfirm: () => void | Promise<void>;
+  }>({
+    isOpen: false,
+    title: '',
+    body: '',
+    onConfirm: () => {}
+  });
 
   const openJobDetails = (jobId: string) => {
     window.dispatchEvent(new CustomEvent('open-job-details', { detail: { jobId } }));
   };
 
-  const handleDeleteRun = async (runId: string) => {
-    if (confirm("Are you sure you want to delete this simulation run?")) {
-      try {
-        const res = await fetch(`http://127.0.0.1:8000/api/simulation/runs/${runId}`, {
-          method: 'DELETE'
-        });
-        if (res.ok) {
-          setNotification({ kind: "success", title: "Simulation Deleted", subtitle: "The simulation run has been deleted." });
-          // Refresh list
-          fetch('http://127.0.0.1:8000/api/simulation/runs')
-            .then(res => res.json())
-            .then(data => { if (Array.isArray(data)) setRuns(data); });
-        } else {
-          setNotification({ kind: "error", title: "Delete Failed", subtitle: "Failed to delete simulation run." });
+  const handleDeleteRun = (runId: string) => {
+    setConfirmModalConfig({
+      isOpen: true,
+      title: "Delete Simulation Run",
+      body: "Are you sure you want to completely delete this simulation run? This action cannot be undone.",
+      onConfirm: async () => {
+        try {
+          const res = await fetch(`http://127.0.0.1:8000/api/simulation/runs/${runId}`, {
+            method: 'DELETE'
+          });
+          if (res.ok) {
+            setNotification({ kind: "success", title: "Simulation Deleted", subtitle: "The simulation run has been deleted." });
+            // Refresh list
+            const runsRes = await fetch('http://127.0.0.1:8000/api/simulation/runs');
+            if (runsRes.ok) {
+              const data = await runsRes.json();
+              if (Array.isArray(data)) setRuns(data);
+            }
+          } else {
+            setNotification({ kind: "error", title: "Delete Failed", subtitle: "Failed to delete simulation run." });
+          }
+        } catch (err) {
+          console.error(err);
+          setNotification({ kind: "error", title: "Delete Failed", subtitle: "Failed to communicate with server." });
+        } finally {
+          setConfirmModalConfig(prev => ({ ...prev, isOpen: false }));
         }
-      } catch (err) {
-        console.error(err);
-        setNotification({ kind: "error", title: "Delete Failed", subtitle: "Failed to communicate with server." });
       }
-    }
+    });
   };
 
   const simHeaders = [
@@ -160,12 +183,13 @@ function SimulationPageContent() {
   const [selectedCompareRunIds, setSelectedCompareRunIds] = useState<string[]>([]);
   const [compareRunsData, setCompareRunsData] = useState<any[]>([]);
   
-  const [datasetConfig, setDatasetConfig] = useState<any>(null);
+  const [datasetConfigs, setDatasetConfigs] = useState<{static: any, latest: any}>({ static: null, latest: null });
 
   const [isIngesting, setIsIngesting] = useState(false);
   const [ingestStatus, setIngestStatus] = useState<{type: 'success' | 'error', message: string} | null>(null);
   const [notification, setNotification] = useState<{kind: "success" | "error" | "info", title: string, subtitle: string} | null>(null);
   const [ingestForm, setIngestForm] = useState({ 
+    dataset_type: 'latest',
     start_date: '2015-01-01', 
     end_date: (() => {
       const d = new Date();
@@ -177,6 +201,7 @@ function SimulationPageContent() {
   const [config, setConfig] = useState({
     name: "",
     mode: "BACKTEST",
+    dataset_type: "latest",
     models: {
       bull_trend: "xbull_5years",
       bear_trend: "xbear_5years",
@@ -242,11 +267,38 @@ function SimulationPageContent() {
       .then(res => res.json())
       .then(data => { 
         if (Array.isArray(data)) {
-          const simConfig = data.find(c => c.key === 'simulation_dataset');
-          if (simConfig && simConfig.value) {
-             const val = typeof simConfig.value === 'string' ? JSON.parse(simConfig.value) : simConfig.value;
-             setDatasetConfig(val);
-             setConfig(prev => ({ ...prev, start_date: val.start_date, end_date: val.end_date }));
+          const latestConfig = data.find((c: any) => c.key === 'simulation_dataset_latest');
+          const staticConfig = data.find((c: any) => c.key === 'simulation_dataset_static');
+          
+          let parsedLatest = null;
+          let parsedStatic = null;
+          
+          if (latestConfig && latestConfig.value) {
+             parsedLatest = typeof latestConfig.value === 'string' ? JSON.parse(latestConfig.value) : latestConfig.value;
+          }
+          if (staticConfig && staticConfig.value) {
+             parsedStatic = typeof staticConfig.value === 'string' ? JSON.parse(staticConfig.value) : staticConfig.value;
+          }
+          
+          const newConfigs = { latest: parsedLatest, static: parsedStatic };
+          setDatasetConfigs(newConfigs);
+          
+          const defaultLaunchConfig = newConfigs['latest'] || newConfigs['static'];
+          if (defaultLaunchConfig) {
+             setConfig(prev => ({ 
+               ...prev, 
+               dataset_type: defaultLaunchConfig.dataset_type || 'latest',
+               start_date: defaultLaunchConfig.start_date, 
+               end_date: defaultLaunchConfig.end_date 
+             }));
+          }
+          
+          if (newConfigs['latest']) {
+             setIngestForm(prev => ({
+               ...prev,
+               start_date: newConfigs['latest'].start_date || prev.start_date,
+               end_date: newConfigs['latest'].end_date || prev.end_date
+             }));
           }
         }
       })
@@ -296,14 +348,14 @@ function SimulationPageContent() {
     setIngestStatus(null);
     
     // Validation
-    const selectedDate = new Date(ingestForm.end_date);
+    const selectedDate = new Date(ingestForm.dataset_type === 'latest' ? new Date().setDate(new Date().getDate() - 1) : ingestForm.end_date);
     const maxDate = new Date();
-    maxDate.setMonth(maxDate.getMonth() - 1);
+    maxDate.setDate(maxDate.getDate() - 1);
     selectedDate.setHours(0,0,0,0);
     maxDate.setHours(0,0,0,0);
     
     if (selectedDate > maxDate) {
-      setIngestStatus({ type: 'error', message: 'Validation Error: End date must be at least 1 month in the past.' });
+      setIngestStatus({ type: 'error', message: 'Validation Error: End date must be at least 1 day in the past.' });
       setIsIngesting(false);
       return;
     }
@@ -317,12 +369,19 @@ function SimulationPageContent() {
       const data = await res.json();
       if (res.ok) {
         setIngestStatus({ type: 'success', message: data.message });
-        setDatasetConfig({
+        const newConfigData = {
+          dataset_type: ingestForm.dataset_type,
           start_date: ingestForm.start_date,
-          end_date: ingestForm.end_date,
-          filename: `SIMULATION_${ingestForm.start_date.replace(/-/g, '')}_${ingestForm.end_date.replace(/-/g, '')}.csv`
-        });
-        setConfig(prev => ({ ...prev, start_date: ingestForm.start_date, end_date: ingestForm.end_date }));
+          end_date: ingestForm.dataset_type === 'latest' ? (() => { const d = new Date(); d.setDate(d.getDate() - 1); return d.toISOString().split('T')[0]; })() : ingestForm.end_date,
+          filename: `SIMULATION_${ingestForm.dataset_type.toUpperCase()}.csv`
+        };
+        setDatasetConfigs(prev => ({ ...prev, [ingestForm.dataset_type]: newConfigData }));
+        setConfig(prev => ({ 
+          ...prev, 
+          dataset_type: ingestForm.dataset_type, 
+          start_date: ingestForm.start_date, 
+          end_date: ingestForm.dataset_type === 'latest' ? (() => { const d = new Date(); d.setDate(d.getDate() - 1); return d.toISOString().split('T')[0]; })() : ingestForm.end_date 
+        }));
       } else {
         setIngestStatus({ type: 'error', message: data.detail || 'Failed to reingest dataset' });
       }
@@ -631,30 +690,52 @@ function SimulationPageContent() {
                         {/* Row 2: Left */}
                         <Column lg={8} md={4} sm={4}>
                           <h4 style={{ margin: '0 0 1rem 0' }}>Simulation Period</h4>
-                          <Grid style={{ padding: 0, marginLeft: '-1rem', marginRight: '-1rem' }}>
-                            <Column lg={8} md={4} sm={2}>
-                              <TextInput 
-                                id="start-date" 
-                                type="date" 
-                                labelText="Start Date" 
-                                value={config.start_date}
-                                min={datasetConfig?.start_date}
-                                max={datasetConfig?.end_date}
-                                onChange={(e) => setConfig({...config, start_date: e.target.value})}
-                              />
-                            </Column>
-                            <Column lg={8} md={4} sm={2}>
-                              <TextInput 
-                                id="end-date" 
-                                type="date" 
-                                labelText="End Date" 
-                                value={config.end_date}
-                                min={datasetConfig?.start_date}
-                                max={datasetConfig?.end_date}
-                                onChange={(e) => setConfig({...config, end_date: e.target.value})}
-                              />
-                            </Column>
-                          </Grid>
+                          <div style={{ marginBottom: '1.5rem' }}>
+                            <h5 style={{ marginBottom: '0.5rem', fontSize: '0.875rem' }}>Dataset Target Mode</h5>
+                            <RadioButtonGroup
+                              name="launch-dataset-type"
+                              valueSelected={config.dataset_type}
+                              onChange={(newType) => {
+                                const typeStr = String(newType);
+                                const currentDataset = datasetConfigs[typeStr as keyof typeof datasetConfigs];
+                                setConfig(prev => ({
+                                  ...prev,
+                                  dataset_type: typeStr,
+                                  start_date: currentDataset?.start_date || prev.start_date,
+                                  end_date: currentDataset?.end_date || prev.end_date
+                                }));
+                              }}
+                            >
+                              <RadioButton value="latest" id="launch-latest" labelText="Use latest data (Auto-syncs up to Yesterday)" />
+                              <RadioButton value="static" id="launch-static" labelText="Static (Fixed Date Range)" />
+                            </RadioButtonGroup>
+                          </div>
+                          {config.dataset_type === 'static' && (
+                            <Grid style={{ padding: 0, marginLeft: '-1rem', marginRight: '-1rem' }}>
+                              <Column lg={8} md={4} sm={2}>
+                                <TextInput 
+                                  id="start-date" 
+                                  type="date" 
+                                  labelText="Start Date" 
+                                  value={config.start_date}
+                                  min={datasetConfigs.static?.start_date}
+                                  max={datasetConfigs.static?.end_date}
+                                  onChange={(e) => setConfig({...config, start_date: e.target.value})}
+                                />
+                              </Column>
+                              <Column lg={8} md={4} sm={2}>
+                                <TextInput 
+                                  id="end-date" 
+                                  type="date" 
+                                  labelText="End Date" 
+                                  value={config.end_date}
+                                  min={datasetConfigs.static?.start_date}
+                                  max={datasetConfigs.static?.end_date}
+                                  onChange={(e) => setConfig({...config, end_date: e.target.value})}
+                                />
+                              </Column>
+                            </Grid>
+                          )}
                         </Column>
 
                         {/* Row 2: Right */}
@@ -1131,20 +1212,15 @@ function SimulationPageContent() {
               <Tile>
                 <h5 style={{ marginBottom: '1rem' }}>Simulation Settings</h5>
                 
-                <h5 style={{ marginBottom: '.5rem' }}>Historical Dataset</h5>
-                {datasetConfig && (
+                {datasetConfigs[ingestForm.dataset_type as keyof typeof datasetConfigs] && (
                   <div style={{ marginBottom: '.5rem', padding: '1rem', backgroundColor: '#262626', borderLeft: '4px solid #0f62fe' }}>
-                    <p style={{ marginBottom: '0.5rem' }}><strong>Locked Dataset:</strong> {datasetConfig.filename}</p>
-                    <p style={{ margin: 0, color: '#a8a8a8' }}>Data spanning from {datasetConfig.start_date} to {datasetConfig.end_date}. All simulation launches are bounded within this period to prevent data drift.</p>
+                    <p style={{ marginBottom: '0.5rem' }}><strong>Locked Dataset:</strong> {datasetConfigs[ingestForm.dataset_type as keyof typeof datasetConfigs].filename}</p>
+                    <p style={{ marginBottom: '0.5rem' }}><strong>Type:</strong> {datasetConfigs[ingestForm.dataset_type as keyof typeof datasetConfigs].dataset_type === 'latest' ? 'Latest (Auto-syncs to T-1)' : 'Static'}</p>
+                    <p style={{ margin: 0, color: '#a8a8a8' }}>Data spanning from {datasetConfigs[ingestForm.dataset_type as keyof typeof datasetConfigs].start_date} to {datasetConfigs[ingestForm.dataset_type as keyof typeof datasetConfigs].end_date}. All simulation launches are bounded within this period to prevent data drift.</p>
                   </div>
                 )}
                 
                 <div style={{ padding: '1rem', border: '1px solid #393939', borderRadius: '4px', maxWidth: '600px' }}>
-                  <h5 style={{ marginBottom: '1rem' }}>Ingest / Update Simulation Data</h5>
-                  <p style={{ marginBottom: '1.5rem', fontSize: '0.875rem', color: '#a8a8a8' }}>
-                    Pull fresh historical data from MetaTrader 5 and recalculate features. This process takes a while and will lock the dataset for all future simulations.
-                  </p>
-                  
                   {ingestStatus && (
                     <div style={{ marginBottom: '1rem' }}>
                       <InlineNotification 
@@ -1157,6 +1233,26 @@ function SimulationPageContent() {
                   )}
 
                   <Form onSubmit={handleReingest}>
+                    <div style={{ marginBottom: '1.5rem' }}>
+                      <h5 style={{ marginBottom: '0.5rem', fontSize: '0.875rem' }}>Dataset Type</h5>
+                      <RadioButtonGroup
+                        name="ingest-dataset-type"
+                        valueSelected={ingestForm.dataset_type}
+                        onChange={(newType) => {
+                          const typeStr = String(newType);
+                          const currentDataset = datasetConfigs[typeStr as keyof typeof datasetConfigs];
+                          setIngestForm({
+                            ...ingestForm, 
+                            dataset_type: typeStr,
+                            start_date: currentDataset?.start_date || ingestForm.start_date,
+                            end_date: currentDataset?.end_date || ingestForm.end_date
+                          });
+                        }}
+                      >
+                        <RadioButton value="latest" id="ingest-latest" labelText="Use latest data (Auto-updates to Yesterday)" />
+                        <RadioButton value="static" id="ingest-static" labelText="Static (Fixed End Date)" />
+                      </RadioButtonGroup>
+                    </div>
                     <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
                       <div style={{ flex: 1 }}>
                         <TextInput 
@@ -1168,21 +1264,23 @@ function SimulationPageContent() {
                           required
                         />
                       </div>
-                      <div style={{ flex: 1 }}>
-                        <TextInput 
-                          id="ingest-end-date" 
-                          type="date" 
-                          labelText="End Date" 
-                          value={ingestForm.end_date}
-                          max={(() => {
-                            const d = new Date();
-                            d.setMonth(d.getMonth() - 1);
-                            return d.toISOString().split('T')[0];
-                          })()}
-                          onChange={(e) => setIngestForm({...ingestForm, end_date: e.target.value})}
-                          required
-                        />
-                      </div>
+                      {ingestForm.dataset_type === 'static' && (
+                        <div style={{ flex: 1 }}>
+                          <TextInput 
+                            id="ingest-end-date" 
+                            type="date" 
+                            labelText="End Date" 
+                            value={ingestForm.end_date}
+                            max={(() => {
+                              const d = new Date();
+                              d.setDate(d.getDate() - 1);
+                              return d.toISOString().split('T')[0];
+                            })()}
+                            onChange={(e) => setIngestForm({...ingestForm, end_date: e.target.value})}
+                            required
+                          />
+                        </div>
+                      )}
                     </div>
                     <Button type="submit" disabled={isIngesting}>
                       {isIngesting ? 'Ingesting from MT5...' : 'Re-ingest Dataset'}
@@ -1196,6 +1294,17 @@ function SimulationPageContent() {
       </div>
       </Column>
     </Grid>
+
+    <Modal
+      open={confirmModalConfig.isOpen}
+      modalHeading={confirmModalConfig.title}
+      primaryButtonText="Confirm"
+      secondaryButtonText="Cancel"
+      onRequestClose={() => setConfirmModalConfig(prev => ({ ...prev, isOpen: false }))}
+      onRequestSubmit={confirmModalConfig.onConfirm}
+    >
+      <p style={{ padding: '1rem 0', fontSize: '0.875rem' }}>{confirmModalConfig.body}</p>
+    </Modal>
     </>
   );
 }
