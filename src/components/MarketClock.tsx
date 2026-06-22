@@ -20,7 +20,7 @@ export default function MarketClock() {
   };
 
   return (
-    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1.5rem' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
       {/* Live Price */}
       {state?.price && (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>

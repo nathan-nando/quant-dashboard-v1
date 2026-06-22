@@ -214,27 +214,43 @@ export default function CandlestickChart({ symbol = "XAUUSD", onHistoryUpdate, s
             }
             markerTime = closest.time as number;
             
-            let color = '#e8e8e8';
-            let shape: any = 'circle';
+            const isShadow = s.status === 'SHADOW';
+
+            let color = isShadow ? '#8d8d8d' : '#e8e8e8';
+            let shape: any = isShadow ? 'square' : 'circle';
             let position: any = 'aboveBar';
             let text = 'N';
             
             if (s.direction === 'BUY') {
-                color = '#24a148'; shape = 'arrowUp'; position = 'belowBar'; text = 'BUY';
+                color = isShadow ? '#8d8d8d' : '#24a148'; 
+                shape = isShadow ? 'square' : 'arrowUp'; 
+                position = 'belowBar'; 
+                text = 'B';
             } else if (s.direction === 'SELL') {
-                color = '#fa4d56'; shape = 'arrowDown'; position = 'aboveBar'; text = 'SELL';
+                color = isShadow ? '#8d8d8d' : '#fa4d56'; 
+                shape = isShadow ? 'square' : 'arrowDown'; 
+                position = 'aboveBar'; 
+                text = 'S';
             }
 
-            return { time: markerTime as Time, position, color, shape, text, size: 1 };
-        })
-        .sort((a, b) => (a.time as number) - (b.time as number));
+            // Using smaller size (0.5) to reduce the marker and text size.
+            return { time: markerTime as Time, position, color, shape, text, size: 0.5, isShadow };
+        });
 
-    // Deduplicate — one marker per candle (keep first signal of that candle)
-    const seen = new Map<number, any>();
+    // Deduplicate — keep only one of each type of signal per candle
+    const seen = new Map<string, any>();
     for (const m of markerData) {
-        if (!seen.has(m.time as number)) seen.set(m.time as number, m);
+        const key = `${m.time}-${m.text}-${m.isShadow}`;
+        if (!seen.has(key)) seen.set(key, m);
     }
-    const uniqueMarkers = Array.from(seen.values()).sort((a, b) => (a.time as number) - (b.time as number));
+    
+    const uniqueMarkers = Array.from(seen.values()).sort((a, b) => {
+        if (a.time !== b.time) return (a.time as number) - (b.time as number);
+        // Sort shadow signals to be rendered after main signals
+        if (a.isShadow && !b.isShadow) return 1;
+        if (!a.isShadow && b.isShadow) return -1;
+        return 0;
+    }).map(({ isShadow, ...rest }) => rest);
 
     try {
         markersRef.current.setMarkers(uniqueMarkers);

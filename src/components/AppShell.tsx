@@ -19,12 +19,14 @@ import { Settings, Notification, Dashboard, SettingsAdjust, Activity, MachineLea
 import MarketClock from './MarketClock';
 import HeaderMetrics from './HeaderMetrics';
 import GlobalJobsWidget from './GlobalJobsWidget';
+import { useGlobalState } from '@/contexts/GlobalStateContext';
 
 const HeaderAny = Header as any;
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { state } = useGlobalState();
 
   // Job Logs Modal States
   const [detailLogs, setDetailLogs] = useState<string>("");
@@ -128,6 +130,32 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     </HeaderMenuItem>
   );
 
+  const HeaderAccountBadge = () => {
+    if (!state || !state.account_info) return null;
+    const acc = state.account_info;
+    const isLive = acc.mode === 'LIVE';
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0 0.5rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', lineHeight: 1 }}>
+          <span style={{ fontSize: '0.65rem', color: '#a8a8a8' }}>{acc.login} | {acc.server}</span>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+             <strong style={{ fontSize: '0.875rem', color: '#fff' }}>
+               ${(acc.equity || acc.balance || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}
+             </strong>
+             {acc.profit !== undefined && acc.profit !== 0 && (
+                <span style={{ fontSize: '0.65rem', color: acc.profit >= 0 ? '#24a148' : '#fa4d56' }}>
+                  ({acc.profit > 0 ? '+' : ''}{acc.profit.toLocaleString(undefined, {minimumFractionDigits: 2})})
+                </span>
+             )}
+          </div>
+        </div>
+        <span style={{ padding: '2px 6px', backgroundColor: isLive ? '#fa4d56' : '#0f62fe', color: 'white', borderRadius: '2px', fontSize: '10px', fontWeight: 600 }}>
+          {acc.mode}
+        </span>
+      </div>
+    );
+  };
+
   return (
     <>
       <Theme theme="g100">
@@ -155,7 +183,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               </HeaderNavigation>
 
               {/* Spacer — pushes Group 2 toward the right */}
-              <MarketClock />
+              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1.5rem' }}>
+                <MarketClock />
+                <HeaderAccountBadge />
+              </div>
 
               {/* Group 2 — sits just before the global action icons */}
               <HeaderNavigation aria-label="Tools" style={{ border: 'none' }}>

@@ -138,7 +138,7 @@ export default function TradeHistoryTable({ trades }: TradeHistoryTableProps) {
     <>
       <GlobalTable
         title="Trade History"
-        description={trades.length === 0 ? "No trades executed during this simulation." : undefined}
+        description={trades.length === 0 ? "No trades" : undefined}
         headers={headers}
         initialData={rows}
         formatCell={formatCell}
