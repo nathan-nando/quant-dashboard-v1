@@ -100,7 +100,17 @@ function SimulationPageContent() {
     use_equity_kill_switch: false,
     max_drawdown_equity_pct: 10.0,
     use_daily_kill_switch: false,
-    max_daily_drawdown_pct: 5.0
+    max_daily_drawdown_pct: 5.0,
+    use_global_thresholds: true,
+    ml_conf_bull: 0.50,
+    ml_margin_bull: 0.10,
+    meta_conf_bull: 0.50,
+    ml_conf_bear: 0.50,
+    ml_margin_bear: 0.10,
+    meta_conf_bear: 0.50,
+    ml_conf_mean: 0.50,
+    ml_margin_mean: 0.05,
+    meta_conf_mean: 0.50
   });
 
   // Tab state synchronized via URL
@@ -108,7 +118,25 @@ function SimulationPageContent() {
   useEffect(() => {
     fetch('http://127.0.0.1:8000/api/models')
       .then(res => res.json())
-      .then(data => { if (Array.isArray(data)) setModels(data); })
+      .then(data => { 
+        if (Array.isArray(data)) {
+          setModels(data);
+          
+          // Find default models by searching name for keywords
+          const bullOption = data.find(m => (!m.regime || m.regime === 'TREND_BULL') && m.name.toLowerCase().includes('bull'));
+          const bearOption = data.find(m => (!m.regime || m.regime === 'TREND_BEAR') && m.name.toLowerCase().includes('bear'));
+          const meanOption = data.find(m => (!m.regime || m.regime === 'MEAN_REVERTING') && m.name.toLowerCase().includes('mean'));
+          
+          setConfig(prev => ({
+            ...prev,
+            models: {
+              bull_trend: bullOption ? bullOption.name : (prev.models.bull_trend || "NONE"),
+              bear_trend: bearOption ? bearOption.name : (prev.models.bear_trend || "NONE"),
+              mean_reverting: meanOption ? meanOption.name : (prev.models.mean_reverting || "NONE")
+            }
+          }));
+        }
+      })
       .catch(console.error);
       
     fetch('http://127.0.0.1:8000/api/simulation/runs')
@@ -216,18 +244,25 @@ function SimulationPageContent() {
     setIsRunning(true);
     setProgress(0);
     
-    const requestPayload: any = { ...config };
-    if (!requestPayload.name || !requestPayload.name.trim()) {
-      delete requestPayload.name;
-    } else {
-      requestPayload.name = requestPayload.name.trim();
+    // Prepare payload. If use_global_thresholds is true, remove local thresholds so backend uses global.
+    const payload = { ...config };
+    if (payload.use_global_thresholds) {
+      const keysToDelete = [
+        "ml_conf_bull", "ml_margin_bull", "meta_conf_bull",
+        "ml_conf_bear", "ml_margin_bear", "meta_conf_bear",
+        "ml_conf_mean", "ml_margin_mean", "meta_conf_mean"
+      ];
+      keysToDelete.forEach(k => delete (payload as any)[k]);
     }
-    
+
     try {
+      setIsRunning(true);
       const res = await fetch('http://127.0.0.1:8000/api/simulation/backtest', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestPayload)
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
       });
       const data = await res.json();
       
@@ -333,7 +368,7 @@ function SimulationPageContent() {
                               onChange={(e) => setConfig({...config, models: {...config.models, bull_trend: e.target.value}})}
                             >
                               <SelectItem value="NONE" text="None (Disabled)" />
-                              {models.map(m => (
+                              {models.filter(m => !m.regime || m.regime === 'TREND_BULL').map(m => (
                                 <SelectItem key={`bull-${m.id}`} value={m.name} text={`${m.name}`} />
                               ))}
                             </Select>
@@ -346,7 +381,7 @@ function SimulationPageContent() {
                               onChange={(e) => setConfig({...config, models: {...config.models, bear_trend: e.target.value}})}
                             >
                               <SelectItem value="NONE" text="None (Disabled)" />
-                              {models.map(m => (
+                              {models.filter(m => !m.regime || m.regime === 'TREND_BEAR').map(m => (
                                 <SelectItem key={`bear-${m.id}`} value={m.name} text={`${m.name}`} />
                               ))}
                             </Select>
@@ -359,7 +394,7 @@ function SimulationPageContent() {
                               onChange={(e) => setConfig({...config, models: {...config.models, mean_reverting: e.target.value}})}
                             >
                               <SelectItem value="NONE" text="None (Disabled)" />
-                              {models.map(m => (
+                              {models.filter(m => !m.regime || m.regime === 'MEAN_REVERTING').map(m => (
                                 <SelectItem key={`mean-${m.id}`} value={m.name} text={`${m.name}`} />
                               ))}
                             </Select>
@@ -409,6 +444,7 @@ function SimulationPageContent() {
                               </div>
                             )}
                           </div>
+                          
                           <div style={{ marginTop: '1rem', display: 'flex', gap: '1rem' }}>
                             <div style={{ flex: 1 }}>
                               <Checkbox 
@@ -451,6 +487,61 @@ function SimulationPageContent() {
                                 </div>
                               )}
                             </div>
+                          </div>
+                        </Column>
+                      </Grid>
+
+                      {/* Section: ML Confidence Thresholds */}
+                      <Grid style={{ padding: 0, marginLeft: '-1rem', marginRight: '-1rem', marginBottom: '2rem' }}>
+                        <Column lg={16} md={8} sm={4}>
+                          <h4 style={{ margin: '0 0 1rem 0' }}>ML Confidence Thresholds</h4>
+                          <div style={{ marginBottom: '1.5rem' }}>
+                            <Toggle 
+                              id="use-global-thresholds" 
+                              labelText="Simulation Confidence Thresholds" 
+                              labelA="Custom Overrides" 
+                              labelB="Use Global Settings" 
+                              toggled={config.use_global_thresholds}
+                              onToggle={(val) => setConfig({...config, use_global_thresholds: val})}
+                            />
+                            {!config.use_global_thresholds && (
+                              <div style={{ marginTop: '1.5rem', width: '100%' }}>
+                                <Grid style={{ padding: 0, margin: '0 -1rem' }}>
+                                  <Column lg={5} md={2} sm={4} style={{ marginBottom: '1rem' }}>
+                                    <h5 style={{ marginBottom: '0.5rem', color: '#24a148', fontSize: '0.8rem' }}>Bull Trend</h5>
+                                    <TextInput id="ml-margin-bull" type="number" step="0.01" labelText="Margin" value={config.ml_margin_bull} onChange={(e) => setConfig({...config, ml_margin_bull: parseFloat(e.target.value)})} />
+                                    <div style={{marginTop: "0.5rem"}}>
+                                      <TextInput id="ml-conf-bull" type="number" step="0.05" labelText="Raw Conf" value={config.ml_conf_bull} onChange={(e) => setConfig({...config, ml_conf_bull: parseFloat(e.target.value)})} />
+                                    </div>
+                                    <div style={{marginTop: "0.5rem"}}>
+                                      <TextInput id="meta-conf-bull" type="number" step="0.05" labelText="Meta Conf" value={config.meta_conf_bull} onChange={(e) => setConfig({...config, meta_conf_bull: parseFloat(e.target.value)})} />
+                                    </div>
+                                  </Column>
+                                  
+                                  <Column lg={5} md={2} sm={4} style={{ marginBottom: '1rem' }}>
+                                    <h5 style={{ marginBottom: '0.5rem', color: '#fa4d56', fontSize: '0.8rem' }}>Bear Trend</h5>
+                                    <TextInput id="ml-margin-bear" type="number" step="0.01" labelText="Margin" value={config.ml_margin_bear} onChange={(e) => setConfig({...config, ml_margin_bear: parseFloat(e.target.value)})} />
+                                    <div style={{marginTop: "0.5rem"}}>
+                                      <TextInput id="ml-conf-bear" type="number" step="0.05" labelText="Raw Conf" value={config.ml_conf_bear} onChange={(e) => setConfig({...config, ml_conf_bear: parseFloat(e.target.value)})} />
+                                    </div>
+                                    <div style={{marginTop: "0.5rem"}}>
+                                      <TextInput id="meta-conf-bear" type="number" step="0.05" labelText="Meta Conf" value={config.meta_conf_bear} onChange={(e) => setConfig({...config, meta_conf_bear: parseFloat(e.target.value)})} />
+                                    </div>
+                                  </Column>
+
+                                  <Column lg={6} md={4} sm={4}>
+                                    <h5 style={{ marginBottom: '0.5rem', color: '#0f62fe', fontSize: '0.8rem' }}>Mean Reverting</h5>
+                                    <TextInput id="ml-margin-mean" type="number" step="0.01" labelText="Margin" value={config.ml_margin_mean} onChange={(e) => setConfig({...config, ml_margin_mean: parseFloat(e.target.value)})} />
+                                    <div style={{marginTop: "0.5rem"}}>
+                                      <TextInput id="ml-conf-mean" type="number" step="0.05" labelText="Raw Conf" value={config.ml_conf_mean} onChange={(e) => setConfig({...config, ml_conf_mean: parseFloat(e.target.value)})} />
+                                    </div>
+                                    <div style={{marginTop: "0.5rem"}}>
+                                      <TextInput id="meta-conf-mean" type="number" step="0.05" labelText="Meta Conf" value={config.meta_conf_mean} onChange={(e) => setConfig({...config, meta_conf_mean: parseFloat(e.target.value)})} />
+                                    </div>
+                                  </Column>
+                                </Grid>
+                              </div>
+                            )}
                           </div>
                         </Column>
                       </Grid>
@@ -581,8 +672,8 @@ function SimulationPageContent() {
 
                   {/* Configuration Summary Card */}
                   {activeRunData && activeRunData.status === 'COMPLETED' && (
-                    <Tile style={{ padding: '0.75rem 1rem', flex: 1, backgroundColor: '#353535', border: 'none', marginBottom: 0 }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.75rem', fontSize: '0.75rem' }}>
+                    <Tile style={{ padding: '0.6rem 1rem', backgroundColor: '#353535', border: 'none', marginBottom: 0, marginLeft: 'auto' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, max-content)', gap: '0.5rem 1rem', fontSize: '0.75rem' }}>
                         <div>
                           <div style={{ color: '#a8a8a8', fontSize: '10px', marginBottom: '2px' }}>SL/TP Control</div>
                           <strong style={{ color: '#ffffff' }}>{activeRunData.config?.use_ai_sl_tp ? 'Fully AI Driven' : 'Manual Thresholds'}</strong>
@@ -600,16 +691,25 @@ function SimulationPageContent() {
                           <strong style={{ color: activeRunData.config?.use_daily_kill_switch ? '#ffffff' : '#a8a8a8' }}>{activeRunData.config?.use_daily_kill_switch ? `${activeRunData.config.max_daily_drawdown_pct}%` : 'OFF'}</strong>
                         </div>
                         <div>
-                          <div style={{ color: '#a8a8a8', fontSize: '10px', marginBottom: '2px' }}>Bull Model</div>
-                          <strong style={{ color: '#ffffff' }}>{activeRunData.config?.models?.bull_trend || 'NONE'}</strong>
+                          <div style={{ color: '#a8a8a8', fontSize: '10px', marginBottom: '2px' }}>Bull Model / Thresh</div>
+                          <strong style={{ color: activeRunData.config?.models?.bull_trend ? '#42be65' : '#a8a8a8' }}>
+                            {activeRunData.config?.models?.bull_trend || 'NONE'}
+                            {activeRunData.config?.models?.bull_trend && activeRunData.config?.thresholds?.ml_conf_bull !== undefined ? ` (>${(activeRunData.config.thresholds.ml_conf_bull * 100).toFixed(0)}%)` : ''}
+                          </strong>
                         </div>
                         <div>
-                          <div style={{ color: '#a8a8a8', fontSize: '10px', marginBottom: '2px' }}>Bear Model</div>
-                          <strong style={{ color: '#ffffff' }}>{activeRunData.config?.models?.bear_trend || 'NONE'}</strong>
+                          <div style={{ color: '#a8a8a8', fontSize: '10px', marginBottom: '2px' }}>Bear Model / Thresh</div>
+                          <strong style={{ color: activeRunData.config?.models?.bear_trend ? '#ff8389' : '#a8a8a8' }}>
+                            {activeRunData.config?.models?.bear_trend || 'NONE'}
+                            {activeRunData.config?.models?.bear_trend && activeRunData.config?.thresholds?.ml_conf_bear !== undefined ? ` (>${(activeRunData.config.thresholds.ml_conf_bear * 100).toFixed(0)}%)` : ''}
+                          </strong>
                         </div>
                         <div>
-                          <div style={{ color: '#a8a8a8', fontSize: '10px', marginBottom: '2px' }}>Mean Rev Model</div>
-                          <strong style={{ color: '#ffffff' }}>{activeRunData.config?.models?.mean_reverting || 'NONE'}</strong>
+                          <div style={{ color: '#a8a8a8', fontSize: '10px', marginBottom: '2px' }}>Mean Rev Model / Thresh</div>
+                          <strong style={{ color: activeRunData.config?.models?.mean_reverting ? '#4589ff' : '#a8a8a8' }}>
+                            {activeRunData.config?.models?.mean_reverting || 'NONE'}
+                            {activeRunData.config?.models?.mean_reverting && activeRunData.config?.thresholds?.ml_conf_mean !== undefined ? ` (>${(activeRunData.config.thresholds.ml_conf_mean * 100).toFixed(0)}%)` : ''}
+                          </strong>
                         </div>
                         <div>
                           <div style={{ color: '#a8a8a8', fontSize: '10px', marginBottom: '2px' }}>Spread & Slippage</div>

@@ -149,8 +149,8 @@ export default function CandlestickChart({ symbol = "XAUUSD", onHistoryUpdate, s
                   const volumeHistory = [];
                   
                   for (const row of data) {
-                      // Add timezone offset so Lightweight Charts displays the native broker time
-                      const t = row.time + tzOffsetSeconds;
+                      // Subtract timezone offset so Lightweight Charts displays the local browser time
+                      const t = row.time - tzOffsetSeconds;
                       history.push({ time: t as Time, open: row.open, high: row.high, low: row.low, close: row.close });
                       volumeHistory.push({ 
                           time: t as Time, 
@@ -263,7 +263,7 @@ export default function CandlestickChart({ symbol = "XAUUSD", onHistoryUpdate, s
          const tzOffsetSeconds = new Date().getTimezoneOffset() * 60;
          
          // Align MT5 Broker time with Local History time
-         const alignedTickTime = rawTick + tzOffsetSeconds;
+         const alignedTickTime = rawTick - tzOffsetSeconds;
          
          const tfSeconds = TIMEFRAMES[timeframe] || 3600;
          const currentCandleTime = alignedTickTime - (alignedTickTime % tfSeconds);

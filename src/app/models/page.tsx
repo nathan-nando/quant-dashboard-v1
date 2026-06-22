@@ -10,6 +10,15 @@ import GlobalJobsWidget from "../../components/GlobalJobsWidget";
 import GlobalJobsTable from "../../components/GlobalJobsTable";
 import GlobalHealthWidget from "../../components/GlobalHealthWidget";
 
+const getRegimeFormat = (regime: string) => {
+  if (!regime) return { text: 'UNKNOWN', color: '#f4f4f4' };
+  if (regime === 'TREND_BULL') return { text: 'Bull Trend', color: '#24a148' }; // Green
+  if (regime === 'TREND_BEAR') return { text: 'Bear Trend', color: '#fa4d56' }; // Red
+  if (regime === 'VOLATILE_CHOP') return { text: 'Volatile Chop', color: '#f1c21b' }; // Yellow
+  if (regime === 'MEAN_REVERTING') return { text: 'Mean Reverting', color: '#4589ff' }; // Blue
+  return { text: regime, color: '#f4f4f4' };
+};
+
 function ModelsContent() {
   const router = useRouter();
   const pathname = usePathname();
@@ -311,10 +320,11 @@ function ModelsContent() {
   const modelHeaders = [
     { key: "name", header: "Model Name" },
     { key: "algorithm_type", header: "Algorithm Type" },
+    { key: "regime", header: "Regime" },
     { key: "accuracy", header: "Accuracy" },
     { key: "dataset", header: "Dataset" },
-    { key: "status", header: "Status" },
     { key: "uses_meta", header: "Meta Labeling" },
+    { key: "status", header: "Status" },
     { key: "actions", header: "Actions" },
   ];
 
@@ -342,7 +352,11 @@ function ModelsContent() {
       );
     }
     if (cellId.endsWith(':uses_meta')) {
-      return value ? "Yes" : "No";
+      return (
+        <span style={{ color: value ? '#24a148' : '#fa4d56', fontWeight: 'bold' }}>
+          {value ? "Yes" : "No"}
+        </span>
+      );
     }
     if (cellId.endsWith(':dataset')) {
       const rowId = cellId.split(':')[0];
@@ -367,6 +381,15 @@ function ModelsContent() {
           hideLabel
           style={{ margin: 0 }}
         />
+      );
+    }
+    if (cellId.endsWith(':regime')) {
+      const format = getRegimeFormat(value);
+      const parts = format.text.split(' ');
+      return (
+        <span style={{ color: format.color, fontWeight: 'bold', fontSize: '0.85em', display: 'inline-block', lineHeight: '1.1' }}>
+          {parts.map((p, i) => <span key={i}>{p}{i < parts.length - 1 && <br/>}</span>)}
+        </span>
       );
     }
     return value;
@@ -459,13 +482,13 @@ function ModelsContent() {
                         <div style={{ width: '280px' }}>
                           <Select id={`route_${regime}_champ`} labelText="👑 Champion" value={modelRouting[regime]?.champion || "NONE"} onChange={e => handleRouteChange(regime, 'champion', e.target.value)}>
                             <SelectItem value="NONE" text="-- None (Disable) --" />
-                            {models.map(m => <SelectItem key={`${m.id}-champ`} value={m.name} text={m.name} />)}
+                            {models.filter(m => !m.regime || m.regime === regime).map(m => <SelectItem key={`${m.id}-champ`} value={m.name} text={m.name} />)}
                           </Select>
                         </div>
                         <div style={{ width: '280px' }}>
                           <Select id={`route_${regime}_chall`} labelText="🔬 Challenger" value={modelRouting[regime]?.challenger || "NONE"} onChange={e => handleRouteChange(regime, 'challenger', e.target.value)}>
                             <SelectItem value="NONE" text="-- None --" />
-                            {models.map(m => <SelectItem key={`${m.id}-chall`} value={m.name} text={m.name} />)}
+                            {models.filter(m => !m.regime || m.regime === regime).map(m => <SelectItem key={`${m.id}-chall`} value={m.name} text={m.name} />)}
                           </Select>
                         </div>
                     </Tile>

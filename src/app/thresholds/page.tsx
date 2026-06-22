@@ -15,10 +15,15 @@ export default function ThresholdsPage() {
     use_ai_sl_tp: true,
     risk_per_trade_pct: 1.0,
     max_open_positions: 1,
-    rsi_buy_threshold: 30,
-    rsi_sell_threshold: 70,
-    ml_confidence_threshold: 0.6,
-    meta_confidence_threshold: 0.65,
+    ml_conf_bull: 0.50,
+    ml_margin_bull: 0.10,
+    meta_conf_bull: 0.50,
+    ml_conf_bear: 0.50,
+    ml_margin_bear: 0.10,
+    meta_conf_bear: 0.50,
+    ml_conf_mean: 0.50,
+    ml_margin_mean: 0.05,
+    meta_conf_mean: 0.50,
     adx_trend_threshold: 25,
     bb_width_volatility_threshold: 5.0,
     sl_mult_trend: 1.5,
@@ -85,7 +90,11 @@ export default function ThresholdsPage() {
   };
 
   const riskKeys = ["auto_execution_enabled", "use_equity_kill_switch", "max_drawdown_equity_pct", "use_daily_kill_switch", "max_daily_drawdown_pct", "risk_per_trade_pct", "max_open_positions"];
-  const alphaKeys = ["rsi_buy_threshold", "rsi_sell_threshold", "ml_confidence_threshold", "meta_confidence_threshold"];
+  const alphaKeys = [
+    "ml_conf_bull", "ml_margin_bull", "meta_conf_bull",
+    "ml_conf_bear", "ml_margin_bear", "meta_conf_bear",
+    "ml_conf_mean", "ml_margin_mean", "meta_conf_mean"
+  ];
   const regimeKeys = ["adx_trend_threshold", "bb_width_volatility_threshold"];
   const sltpKeys = ["use_ai_sl_tp", "sl_mult_trend", "tp_mult_trend", "sl_mult_mean_reverting", "tp_mult_mean_reverting", "sl_mult_volatile", "tp_mult_volatile"];
   const systemKeys = ["engine_active", "cron_interval_minutes"];
@@ -193,32 +202,43 @@ export default function ThresholdsPage() {
                 {saving ? "Saving..." : "Save"}
               </Button>
             </div>
-            <FormGroup legendText="" style={{ marginTop: "1rem" }}>
-              <div>
-                <NumberInput 
-                  id="rsi_buy" label="RSI Buy Threshold" value={config.rsi_buy_threshold} 
-                  min={1} max={100} onChange={(e: any, { value }: any) => updateConfig("rsi_buy_threshold", Number(value))}
-                />
-              </div>
-              <div style={{marginTop: "1rem"}}>
-                <NumberInput 
-                  id="rsi_sell" label="RSI Sell Threshold" value={config.rsi_sell_threshold} 
-                  min={1} max={100} onChange={(e: any, { value }: any) => updateConfig("rsi_sell_threshold", Number(value))}
-                />
-              </div>
-              <div style={{marginTop: "1rem"}}>
-                <NumberInput 
-                  id="ml_conf" label="ML Confidence Threshold" value={config.ml_confidence_threshold} 
-                  min={0.1} max={1.0} step={0.05} onChange={(e: any, { value }: any) => updateConfig("ml_confidence_threshold", Number(value))}
-                />
-              </div>
-              <div style={{marginTop: "1rem"}}>
-                <NumberInput 
-                  id="meta_conf" label="Meta-Model Confidence Threshold" value={config.meta_confidence_threshold ?? 0.65} 
-                  min={0.1} max={1.0} step={0.05} onChange={(e: any, { value }: any) => updateConfig("meta_confidence_threshold", Number(value))}
-                />
-              </div>
-            </FormGroup>
+            <Grid style={{ padding: 0, margin: '1rem -1rem 0 -1rem' }}>
+              {/* Bull Trend */}
+              <Column lg={5} md={2} sm={4} style={{ marginBottom: '1rem' }}>
+                <h5 style={{ marginBottom: '0.5rem', color: '#24a148' }}>Bull Trend</h5>
+                <NumberInput id="ml_margin_bull" label="ML Margin (Selisih)" value={config.ml_margin_bull ?? 0.10} min={0.01} max={1.0} step={0.01} onChange={(e: any, { value }: any) => updateConfig("ml_margin_bull", Number(value))} />
+                <div style={{marginTop: "0.5rem"}}>
+                  <NumberInput id="ml_conf_bull" label="ML Confidence (Mutlak)" value={config.ml_conf_bull ?? 0.50} min={0.1} max={1.0} step={0.05} onChange={(e: any, { value }: any) => updateConfig("ml_conf_bull", Number(value))} />
+                </div>
+                <div style={{marginTop: "0.5rem"}}>
+                  <NumberInput id="meta_conf_bull" label="Meta Confidence" value={config.meta_conf_bull ?? 0.50} min={0.1} max={1.0} step={0.05} onChange={(e: any, { value }: any) => updateConfig("meta_conf_bull", Number(value))} />
+                </div>
+              </Column>
+              
+              {/* Bear Trend */}
+              <Column lg={5} md={2} sm={4} style={{ marginBottom: '1rem' }}>
+                <h5 style={{ marginBottom: '0.5rem', color: '#fa4d56' }}>Bear Trend</h5>
+                <NumberInput id="ml_margin_bear" label="ML Margin (Selisih)" value={config.ml_margin_bear ?? 0.10} min={0.01} max={1.0} step={0.01} onChange={(e: any, { value }: any) => updateConfig("ml_margin_bear", Number(value))} />
+                <div style={{marginTop: "0.5rem"}}>
+                  <NumberInput id="ml_conf_bear" label="ML Confidence (Mutlak)" value={config.ml_conf_bear ?? 0.50} min={0.1} max={1.0} step={0.05} onChange={(e: any, { value }: any) => updateConfig("ml_conf_bear", Number(value))} />
+                </div>
+                <div style={{marginTop: "0.5rem"}}>
+                  <NumberInput id="meta_conf_bear" label="Meta Confidence" value={config.meta_conf_bear ?? 0.50} min={0.1} max={1.0} step={0.05} onChange={(e: any, { value }: any) => updateConfig("meta_conf_bear", Number(value))} />
+                </div>
+              </Column>
+
+              {/* Mean Reverting */}
+              <Column lg={6} md={4} sm={4}>
+                <h5 style={{ marginBottom: '0.5rem', color: '#0f62fe' }}>Mean Reverting</h5>
+                <NumberInput id="ml_margin_mean" label="ML Margin (Selisih)" value={config.ml_margin_mean ?? 0.05} min={0.01} max={1.0} step={0.01} onChange={(e: any, { value }: any) => updateConfig("ml_margin_mean", Number(value))} />
+                <div style={{marginTop: "0.5rem"}}>
+                  <NumberInput id="ml_conf_mean" label="ML Confidence (Mutlak)" value={config.ml_conf_mean ?? 0.50} min={0.1} max={1.0} step={0.05} onChange={(e: any, { value }: any) => updateConfig("ml_conf_mean", Number(value))} />
+                </div>
+                <div style={{marginTop: "0.5rem"}}>
+                  <NumberInput id="meta_conf_mean" label="Meta Confidence" value={config.meta_conf_mean ?? 0.50} min={0.1} max={1.0} step={0.05} onChange={(e: any, { value }: any) => updateConfig("meta_conf_mean", Number(value))} />
+                </div>
+              </Column>
+            </Grid>
           </Tile>
         )}
 
