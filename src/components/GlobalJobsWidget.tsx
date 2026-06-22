@@ -3,20 +3,23 @@
 import React, { useState, useEffect, useRef } from "react";
 import { ProgressBar, Button, ToastNotification, Modal } from "@carbon/react";
 import { Document, ChevronUp, ChevronDown, View, Stop, TrashCan, Play } from "@carbon/icons-react";
+import { useGlobalState } from "../contexts/GlobalStateContext";
 
 interface GlobalJobsWidgetProps {
   target?: string;
-  refreshTrigger?: number;
+  refreshTrigger?: number; // Kept for interface compatibility
   onJobComplete?: () => void;
   openJobDetails: (id: string) => void;
-  onLogLine?: (taskId: string, line: string) => void;
 }
 
-export default function GlobalJobsWidget({ target, refreshTrigger, onJobComplete, openJobDetails, onLogLine }: GlobalJobsWidgetProps) {
-  const [activeJobs, setActiveJobs] = useState<any[]>([]);
+export default function GlobalJobsWidget({ target, onJobComplete, openJobDetails }: GlobalJobsWidgetProps) {
+  const { state } = useGlobalState();
+  const rawJobs = state?.active_jobs || [];
+  
+  // Filter jobs by target if provided
+  const activeJobs = target ? rawJobs.filter((job: any) => job.target === target) : rawJobs;
+
   const [isWidgetCollapsed, setIsWidgetCollapsed] = useState(true);
-  const [progressData, setProgressData] = useState<Record<string, { label: string, value: number }>>({});
-  const activeSSERef = useRef<Record<string, EventSource>>({});
   const [notification, setNotification] = useState<{kind: "success" | "error" | "info", title: string, subtitle: string} | null>(null);
   const [confirmModalConfig, setConfirmModalConfig] = useState<{
     isOpen: boolean;
@@ -30,107 +33,59 @@ export default function GlobalJobsWidget({ target, refreshTrigger, onJobComplete
     onConfirm: () => {}
   });
 
-  const fetchActiveJobs = async () => {
-    try {
-      const url = `http://127.0.0.1:8000/api/jobs/active${target ? `?target=${target}` : ''}`;
-      const res = await fetch(url);
-      if (res.ok) {
-        const data = await res.json();
-        setActiveJobs(data.jobs);
-        data.jobs.forEach((job: any) => {
-          if (job.status === "running") {
-            connectToSSE(job.task_id);
-          }
-        });
-      }
-    } catch (e) {
-      console.error("Failed to fetch active jobs", e);
-    }
-  };
+  const prevActiveJobsRef = useRef<any[]>([]);
 
   useEffect(() => {
-    fetchActiveJobs();
-    const interval = setInterval(fetchActiveJobs, 15000);
-    return () => {
-      clearInterval(interval);
-      Object.values(activeSSERef.current).forEach(source => source.close());
-    };
-  }, [target, refreshTrigger]);
+    // Detect transitions when activeJobs updates from the global stream
+    const prevJobs = prevActiveJobsRef.current;
+    let jobCompleted = false;
+    let completedWithSuccess = false;
+    let completedWithFailure = false;
 
-  useEffect(() => {
-    const handleJobStart = () => {
-      fetchActiveJobs();
-    };
-    window.addEventListener('job-start', handleJobStart);
-    return () => {
-      window.removeEventListener('job-start', handleJobStart);
-    };
-  }, [target]);
+    prevJobs.forEach((prevJob) => {
+      const currentJob = activeJobs.find((j: any) => j.task_id === prevJob.task_id);
+      const wasRunning = prevJob.status === "running";
+      const isFinished = !currentJob || currentJob.status !== "running";
 
-  const connectToSSE = (taskId: string) => {
-    if (activeSSERef.current[taskId]) return;
-
-    setProgressData(prev => ({ ...prev, [taskId]: prev[taskId] || { label: "Connecting...", value: 0 } }));
-
-    const eventSource = new EventSource(`http://127.0.0.1:8000/api/jobs/stream/${taskId}`);
-    activeSSERef.current[taskId] = eventSource;
-
-    let hasError = false;
-
-    eventSource.onmessage = (event) => {
-      const msg = event.data;
-      
-      if (onLogLine) {
-        onLogLine(taskId, msg);
+      if (wasRunning && isFinished) {
+        jobCompleted = true;
+        const finalStatus = currentJob ? currentJob.status : "done";
+        if (finalStatus?.toLowerCase() === "failed" || finalStatus?.toLowerCase() === "error") {
+          completedWithFailure = true;
+        } else {
+          completedWithSuccess = true;
+        }
       }
-      
-      if (msg.includes("ERROR:")) {
-         hasError = true;
-      }
+    });
 
-      if (msg.includes("[DONE]")) {
-        eventSource.close();
-        delete activeSSERef.current[taskId];
-        setProgressData(prev => {
-          const newP = { ...prev };
-          delete newP[taskId];
-          return newP;
-        });
-        
-        fetchActiveJobs();
-        if (onJobComplete) onJobComplete();
-        window.dispatchEvent(new CustomEvent('job-complete'));
-        
+    prevActiveJobsRef.current = activeJobs;
+
+    if (jobCompleted) {
+      if (onJobComplete) onJobComplete();
+      window.dispatchEvent(new CustomEvent('job-complete'));
+
+      if (completedWithFailure) {
         setNotification({
-           kind: hasError ? "error" : "success",
-           title: hasError ? "Job Failed" : "Job Complete",
-           subtitle: hasError ? "Check logs for details." : `Job finished successfully.`
+          kind: "error",
+          title: "Job Failed",
+          subtitle: "One or more tasks failed. Check logs for details."
         });
-        setTimeout(() => setNotification(null), 8000);
-      } else {
-        let val = 0;
-        const match = msg.match(/PROGRESS:\s*(\d+)%/);
-        if (match) val = parseInt(match[1]);
-        const cleanedMsg = msg.replace(/PROGRESS:\s*\d+%\s*-\s*/, '');
-        const displayMsg = cleanedMsg.length > 45 ? cleanedMsg.substring(0, 45) + '...' : cleanedMsg;
-        setProgressData(prev => ({ ...prev, [taskId]: { label: displayMsg, value: val || prev[taskId]?.value || 0 } }));
+      } else if (completedWithSuccess) {
+        setNotification({
+          kind: "success",
+          title: "Job Complete",
+          subtitle: "Task finished successfully."
+        });
       }
-    };
-
-    eventSource.onerror = (e) => {
-        console.error("SSE Error", e);
-        eventSource.close();
-        delete activeSSERef.current[taskId];
-        fetchActiveJobs();
-    };
-  };
+      setTimeout(() => setNotification(null), 8000);
+    }
+  }, [activeJobs, onJobComplete]);
 
   const handleRetryJob = async (jobId: string) => {
     try {
       const res = await fetch(`http://127.0.0.1:8000/api/jobs/retry/${jobId}`, { method: 'POST' });
       if(res.ok) {
         setNotification({ kind: 'success', title: 'Retry Started', subtitle: 'Job has been restarted.' });
-        fetchActiveJobs();
         if (onJobComplete) onJobComplete();
       }
     } catch(e) {}
@@ -141,8 +96,6 @@ export default function GlobalJobsWidget({ target, refreshTrigger, onJobComplete
         const res = await fetch(`http://127.0.0.1:8000/api/jobs/cancel/${jobId}`, { method: 'POST' });
         if(res.ok) {
              setNotification({ kind: 'info', title: 'Job Cancelled', subtitle: 'Sent cancellation signal.' });
-             fetchActiveJobs();
-             window.dispatchEvent(new CustomEvent('job-complete'));
         }
     } catch(e) { }
   };
@@ -157,9 +110,7 @@ export default function GlobalJobsWidget({ target, refreshTrigger, onJobComplete
             const res = await fetch(`http://127.0.0.1:8000/api/jobs/${jobId}`, { method: 'DELETE' });
             if(res.ok) {
                  setNotification({ kind: 'success', title: 'Job Deleted', subtitle: 'Job has been completely removed.' });
-                 fetchActiveJobs();
                  if(onJobComplete) onJobComplete();
-                 window.dispatchEvent(new CustomEvent('job-complete'));
             }
         } catch(e) { 
             console.error("Failed to delete job", e);
@@ -169,7 +120,7 @@ export default function GlobalJobsWidget({ target, refreshTrigger, onJobComplete
     });
   };
 
-  const widgetJobs = activeJobs.filter(job => job.status?.toLowerCase() !== 'done' && job.status?.toLowerCase() !== 'success');
+  const widgetJobs = activeJobs.filter((job: any) => job.status?.toLowerCase() !== 'done' && job.status?.toLowerCase() !== 'success');
   if (widgetJobs.length === 0) return null;
 
   return (
@@ -197,7 +148,7 @@ export default function GlobalJobsWidget({ target, refreshTrigger, onJobComplete
         
         {!isWidgetCollapsed && (
         <div style={{ padding: '0', maxHeight: '400px', overflowY: 'auto', overflowX: 'hidden' }}>
-            {widgetJobs.map(job => {
+            {widgetJobs.map((job: any) => {
               const displayName = job.payload?.model_name || job.payload?.name || job.payload?.regime || "Unknown Task";
               return (
               <div key={job.task_id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1rem', borderBottom: '1px solid var(--cds-border-subtle, #393939)' }}>
@@ -213,8 +164,8 @@ export default function GlobalJobsWidget({ target, refreshTrigger, onJobComplete
                             <div style={{ marginTop: '0.5rem', width: '100%', minWidth: 0 }}>
                                 <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '230px' }}>
                                   <ProgressBar 
-                                      label={progressData[job.task_id] ? progressData[job.task_id].label : "Starting..."} 
-                                      value={progressData[job.task_id] ? progressData[job.task_id].value : undefined} 
+                                      label={job.latest_log || "Starting..."} 
+                                      value={job.progress !== undefined ? job.progress : undefined} 
                                   />
                                 </div>
                             </div>

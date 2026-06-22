@@ -383,7 +383,7 @@ function ModelsContent() {
         />
       );
     }
-    if (cellId.endsWith(':regime')) {
+  if (cellId.endsWith(':regime')) {
       const format = getRegimeFormat(value);
       const parts = format.text.split(' ');
       return (

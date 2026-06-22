@@ -153,6 +153,7 @@ export default function GlobalJobsTable({ target, refreshTrigger, openJobDetails
         formatCell={(cellId, value) => formatCell(cellId, value, formattedData)}
         collapsible
         defaultCollapsed
+        onReload={fetchHistoryJobs}
       />
 
       <Modal

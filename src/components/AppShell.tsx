@@ -30,11 +30,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [detailLogs, setDetailLogs] = useState<string>("");
   const [isDetailModalOpen, setDetailModalOpen] = useState(false);
   const [detailJobId, setDetailJobId] = useState<string | null>(null);
-  
-  const detailJobIdRef = useRef<string | null>(null);
-  useEffect(() => {
-    detailJobIdRef.current = detailJobId;
-  }, [detailJobId]);
+  const detailEventSourceRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
     const handleOpenDetails = (e: Event) => {
@@ -47,30 +43,76 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const handleLogLine = useCallback((taskId: string, line: string) => {
-    if (taskId === detailJobIdRef.current) {
-      setDetailLogs(prev => {
-        if (!prev || prev === "Loading logs..." || prev === "No logs available.") return line;
-        if (prev.endsWith(line)) return prev;
-        return prev + "\n" + line;
-      });
-    }
-  }, []);
-
   const openJobDetails = async (jobId: string) => {
     setDetailLogs("Loading logs...");
     setDetailModalOpen(true);
+    setDetailJobId(jobId);
+
+    // Clean up any existing connection
+    if (detailEventSourceRef.current) {
+      detailEventSourceRef.current.close();
+      detailEventSourceRef.current = null;
+    }
+
     try {
-      const res = await fetch(`http://127.0.0.1:8000/api/jobs/logs/${jobId}`);
-      if (res.ok) {
-        const data = await res.json();
-        setDetailLogs(data.logs || "No logs available.");
-        setDetailJobId(jobId);
+      // Check if job is currently running
+      let isRunning = false;
+      const activeRes = await fetch("http://127.0.0.1:8000/api/jobs/active");
+      if (activeRes.ok) {
+        const activeData = await activeRes.json();
+        isRunning = activeData.jobs.some((j: any) => j.task_id === jobId && j.status === "running");
+      }
+
+      if (isRunning) {
+        let isFirstLine = true;
+        const eventSource = new EventSource(`http://127.0.0.1:8000/api/jobs/stream/${jobId}`);
+        detailEventSourceRef.current = eventSource;
+
+        eventSource.onmessage = (event) => {
+          const msg = event.data;
+          if (msg.includes("[DONE]")) {
+            eventSource.close();
+            if (detailEventSourceRef.current === eventSource) {
+              detailEventSourceRef.current = null;
+            }
+          } else {
+            setDetailLogs(prev => {
+              if (isFirstLine || prev === "Loading logs..." || prev === "No logs available.") {
+                isFirstLine = false;
+                return msg;
+              }
+              return prev + "\n" + msg;
+            });
+          }
+        };
+
+        eventSource.onerror = () => {
+          eventSource.close();
+          if (detailEventSourceRef.current === eventSource) {
+            detailEventSourceRef.current = null;
+          }
+        };
       } else {
-        setDetailLogs("Failed to load logs.");
+        // Fetch static logs
+        const res = await fetch(`http://127.0.0.1:8000/api/jobs/logs/${jobId}`);
+        if (res.ok) {
+          const data = await res.json();
+          setDetailLogs(data.logs || "No logs available.");
+        } else {
+          setDetailLogs("Failed to load logs.");
+        }
       }
     } catch (e) {
       setDetailLogs("Failed to load logs.");
+    }
+  };
+
+  const closeJobDetails = () => {
+    setDetailModalOpen(false);
+    setDetailJobId(null);
+    if (detailEventSourceRef.current) {
+      detailEventSourceRef.current.close();
+      detailEventSourceRef.current = null;
     }
   };
 
@@ -147,7 +189,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         {/* Logs Modal */}
         <Modal 
             open={isDetailModalOpen} 
-            onRequestClose={() => { setDetailModalOpen(false); setDetailJobId(null); }} 
+            onRequestClose={closeJobDetails} 
             passiveModal 
             modalHeading="Job Logs" 
         >
@@ -161,7 +203,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </Modal>
 
         {/* Global Jobs Widget (monitoring all active dataset & training jobs) */}
-        <GlobalJobsWidget openJobDetails={openJobDetails} onLogLine={handleLogLine} />
+        <GlobalJobsWidget openJobDetails={openJobDetails} />
       </Theme>
     </>
   );

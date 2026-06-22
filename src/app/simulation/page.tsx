@@ -31,13 +31,14 @@ import {
   MultiSelect,
   ToastNotification
 } from '@carbon/react';
-import { Play, ChartLineData, Compare, Maximize, Minimize, Settings as SettingsIcon } from '@carbon/icons-react';
+import { Play, ChartLineData, Compare, Maximize, Minimize, Settings as SettingsIcon, Renew, Catalog, TrashCan, Document } from '@carbon/icons-react';
 
 import SimulationChart from '../../components/SimulationChart';
 import MonthlyHeatmap from '../../components/MonthlyHeatmap';
 import RegimeBreakdown from '../../components/RegimeBreakdown';
 import TradeHistoryTable from '../../components/TradeHistoryTable';
 import GlobalTable from '../../components/GlobalTable';
+import GlobalJobsTable from '../../components/GlobalJobsTable';
 import ComparisonChart from '../../components/ComparisonChart';
 
 function SimulationPageContent() {
@@ -51,12 +52,105 @@ function SimulationPageContent() {
     { id: 'launch', label: 'Launch', icon: Play },
     { id: 'results', label: 'Results', icon: ChartLineData },
     { id: 'compare', label: 'Compare', icon: Compare },
+    { id: 'history', label: 'History', icon: Catalog },
     { id: 'settings', label: 'Settings', icon: SettingsIcon }
   ];
   const [models, setModels] = useState<any[]>([]);
-  const [isRunning, setIsRunning] = useState(false);
-  const [progress, setProgress] = useState(0);
   const [isChartFullscreen, setIsChartFullscreen] = useState(false);
+  const [refreshJobsTrigger, setRefreshJobsTrigger] = useState(0);
+
+  const openJobDetails = (jobId: string) => {
+    window.dispatchEvent(new CustomEvent('open-job-details', { detail: { jobId } }));
+  };
+
+  const handleDeleteRun = async (runId: string) => {
+    if (confirm("Are you sure you want to delete this simulation run?")) {
+      try {
+        const res = await fetch(`http://127.0.0.1:8000/api/simulation/runs/${runId}`, {
+          method: 'DELETE'
+        });
+        if (res.ok) {
+          setNotification({ kind: "success", title: "Simulation Deleted", subtitle: "The simulation run has been deleted." });
+          // Refresh list
+          fetch('http://127.0.0.1:8000/api/simulation/runs')
+            .then(res => res.json())
+            .then(data => { if (Array.isArray(data)) setRuns(data); });
+        } else {
+          setNotification({ kind: "error", title: "Delete Failed", subtitle: "Failed to delete simulation run." });
+        }
+      } catch (err) {
+        console.error(err);
+        setNotification({ kind: "error", title: "Delete Failed", subtitle: "Failed to communicate with server." });
+      }
+    }
+  };
+
+  const simHeaders = [
+    { key: "name", header: "Simulation Name" },
+    { key: "created_at", header: "Date" },
+    { key: "initial_capital", header: "Initial Capital" },
+    { key: "final_equity", header: "Final Equity" },
+    { key: "total_pnl", header: "Net PnL" },
+    { key: "win_rate", header: "Win Rate" },
+    { key: "total_trades", header: "Trades" },
+    { key: "sharpe_ratio", header: "Sharpe" },
+    { key: "max_drawdown", header: "Max DD" },
+    { key: "status", header: "Status" },
+    { key: "actions", header: "Actions" }
+  ];
+
+  const formatSimCell = (cellId: string, value: any) => {
+    if (cellId.endsWith(':actions')) {
+      const rowId = cellId.split(':')[0];
+      return (
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <Button 
+            kind="ghost" 
+            size="sm" 
+            renderIcon={Document} 
+            iconDescription="View Details" 
+            hasIconOnly 
+            onClick={() => {
+              setSelectedRunId(rowId);
+              router.push(`/simulation?tab=results&run_id=${rowId}`);
+            }} 
+          />
+          <Button 
+            kind="danger--ghost" 
+            size="sm" 
+            renderIcon={TrashCan} 
+            iconDescription="Delete" 
+            hasIconOnly 
+            onClick={() => handleDeleteRun(rowId)} 
+          />
+        </div>
+      );
+    }
+    
+    if (cellId.endsWith(':created_at')) {
+      return value ? new Date(value).toLocaleString() : 'N/A';
+    }
+    
+    if (cellId.endsWith(':initial_capital') || cellId.endsWith(':final_equity')) {
+      return value !== null ? `$${value.toLocaleString()}` : '-';
+    }
+    
+    if (cellId.endsWith(':total_pnl')) {
+      if (value === null) return '-';
+      const color = value >= 0 ? '#24a148' : '#fa4d56';
+      return <span style={{ color, fontWeight: 'bold' }}>{value >= 0 ? '+' : ''}${value.toLocaleString()}</span>;
+    }
+    
+    if (cellId.endsWith(':win_rate') || cellId.endsWith(':max_drawdown')) {
+      return value !== null ? `${(value * 100).toFixed(1)}%` : '-';
+    }
+    
+    if (cellId.endsWith(':sharpe_ratio')) {
+      return value !== null ? value.toFixed(2) : '-';
+    }
+
+    return value;
+  };
   
   const [runs, setRuns] = useState<any[]>([]);
   const [selectedRunId, setSelectedRunId] = useState<string>(runIdParam || '');
@@ -241,8 +335,6 @@ function SimulationPageContent() {
 
   const handleLaunch = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsRunning(true);
-    setProgress(0);
     
     // Prepare payload. If use_global_thresholds is true, remove local thresholds so backend uses global.
     const payload = { ...config };
@@ -256,7 +348,6 @@ function SimulationPageContent() {
     }
 
     try {
-      setIsRunning(true);
       const res = await fetch('http://127.0.0.1:8000/api/simulation/backtest', {
         method: 'POST',
         headers: {
@@ -267,32 +358,22 @@ function SimulationPageContent() {
       const data = await res.json();
       
       if (res.ok && data.run_id) {
-        const source = new EventSource(`http://127.0.0.1:8000/api/simulation/stream/${data.run_id}`);
-        source.onmessage = (event) => {
-          const streamData = JSON.parse(event.data);
-          if (streamData.progress !== undefined) setProgress(streamData.progress);
-          if (streamData.status === "COMPLETED" || streamData.status === "FAILED") {
-            source.close();
-            setIsRunning(false);
-            if (streamData.status === "COMPLETED") {
-              setSelectedRunId(data.run_id);
-              router.push(`/simulation?tab=results&run_id=${data.run_id}`);
-              // Refresh runs list
-              fetch('http://127.0.0.1:8000/api/simulation/runs')
-                .then(res => res.json())
-                .then(r => { if (Array.isArray(r)) setRuns(r); });
-            } else {
-               setNotification({ kind: "error", title: "Simulation Failed", subtitle: streamData.error || 'Unknown error' });
-            }
-          }
-        };
+        setNotification({ 
+          kind: "success", 
+          title: "Simulation Started", 
+          subtitle: "Simulation is running in the background. Track progress in the Active Jobs panel." 
+        });
+        
+        // Refresh runs list to include the new run (which will be in RUNNING status)
+        fetch('http://127.0.0.1:8000/api/simulation/runs')
+          .then(res => res.json())
+          .then(r => { if (Array.isArray(r)) setRuns(r); });
       } else {
-        setIsRunning(false);
         setNotification({ kind: "error", title: "Launch Failed", subtitle: data.detail || 'Unknown error' });
       }
     } catch (err) {
       console.error(err);
-      setIsRunning(false);
+      setNotification({ kind: "error", title: "Launch Failed", subtitle: "Failed to communicate with simulation server." });
     }
   };
 
@@ -614,31 +695,13 @@ function SimulationPageContent() {
                       
                       <Button 
                         type="submit" 
-                        disabled={isRunning} 
                         style={{ 
                           marginTop: '1rem', 
                           width: '100%', 
-                          maxWidth: 'none',
-                          position: 'relative',
-                          overflow: 'hidden'
+                          maxWidth: 'none'
                         }}
                       >
-                        {isRunning && (
-                          <div 
-                            style={{ 
-                              position: 'absolute', 
-                              left: 0, 
-                              top: 0, 
-                              bottom: 0, 
-                              width: `${progress}%`, 
-                              backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                              transition: 'width 0.3s ease-out'
-                            }} 
-                          />
-                        )}
-                        <span style={{ position: 'relative', zIndex: 1 }}>
-                          {isRunning ? `Simulation Progress: ${progress.toFixed(1)}%` : `Start Backtest`}
-                        </span>
+                        Start Backtest
                       </Button>
                     </Form>
                   </Tile>
@@ -648,26 +711,57 @@ function SimulationPageContent() {
             {currentTab === 'results' && (
               <>
                 <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'flex-start', marginBottom: '0.25rem' }}>
-                  {/* Select Dropdown */}
-                  <div style={{ width: '320px', flexShrink: 0 }}>
-                    <Select 
-                      id="run-selector" 
-                      labelText="Choose Simulation" 
-                      value={selectedRunId}
-                      onChange={(e) => {
-                        setSelectedRunId(e.target.value);
-                        router.push(`/simulation?tab=results&run_id=${e.target.value}`);
+                  {/* Select Dropdown & Reload Button */}
+                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.5rem', flexShrink: 0 }}>
+                    <div style={{ width: '320px' }}>
+                      <Select 
+                        id="run-selector" 
+                        labelText="Choose Simulation" 
+                        value={selectedRunId}
+                        onChange={(e) => {
+                          setSelectedRunId(e.target.value);
+                          router.push(`/simulation?tab=results&run_id=${e.target.value}`);
+                        }}
+                      >
+                        <SelectItem value="" text="Select a run..." />
+                        {runs.map(r => (
+                          <SelectItem 
+                            key={r.id} 
+                            value={r.id} 
+                            text={`${r.name} (${new Date(r.created_at).toLocaleDateString()}) - ${r.status}`} 
+                          />
+                        ))}
+                      </Select>
+                    </div>
+                    <Button 
+                      kind="ghost" 
+                      size="md"
+                      hasIconOnly 
+                      iconDescription="Reload simulations"
+                      renderIcon={Renew}
+                      onClick={async () => {
+                        try {
+                          const res = await fetch('http://127.0.0.1:8000/api/simulation/runs');
+                          if (res.ok) {
+                            const data = await res.json();
+                            if (Array.isArray(data)) setRuns(data);
+                          }
+                          if (selectedRunId) {
+                            const detailRes = await fetch(`http://127.0.0.1:8000/api/simulation/runs/${selectedRunId}`);
+                            if (detailRes.ok) {
+                              const detailData = await detailRes.json();
+                              const tradesRes = await fetch(`http://127.0.0.1:8000/api/simulation/runs/${selectedRunId}/trades?limit=10000`);
+                              if (tradesRes.ok) {
+                                const tradesData = await tradesRes.json();
+                                setActiveRunData({ ...detailData, tradeList: tradesData });
+                              }
+                            }
+                          }
+                        } catch (err) {
+                          console.error("Failed to reload simulation runs", err);
+                        }
                       }}
-                    >
-                      <SelectItem value="" text="Select a run..." />
-                      {runs.map(r => (
-                        <SelectItem 
-                          key={r.id} 
-                          value={r.id} 
-                          text={`${r.name} (${new Date(r.created_at).toLocaleDateString()}) - ${r.status}`} 
-                        />
-                      ))}
-                    </Select>
+                    />
                   </div>
 
                   {/* Configuration Summary Card */}
@@ -854,9 +948,8 @@ function SimulationPageContent() {
             {currentTab === 'compare' && (
               <Tile>
                 <h4>Compare Simulations</h4>
-                <p style={{ marginBottom: '1rem' }}>Select multiple simulation runs to compare metrics side-by-side.</p>
                 
-                <div style={{ marginBottom: '2rem', maxWidth: '600px' }}>
+                <div style={{ marginBottom: '.5rem', marginTop: '.5rem', maxWidth: '600px' }}>
                   <MultiSelect
                     id="compare-multiselect"
                     label="Select runs to compare"
@@ -1001,15 +1094,46 @@ function SimulationPageContent() {
               </Tile>
             )}
 
-            {/* Tab 4: Settings */}
+            {/* Tab 4: History */}
+            {currentTab === 'history' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '.2rem' }}>
+                <GlobalTable 
+                  title="Completed Simulations"
+                  headers={simHeaders}
+                  initialData={runs}
+                  formatCell={formatSimCell}
+                  onReload={async () => {
+                    const res = await fetch('http://127.0.0.1:8000/api/simulation/runs');
+                    if (res.ok) {
+                      const data = await res.json();
+                      if (Array.isArray(data)) setRuns(data);
+                    }
+                  }}
+                />
+
+                <GlobalJobsTable 
+                  target="simulation"
+                  refreshTrigger={refreshJobsTrigger}
+                  openJobDetails={openJobDetails}
+                  onJobChange={async () => {
+                    const res = await fetch('http://127.0.0.1:8000/api/simulation/runs');
+                    if (res.ok) {
+                      const data = await res.json();
+                      if (Array.isArray(data)) setRuns(data);
+                    }
+                  }}
+                />
+              </div>
+            )}
+
+            {/* Tab 5: Settings */}
             {currentTab === 'settings' && (
               <Tile>
-                <h3 style={{ marginBottom: '0.5rem' }}>Simulation Settings</h3>
-                <p style={{ marginBottom: '2rem', color: '#a8a8a8' }}>Manage global simulation configurations and base datasets.</p>
+                <h5 style={{ marginBottom: '1rem' }}>Simulation Settings</h5>
                 
-                <h4 style={{ marginBottom: '1rem' }}>Historical Dataset</h4>
+                <h5 style={{ marginBottom: '.5rem' }}>Historical Dataset</h5>
                 {datasetConfig && (
-                  <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#262626', borderLeft: '4px solid #0f62fe' }}>
+                  <div style={{ marginBottom: '.5rem', padding: '1rem', backgroundColor: '#262626', borderLeft: '4px solid #0f62fe' }}>
                     <p style={{ marginBottom: '0.5rem' }}><strong>Locked Dataset:</strong> {datasetConfig.filename}</p>
                     <p style={{ margin: 0, color: '#a8a8a8' }}>Data spanning from {datasetConfig.start_date} to {datasetConfig.end_date}. All simulation launches are bounded within this period to prevent data drift.</p>
                   </div>

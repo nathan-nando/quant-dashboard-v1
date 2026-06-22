@@ -28,7 +28,7 @@ export default function ThresholdsPage() {
     bb_width_volatility_threshold: 5.0,
     sl_mult_trend: 1.5,
     tp_mult_trend: 3.0,
-    sl_mult_mean_reverting: 1.0,
+    sl_mult_mean_reverting: 1.5,
     tp_mult_mean_reverting: 1.5,
     sl_mult_volatile: 2.0,
     tp_mult_volatile: 2.0,
@@ -62,18 +62,50 @@ export default function ThresholdsPage() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await fetch("http://127.0.0.1:8000/api/configurations/thresholds", {
+      const payload = { ...config };
+      
+      for (const key in payload) {
+        if (typeof payload[key] === 'string') {
+          const parsed = Number(payload[key].replace(',', '.'));
+          if (!isNaN(parsed)) {
+            payload[key] = parsed;
+          }
+        }
+        
+        if (["ml_conf_", "ml_margin_", "meta_conf_"].some(prefix => key.startsWith(prefix))) {
+           if (typeof payload[key] === 'number' && payload[key] > 1.0 && payload[key] <= 100) {
+              payload[key] = payload[key] / 100.0;
+           }
+        }
+      }
+
+      const res = await fetch("http://127.0.0.1:8000/api/configurations/thresholds", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(config)
+        body: JSON.stringify(payload)
       });
-      setOriginalConfig({ ...config });
+      if (!res.ok) {
+        const errText = await res.text();
+        console.error("Server error:", errText);
+        throw new Error(errText || "Server rejected the configuration");
+      }
+      setOriginalConfig({ ...payload });
+      setConfig({ ...payload });
       setToastMsg({ kind: "success", title: "Configuration Saved", subtitle: "System parameters updated successfully!", caption: new Date().toLocaleTimeString() });
-    } catch (err) {
-      setToastMsg({ kind: "error", title: "Error", subtitle: "Failed to save configuration.", caption: new Date().toLocaleTimeString() });
+    } catch (err: any) {
+      setToastMsg({ kind: "error", title: "Error", subtitle: err.message || "Failed to save configuration.", caption: new Date().toLocaleTimeString() });
     } finally {
       setSaving(false);
     }
+  };
+
+  
+  const parseValue = (val: any) => {
+    if (typeof val === 'string') {
+      const parsed = Number(val.replace(',', '.'));
+      return isNaN(parsed) ? val : parsed;
+    }
+    return Number(val);
   };
 
   const updateConfig = (key: string, value: any) => {
@@ -154,7 +186,7 @@ export default function ThresholdsPage() {
                     <div style={{marginTop: "1.5rem"}}>
                       <NumberInput 
                         id="max_drawdown_equity" label="Max Drawdown Equity (%)" value={config.max_drawdown_equity_pct} 
-                        min={1} max={100} onChange={(e: any, { value }: any) => updateConfig("max_drawdown_equity_pct", Number(value))}
+                        min={1} max={100} onChange={(e: any, { value }: any) => updateConfig("max_drawdown_equity_pct", value)}
                       />
                     </div>
                   )}
@@ -172,7 +204,7 @@ export default function ThresholdsPage() {
                     <div style={{marginTop: "1.5rem"}}>
                       <NumberInput 
                         id="max_daily_drawdown" label="Max Daily Drawdown (%)" value={config.max_daily_drawdown_pct} 
-                        min={1} max={100} onChange={(e: any, { value }: any) => updateConfig("max_daily_drawdown_pct", Number(value))}
+                        min={1} max={100} onChange={(e: any, { value }: any) => updateConfig("max_daily_drawdown_pct", value)}
                       />
                     </div>
                   )}
@@ -181,13 +213,13 @@ export default function ThresholdsPage() {
               <div style={{marginTop: "1rem"}}>
                 <NumberInput 
                   id="risk_per_trade" label="Risk Per Trade (%)" value={config.risk_per_trade_pct} 
-                  min={0.1} max={100} step={0.1} onChange={(e: any, { value }: any) => updateConfig("risk_per_trade_pct", Number(value))}
+                  min={0.1} max={100} step={0.1} onChange={(e: any, { value }: any) => updateConfig("risk_per_trade_pct", value)}
                 />
               </div>
               <div style={{marginTop: "1rem"}}>
                 <NumberInput 
                   id="max_positions" label="Max Open Positions" value={config.max_open_positions} 
-                  min={1} max={20} onChange={(e: any, { value }: any) => updateConfig("max_open_positions", Number(value))}
+                  min={1} max={20} onChange={(e: any, { value }: any) => updateConfig("max_open_positions", value)}
                 />
               </div>
             </FormGroup>
@@ -206,36 +238,36 @@ export default function ThresholdsPage() {
               {/* Bull Trend */}
               <Column lg={5} md={2} sm={4} style={{ marginBottom: '1rem' }}>
                 <h5 style={{ marginBottom: '0.5rem', color: '#24a148' }}>Bull Trend</h5>
-                <NumberInput id="ml_margin_bull" label="ML Margin (Selisih)" value={config.ml_margin_bull ?? 0.10} min={0.01} max={1.0} step={0.01} onChange={(e: any, { value }: any) => updateConfig("ml_margin_bull", Number(value))} />
+                <NumberInput id="ml_margin_bull" label="ML Margin (Selisih)" value={config.ml_margin_bull ?? 0.10} min={0.01} max={1.0} step={0.01} onChange={(e: any, { value }: any) => updateConfig("ml_margin_bull", value)} />
                 <div style={{marginTop: "0.5rem"}}>
-                  <NumberInput id="ml_conf_bull" label="ML Confidence (Mutlak)" value={config.ml_conf_bull ?? 0.50} min={0.1} max={1.0} step={0.05} onChange={(e: any, { value }: any) => updateConfig("ml_conf_bull", Number(value))} />
+                  <NumberInput id="ml_conf_bull" label="ML Confidence (Mutlak)" value={config.ml_conf_bull ?? 0.50} min={0.1} max={1.0} step={0.05} onChange={(e: any, { value }: any) => updateConfig("ml_conf_bull", value)} />
                 </div>
                 <div style={{marginTop: "0.5rem"}}>
-                  <NumberInput id="meta_conf_bull" label="Meta Confidence" value={config.meta_conf_bull ?? 0.50} min={0.1} max={1.0} step={0.05} onChange={(e: any, { value }: any) => updateConfig("meta_conf_bull", Number(value))} />
+                  <NumberInput id="meta_conf_bull" label="Meta Confidence" value={config.meta_conf_bull ?? 0.50} min={0.1} max={1.0} step={0.05} onChange={(e: any, { value }: any) => updateConfig("meta_conf_bull", value)} />
                 </div>
               </Column>
               
               {/* Bear Trend */}
               <Column lg={5} md={2} sm={4} style={{ marginBottom: '1rem' }}>
                 <h5 style={{ marginBottom: '0.5rem', color: '#fa4d56' }}>Bear Trend</h5>
-                <NumberInput id="ml_margin_bear" label="ML Margin (Selisih)" value={config.ml_margin_bear ?? 0.10} min={0.01} max={1.0} step={0.01} onChange={(e: any, { value }: any) => updateConfig("ml_margin_bear", Number(value))} />
+                <NumberInput id="ml_margin_bear" label="ML Margin (Selisih)" value={config.ml_margin_bear ?? 0.10} min={0.01} max={1.0} step={0.01} onChange={(e: any, { value }: any) => updateConfig("ml_margin_bear", value)} />
                 <div style={{marginTop: "0.5rem"}}>
-                  <NumberInput id="ml_conf_bear" label="ML Confidence (Mutlak)" value={config.ml_conf_bear ?? 0.50} min={0.1} max={1.0} step={0.05} onChange={(e: any, { value }: any) => updateConfig("ml_conf_bear", Number(value))} />
+                  <NumberInput id="ml_conf_bear" label="ML Confidence (Mutlak)" value={config.ml_conf_bear ?? 0.50} min={0.1} max={1.0} step={0.05} onChange={(e: any, { value }: any) => updateConfig("ml_conf_bear", value)} />
                 </div>
                 <div style={{marginTop: "0.5rem"}}>
-                  <NumberInput id="meta_conf_bear" label="Meta Confidence" value={config.meta_conf_bear ?? 0.50} min={0.1} max={1.0} step={0.05} onChange={(e: any, { value }: any) => updateConfig("meta_conf_bear", Number(value))} />
+                  <NumberInput id="meta_conf_bear" label="Meta Confidence" value={config.meta_conf_bear ?? 0.50} min={0.1} max={1.0} step={0.05} onChange={(e: any, { value }: any) => updateConfig("meta_conf_bear", value)} />
                 </div>
               </Column>
 
               {/* Mean Reverting */}
               <Column lg={6} md={4} sm={4}>
                 <h5 style={{ marginBottom: '0.5rem', color: '#0f62fe' }}>Mean Reverting</h5>
-                <NumberInput id="ml_margin_mean" label="ML Margin (Selisih)" value={config.ml_margin_mean ?? 0.05} min={0.01} max={1.0} step={0.01} onChange={(e: any, { value }: any) => updateConfig("ml_margin_mean", Number(value))} />
+                <NumberInput id="ml_margin_mean" label="ML Margin (Selisih)" value={config.ml_margin_mean ?? 0.05} min={0.01} max={1.0} step={0.01} onChange={(e: any, { value }: any) => updateConfig("ml_margin_mean", value)} />
                 <div style={{marginTop: "0.5rem"}}>
-                  <NumberInput id="ml_conf_mean" label="ML Confidence (Mutlak)" value={config.ml_conf_mean ?? 0.50} min={0.1} max={1.0} step={0.05} onChange={(e: any, { value }: any) => updateConfig("ml_conf_mean", Number(value))} />
+                  <NumberInput id="ml_conf_mean" label="ML Confidence (Mutlak)" value={config.ml_conf_mean ?? 0.50} min={0.1} max={1.0} step={0.05} onChange={(e: any, { value }: any) => updateConfig("ml_conf_mean", value)} />
                 </div>
                 <div style={{marginTop: "0.5rem"}}>
-                  <NumberInput id="meta_conf_mean" label="Meta Confidence" value={config.meta_conf_mean ?? 0.50} min={0.1} max={1.0} step={0.05} onChange={(e: any, { value }: any) => updateConfig("meta_conf_mean", Number(value))} />
+                  <NumberInput id="meta_conf_mean" label="Meta Confidence" value={config.meta_conf_mean ?? 0.50} min={0.1} max={1.0} step={0.05} onChange={(e: any, { value }: any) => updateConfig("meta_conf_mean", value)} />
                 </div>
               </Column>
             </Grid>
@@ -250,26 +282,17 @@ export default function ThresholdsPage() {
                 {saving ? "Saving..." : "Save"}
               </Button>
             </div>
-            <div style={{ marginTop: "0rem", fontSize: "11px", color: "#e0e0e0", backgroundColor: "#393939", padding: ".5rem", borderRadius: "4px", lineHeight: "1.5" }}>
-              <strong style={{ color: "#ffffff", fontSize: "11px" }}>Cara Kerja </strong><br/>
-              <span style={{ color: "#c6c6c6", fontSize: "10px" }}>Kedua parameter ini bertindak sebagai garis pembatas untuk mendefinisikan 4 rezim pasar secara matematis:</span>
-              <div style={{ margin: "0.75rem 0 0 0.5rem", display: "grid", gridTemplateColumns: "10rem 10px auto", rowGap: "3px", color: "#c6c6c6" }}>
-                <strong style={{ color: "#ffffff", fontSize: "10px" }}>TREND_BULL / BEAR</strong> <span>:</span> <span>Jika ADX &gt; Trend Threshold (Arah ditentukan oleh EMA 50)</span>
-                <strong style={{ color: "#ffffff", fontSize: "10px" }}>VOLATILE_CHOP</strong> <span>:</span> <span>Jika ADX &le; Trend Threshold DAN BB Width &gt; Volatility Threshold</span>
-                <strong style={{ color: "#ffffff", fontSize: "10px" }}>MEAN_REVERTING</strong> <span>:</span> <span>Jika ADX &le; Trend Threshold DAN BB Width &le; Volatility Threshold</span>
-              </div>
-            </div>
-            <FormGroup legendText="" style={{ marginTop: "1rem" }}>
+            <FormGroup legendText="" style={{ marginTop: "1rem", display: "flex", flexDirection: "revert", gap: "1rem", justifyContent: "start" }}>
               <div>
                 <NumberInput 
                   id="adx_trend" label="ADX Trend Threshold" value={config.adx_trend_threshold} 
-                  min={1} max={100} onChange={(e: any, { value }: any) => updateConfig("adx_trend_threshold", Number(value))}
+                  min={1} max={100} onChange={(e: any, { value }: any) => updateConfig("adx_trend_threshold", value)}
                 />
               </div>
-              <div style={{marginTop: "1rem"}}>
+              <div>
                 <NumberInput 
                   id="bb_width" label="Bollinger Bands Width Threshold (%)" value={config.bb_width_volatility_threshold} 
-                  min={0.1} max={20} step={0.5} onChange={(e: any, { value }: any) => updateConfig("bb_width_volatility_threshold", Number(value))}
+                  min={0.1} max={20} step={0.5} onChange={(e: any, { value }: any) => updateConfig("bb_width_volatility_threshold", value)}
                 />
               </div>
             </FormGroup>
@@ -284,7 +307,7 @@ export default function ThresholdsPage() {
                 {saving ? "Saving..." : "Save"}
               </Button>
             </div>
-            <p style={{marginBottom: "1.5rem", marginTop: "0.5rem", fontSize: "12px", color: "#525252"}}>Multipliers based on Average True Range (ATR)</p>
+            <p style={{marginBottom: "1.5rem", marginTop: "0.5rem", fontSize: "12px", color: "#525252"}}>Multipliers: Dikalikan ke Prediksi MAE/MFE AI (Fully AI Driven) ATAU nilai indikator ATR (Manual Fallback)</p>
             <div style={{marginBottom: "1.5rem"}}>
               <Toggle 
                 id="use_ai_sl_tp" 
@@ -296,17 +319,16 @@ export default function ThresholdsPage() {
               />
             </div>
             
-            {!config.use_ai_sl_tp && (
-              <>
+            
                 <FormGroup legendText="Trend Regime" style={{ marginTop: "1rem" }}>
                   <div style={{ display: 'flex', gap: '1rem' }}>
                     <NumberInput 
                       id="sl_trend" label="SL Multiplier" value={config.sl_mult_trend} 
-                      min={0.1} max={10.0} step={0.1} onChange={(e: any, { value }: any) => updateConfig("sl_mult_trend", Number(value))}
+                      min={0.1} max={10.0} step={0.1} onChange={(e: any, { value }: any) => updateConfig("sl_mult_trend", value)}
                     />
                     <NumberInput 
                       id="tp_trend" label="TP Multiplier" value={config.tp_mult_trend} 
-                      min={0.1} max={10.0} step={0.1} onChange={(e: any, { value }: any) => updateConfig("tp_mult_trend", Number(value))}
+                      min={0.1} max={10.0} step={0.1} onChange={(e: any, { value }: any) => updateConfig("tp_mult_trend", value)}
                     />
                   </div>
                 </FormGroup>
@@ -314,11 +336,11 @@ export default function ThresholdsPage() {
                   <div style={{ display: 'flex', gap: '1rem' }}>
                     <NumberInput 
                       id="sl_mr" label="SL Multiplier" value={config.sl_mult_mean_reverting} 
-                      min={0.1} max={10.0} step={0.1} onChange={(e: any, { value }: any) => updateConfig("sl_mult_mean_reverting", Number(value))}
+                      min={0.1} max={10.0} step={0.1} onChange={(e: any, { value }: any) => updateConfig("sl_mult_mean_reverting", value)}
                     />
                     <NumberInput 
                       id="tp_mr" label="TP Multiplier" value={config.tp_mult_mean_reverting} 
-                      min={0.1} max={10.0} step={0.1} onChange={(e: any, { value }: any) => updateConfig("tp_mult_mean_reverting", Number(value))}
+                      min={0.1} max={10.0} step={0.1} onChange={(e: any, { value }: any) => updateConfig("tp_mult_mean_reverting", value)}
                     />
                   </div>
                 </FormGroup>
@@ -326,16 +348,14 @@ export default function ThresholdsPage() {
                   <div style={{ display: 'flex', gap: '1rem' }}>
                     <NumberInput 
                       id="sl_vol" label="SL Multiplier" value={config.sl_mult_volatile} 
-                      min={0.1} max={10.0} step={0.1} onChange={(e: any, { value }: any) => updateConfig("sl_mult_volatile", Number(value))}
+                      min={0.1} max={10.0} step={0.1} onChange={(e: any, { value }: any) => updateConfig("sl_mult_volatile", value)}
                     />
                     <NumberInput 
                       id="tp_vol" label="TP Multiplier" value={config.tp_mult_volatile} 
-                      min={0.1} max={10.0} step={0.1} onChange={(e: any, { value }: any) => updateConfig("tp_mult_volatile", Number(value))}
+                      min={0.1} max={10.0} step={0.1} onChange={(e: any, { value }: any) => updateConfig("tp_mult_volatile", value)}
                     />
                   </div>
                 </FormGroup>
-              </>
-            )}
           </Tile>
         )}
 
@@ -359,7 +379,7 @@ export default function ThresholdsPage() {
               <div style={{marginTop: "2rem"}}>
                 <NumberInput 
                   id="cron_interval" label="Engine Cycle Interval (Minutes)" value={config.cron_interval_minutes} 
-                  min={1} max={60} step={1} onChange={(e: any, { value }: any) => updateConfig("cron_interval_minutes", Number(value))}
+                  min={1} max={60} step={1} onChange={(e: any, { value }: any) => updateConfig("cron_interval_minutes", value)}
                 />
               </div>
             </FormGroup>
