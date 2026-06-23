@@ -222,22 +222,6 @@ export default function GlobalDetailTable({ id, type = 'signal', dataObj, onClos
             </div>
           </div>
 
-          <h4 style={{ marginBottom: "1rem", fontSize: "1rem", borderTop: "1px solid #393939", paddingTop: "1rem" }}>Technical Indicators (XGBoost Features)</h4>
-          {data.features && Object.keys(data.features).length > 0 ? (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem 0.75rem', marginBottom: '1rem' }}>
-              {Object.entries(data.features).map(([key, value]: [string, any]) => (
-                <div key={key} style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #262626', paddingBottom: '0.25rem' }}>
-                  <span style={{ fontSize: '0.85rem', color: '#a8a8a8', fontWeight: '500' }}>{key}</span>
-                  <strong style={{ fontSize: '0.85rem', color: '#ffffff' }}>
-                    {value !== null && value !== undefined ? Number(value).toFixed(4) : "N/A"}
-                  </strong>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p style={{ color: "#a8a8a8", fontSize: "0.9rem", marginBottom: "1rem" }}>No feature snapshot available for this signal.</p>
-          )}
-
           <h4 style={{ marginBottom: "1rem", fontSize: "1rem", borderTop: "1px solid #393939", paddingTop: "1rem" }}>Associated Trades</h4>
           {data.trades && data.trades.length > 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1rem' }}>
@@ -282,6 +266,67 @@ export default function GlobalDetailTable({ id, type = 'signal', dataObj, onClos
             </div>
           ) : (
             <p style={{ color: "#a8a8a8", fontSize: "0.9rem", marginBottom: "1rem" }}>No trades executed for this signal.</p>
+          )}
+
+          <h4 style={{ marginBottom: "1rem", fontSize: "1rem", borderTop: "1px solid #393939", paddingTop: "1rem" }}>Metadata</h4>
+          {data.metadata && Object.keys(data.metadata).length > 0 ? (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.25rem 0.75rem', marginBottom: '1rem', alignItems: 'start' }}>
+              {Object.entries(data.metadata).map(([key, value]: [string, any]) => {
+                let displayValue = value;
+                if (typeof value === 'object') {
+                    displayValue = JSON.stringify(value, null, 2);
+                } else if (typeof value === 'string') {
+                    try {
+                        const parsed = JSON.parse(value);
+                        displayValue = JSON.stringify(parsed, null, 2);
+                    } catch (e) {}
+                }
+                const formattedKey = key.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+                const expandedKey = `metadata_${key}`;
+                const isExpanded = !!expandedKeys[expandedKey];
+
+                return (
+                  <div key={key}>
+                    <p style={{ color: '#a8a8a8', fontSize: '0.75rem', marginBottom: '4px' }}>{formattedKey}</p>
+                    <CollapsibleJSON 
+                      displayValue={String(displayValue)} 
+                      isExpanded={isExpanded}
+                      onToggle={() => setExpandedKeys(prev => ({ ...prev, [expandedKey]: !prev[expandedKey] }))}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p style={{ color: "#a8a8a8", fontSize: "0.9rem", marginBottom: "1rem" }}>No metadata available for this signal.</p>
+          )}
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: "1rem", borderTop: "1px solid #393939", paddingTop: "1rem" }}>
+            <h4 style={{ fontSize: "1rem", margin: 0 }}>Technical Indicators (XGBoost Features)</h4>
+            <button 
+              type="button" 
+              onClick={() => setExpandedKeys(prev => ({ ...prev, features_collapsed: !prev['features_collapsed'] }))}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#a8a8a8', display: 'flex', alignItems: 'center', gap: '0.25rem', padding: '0.2rem' }}
+            >
+              <span style={{ fontSize: '0.75rem' }}>{!!expandedKeys['features_collapsed'] ? 'Expand' : 'Collapse'}</span>
+              {!!expandedKeys['features_collapsed'] ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+            </button>
+          </div>
+          {data.features && Object.keys(data.features).length > 0 ? (
+            !expandedKeys['features_collapsed'] && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem 0.75rem', marginBottom: '1rem' }}>
+                {Object.entries(data.features).map(([key, value]: [string, any]) => (
+                  <div key={key} style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #262626', paddingBottom: '0.25rem' }}>
+                    <span style={{ fontSize: '0.85rem', color: '#a8a8a8', fontWeight: '500' }}>{key}</span>
+                    <strong style={{ fontSize: '0.85rem', color: '#ffffff' }}>
+                      {value !== null && value !== undefined ? Number(value).toFixed(4) : "N/A"}
+                    </strong>
+                  </div>
+                ))}
+              </div>
+            )
+          ) : (
+            <p style={{ color: "#a8a8a8", fontSize: "0.9rem", marginBottom: "1rem" }}>No feature snapshot available for this signal.</p>
           )}
         </div>
       )}
