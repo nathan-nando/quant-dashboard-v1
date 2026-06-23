@@ -1,7 +1,7 @@
 "use client";
 
 import { Grid, Column, Button, ToastNotification, Tag, Tile } from "@carbon/react";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import dynamic from 'next/dynamic';
 import GlobalTable from '../components/GlobalTable';
 import GlobalDetailTable from '../components/GlobalDetailTable';
@@ -26,7 +26,7 @@ const getRegimeFormat = (regime: string) => {
 };
 
 export default function Home() {
-  const { signals } = useGlobalState();
+  const { signals, totalTrades, positions } = useGlobalState();
 
   const latestSignalIdRef = useRef<number | null>(null);
   const chartHistoryRef = useRef<any[]>([]);
@@ -46,7 +46,23 @@ export default function Home() {
 
   useEffect(() => {
     fetchTrades();
-  }, [signals]);
+  }, [totalTrades]);
+
+  const mergedTrades = useMemo(() => {
+    return trades.map(t => {
+      if (t.status === 'OPEN') {
+        const pos = positions.find(p => String(p.ticket) === String(t.mt5_ticket));
+        if (pos) {
+          return {
+            ...t,
+            pnl_money: pos.profit,
+            exit_price: pos.price_current
+          };
+        }
+      }
+      return t;
+    });
+  }, [trades, positions]);
 
   const signalHeaders = [
     { key: "timestamp", header: "Time" },
@@ -384,7 +400,7 @@ export default function Home() {
             tooltipInfo="Recent executed trades and their PnL details."
             onExportCsv={() => {
               const headers = ["Direction", "Entry Time", "Exit Time", "Entry", "Exit", "Lots", "Reason", "Regime", "Model", "Conf", "PnL"];
-              const rows = trades.map(t => [
+              const rows = mergedTrades.map(t => [
                 t.direction,
                 t.entry_time ? new Date(t.entry_time).toLocaleString() : '',
                 t.exit_time ? new Date(t.exit_time).toLocaleString() : '',
@@ -409,7 +425,7 @@ export default function Home() {
             }}
           >
             <div style={{ height: "100%" }}>
-              <TradeHistoryTable trades={trades.slice(0, 5)} title="" hidePagination hideSearch />
+              <TradeHistoryTable trades={mergedTrades.slice(0, 5)} title="" hidePagination hideSearch />
             </div>
           </DashboardPanel>
         </div>

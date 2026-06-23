@@ -2,7 +2,7 @@
 
 import React, { Suspense, useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
-import { Grid, Column, Tile, Button, Toggle, TextInput, Select, SelectItem } from '@carbon/react';
+import { Grid, Column, Tile, Button, Toggle, TextInput, Select, SelectItem, Dropdown, Modal, ToastNotification } from '@carbon/react';
 import { Wallet, ChartLine, Settings, ArrowUpRight, ArrowDownRight, Information, Activity, DataBase } from '@carbon/icons-react';
 import TradeHistoryTable from '@/components/TradeHistoryTable';
 import PnLChart from '@/components/PnLChart';
@@ -22,6 +22,51 @@ function AccountContent() {
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
   const [selectedSignalId, setSelectedSignalId] = useState<number | null>(null);
+
+  const [accounts, setAccounts] = useState<any[]>([]);
+  const [notification, setNotification] = useState<{kind: "success" | "error" | "info", title: string, subtitle: string} | null>(null);
+  const [confirmModalConfig, setConfirmModalConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    body: string;
+    onConfirm: () => void | Promise<void>;
+  }>({
+    isOpen: false,
+    title: '',
+    body: '',
+    onConfirm: () => {}
+  });
+
+  const switchAccount = async (accountId: number) => {
+    try {
+      setNotification({ kind: "info", title: "Switching Account", subtitle: "Connecting to MT5..." });
+      const res = await fetch(`http://127.0.0.1:8000/api/account/switch/${accountId}`, { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) {
+        setNotification({ kind: "success", title: "Success", subtitle: data.message });
+        setTimeout(() => window.location.reload(), 1500);
+      } else {
+        setNotification({ kind: "error", title: "Failed", subtitle: data.detail || "Failed to switch account" });
+      }
+    } catch (e) {
+      setNotification({ kind: "error", title: "Error", subtitle: "Could not connect to engine" });
+    }
+  };
+
+  const handleAccountChange = (data: any) => {
+    const selectedItem = data.selectedItem;
+    if (!selectedItem || selectedItem.id === accountData?.metadata?.id) return;
+    
+    setConfirmModalConfig({
+      isOpen: true,
+      title: "Confirm Account Switch",
+      body: `Are you sure you want to switch to account ${selectedItem.name} (${selectedItem.mode})? Engine will try to reconnect.`,
+      onConfirm: async () => {
+        setConfirmModalConfig(prev => ({ ...prev, isOpen: false }));
+        await switchAccount(selectedItem.id);
+      }
+    });
+  };
 
   const fetchTrades = useCallback(() => {
     return fetch('http://localhost:8000/api/dashboard/trades')
@@ -44,6 +89,16 @@ function AccountContent() {
         if (data.status === 'success') {
           setAccountData(data);
         }
+      })
+      .catch(console.error);
+
+    // Fetch account list for dropdown
+    fetch('http://localhost:8000/api/account/list')
+      .then(res => res.json())
+      .then(data => {
+         if (data.status === 'success') {
+             setAccounts(data.data);
+         }
       })
       .catch(console.error);
 
@@ -113,21 +168,55 @@ function AccountContent() {
     return <div style={{ padding: '2rem' }}>Loading Account Workspace...</div>;
   }
 
+  const accountDropdownItems = accounts.map(a => ({
+      id: a.id,
+      name: a.name,
+      mode: a.mode,
+      label: `${a.name} (${a.mode})`
+  }));
+  const activeAccountItem = accountDropdownItems.find(i => i.id === accountData?.metadata?.id) || accountDropdownItems[0];
+
   return (
     <Grid fullWidth>
+      {notification && (
+        <div style={{ position: "fixed", top: "4rem", right: "1rem", zIndex: 9999 }}>
+          <ToastNotification
+            timeout={5000}
+            kind={notification.kind as any}
+            title={notification.title}
+            subtitle={notification.subtitle}
+            caption={new Date().toLocaleTimeString()}
+            onClose={() => { setNotification(null); return false; }}
+          />
+        </div>
+      )}
       <Column lg={16} md={8} sm={4} className="landing-page__banner">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h3 style={{ margin: 0, fontWeight: 400 }}>Account</h3>
-          {accountData && accountData.metadata && (
-            <div style={{ display: 'flex', gap: '0.2rem' }}>
-              <span style={{ padding: '4px 8px', backgroundColor: accountData.metadata.mode === 'LIVE' ? '#24a148' : '#0f62fe', color: 'white', fontSize: '12px', fontWeight: 600 }}>
-                {accountData.metadata.mode}
-              </span>
-              <span style={{ padding: '4px 8px', backgroundColor: '#393939', color: '#c6c6c6', fontSize: '12px' }}>
-                {accountData.metadata.broker}
-              </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <div style={{ width: '250px' }}>
+              <Dropdown
+                id="account-page-switcher"
+                titleText="Switch Account"
+                label="Switch Account"
+                items={accountDropdownItems}
+                itemToString={(item) => (item ? item.label : '')}
+                selectedItem={activeAccountItem}
+                onChange={handleAccountChange}
+                size="sm"
+              />
             </div>
-          )}
+            {accountData && accountData.metadata && (
+              <div style={{ display: 'flex', gap: '0.2rem' }}>
+                <span style={{ padding: '4px 8px', backgroundColor: accountData.metadata.mode === 'LIVE' ? '#24a148' : '#0f62fe', color: 'white', fontSize: '12px', fontWeight: 600 }}>
+                  {accountData.metadata.mode}
+                </span>
+                <span style={{ padding: '4px 8px', backgroundColor: '#393939', color: '#c6c6c6', fontSize: '12px' }}>
+                  {accountData.metadata.broker}
+                </span>
+              </div>
+            )}
+          </div>
         </div>
       </Column>
 
@@ -411,6 +500,17 @@ function AccountContent() {
         type="signal"
         onClose={() => setSelectedSignalId(null)}
       />
+
+      <Modal
+        open={confirmModalConfig.isOpen}
+        modalHeading={confirmModalConfig.title}
+        primaryButtonText="Confirm"
+        secondaryButtonText="Cancel"
+        onRequestClose={() => setConfirmModalConfig(prev => ({ ...prev, isOpen: false }))}
+        onRequestSubmit={confirmModalConfig.onConfirm}
+      >
+        <p style={{ padding: '1rem 0', fontSize: '0.875rem' }}>{confirmModalConfig.body}</p>
+      </Modal>
     </Grid>
   );
 }

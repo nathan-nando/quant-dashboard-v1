@@ -7,12 +7,16 @@ interface GlobalStateContextType {
   state: any;
   signals: any[];
   analytics: any;
+  totalTrades: number;
+  positions: any[];
 }
 
 const GlobalStateContext = createContext<GlobalStateContextType>({
   state: null,
   signals: [],
-  analytics: null
+  analytics: null,
+  totalTrades: 0,
+  positions: []
 });
 
 export const useGlobalState = () => useContext(GlobalStateContext);
@@ -30,6 +34,8 @@ export function GlobalStateProvider({ children }: { children: React.ReactNode })
   const [state, setState] = useState<any>(null);
   const [signals, setSignals] = useState<any[]>([]);
   const [analytics, setAnalytics] = useState<any>(null);
+  const [totalTrades, setTotalTrades] = useState<number>(0);
+  const [positions, setPositions] = useState<any[]>([]);
   const [toastMsg, setToastMsg] = useState<{ kind: any, title: string, subtitle: React.ReactNode, caption?: string } | null>(null);
   
   const latestSignalIdRef = useRef<number | null>(null);
@@ -41,6 +47,9 @@ export function GlobalStateProvider({ children }: { children: React.ReactNode })
       try {
         const payload = JSON.parse(event.data);
         setState(payload);
+        
+        if (payload.total_trades !== undefined) setTotalTrades(payload.total_trades);
+        if (payload.positions) setPositions(payload.positions);
         
         if (payload.recent_signals && payload.recent_signals.length > 0) {
           const topSignal = payload.recent_signals[0];
@@ -88,7 +97,7 @@ export function GlobalStateProvider({ children }: { children: React.ReactNode })
   }, []);
 
   return (
-    <GlobalStateContext.Provider value={{ state, signals, analytics }}>
+    <GlobalStateContext.Provider value={{ state, signals, analytics, totalTrades, positions }}>
       {/* Toast Notification Mount Point */}
       {toastMsg && (
         <div style={{ position: "fixed", top: "4rem", right: "2rem", zIndex: 9999 }}>
