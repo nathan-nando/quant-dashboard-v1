@@ -1,6 +1,6 @@
 "use client";
 
-import { Grid, Column, Tag } from "@carbon/react";
+import { Grid, Column } from "@carbon/react";
 import { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import GlobalTable from "../../components/GlobalTable";
@@ -25,14 +25,10 @@ export default function SignalsPage() {
 
   const headers = [
     { key: "timestamp", header: "Time" },
-    { key: "direction", header: "Signal", width: "1%" },
-    { key: "entry_price", header: "Price" },
-    { key: "sl_price", header: "SL $" },
-    { key: "tp_price", header: "TP $" },
-    { key: "rr_ratio", header: "R:R", width: "1%" },
-    { key: "confidence", header: "Conf" },
-    { key: "regime", header: "Regime", width: "1%" },
-    { key: "model", header: "Model" },
+    { key: "direction", header: "Signal" },
+    { key: "entry_price", header: "Price / SL / TP / R:R" },
+    { key: "model", header: "Model / Conf" },
+    { key: "regime", header: "Regime" },
     { key: "status", header: "Status" },
   ];
 
@@ -55,28 +51,75 @@ export default function SignalsPage() {
     if (col.includes("status")) {
       if (value === "PENDING_EXECUTION") {
         return (
-          <Tag type="cyan" style={{ height: 'auto', padding: '4px 6px', lineHeight: '1.2', textAlign: 'left' }}>
-            Pending<br/>Execution
-          </Tag>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 'bold', fontSize: '11px' }}>
+            <svg width="12" height="12" viewBox="0 0 32 32" style={{ fill: '#11a3c6', flexShrink: 0 }}>
+              <path d="M16 4C9.383 4 4 9.383 4 16s5.383 12 12 12 12-5.383 12-12S22.617 4 16 4zm0 2c5.523 0 10 4.477 10 10s-4.477 10-10 10S6 21.523 6 16 10.477 6 16 6zm-1 3v8h6v-2h-4v-6h-2z" />
+            </svg>
+            <span style={{ color: '#11a3c6', whiteSpace: 'nowrap' }}>Pending Execution</span>
+          </div>
         );
       }
-      return <Tag type={value === "NEW" ? "blue" : "gray"}>{value === "NEW" ? "New" : value}</Tag>;
+      if (value === "EXECUTED") {
+        return (
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 'bold', fontSize: '11px' }}>
+            <svg width="12" height="12" viewBox="0 0 32 32" style={{ fill: '#24a148', flexShrink: 0 }}>
+              <path d="M14 21.414l-5.707-5.707-1.414 1.414 7.121 7.121 12-12-1.414-1.414z" />
+            </svg>
+            <span style={{ color: '#ffffff', whiteSpace: 'nowrap' }}>Executed</span>
+          </div>
+        );
+      }
+      if (value === "NEW") {
+        return (
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 'bold', fontSize: '11px' }}>
+            <svg width="12" height="12" viewBox="0 0 32 32" style={{ fill: '#fa4d56', flexShrink: 0 }}>
+              <circle cx="16" cy="16" r="8" />
+            </svg>
+            <span style={{ color: '#ffffff', whiteSpace: 'nowrap' }}>New</span>
+          </div>
+        );
+      }
+      // Fallback
+      const readableValue = value ? value.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ') : '';
+      return (
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 'bold', fontSize: '11px' }}>
+          <svg width="12" height="12" viewBox="0 0 32 32" style={{ fill: '#6f6f6f', flexShrink: 0 }}>
+            <circle cx="16" cy="16" r="8" />
+          </svg>
+          <span style={{ color: '#a8a8a8', whiteSpace: 'nowrap' }}>{readableValue}</span>
+        </div>
+      );
     }
     if (col.includes("direction")) {
       const readable = value ? value.charAt(0).toUpperCase() + value.slice(1).toLowerCase() : '';
       return <span style={{ color: value === 'BUY' ? '#24a148' : value === 'SELL' ? '#fa4d56' : '#f4f4f4', fontWeight: 'bold' }}>{readable}</span>;
     }
-    if (col.includes("confidence")) {
-      const conf = Number(value);
-      const color = conf >= 0.7 ? '#24a148' : conf >= 0.5 ? '#f1c21b' : '#fa4d56';
-      return <span style={{ color, fontWeight: 'bold' }}>{(conf * 100).toFixed(2)}%</span>;
-    }
-    if (col.includes("entry_price")) return <span>{value ? Number(value).toFixed(2) : '-'}</span>;
-    if (col.includes("sl_price") || col.includes("sl_pips")) return <span style={{ color: '#fa4d56' }}>{value ? Number(value).toFixed(2) : '-'}</span>;
-    if (col.includes("tp_price") || col.includes("tp_pips")) return <span style={{ color: '#24a148' }}>{value ? Number(value).toFixed(2) : '-'}</span>;
-    if (col.includes("rr_ratio")) {
-      const rr = Number(value) || 0;
-      return <span style={{ color: rr >= 2.0 ? '#24a148' : '#f4f4f4' }}>{rr.toFixed(2)}</span>;
+    if (col.includes("entry_price")) {
+      const rowId = cellId.split(':')[0];
+      const signal = signals.find((s: any) => String(s.id) === String(rowId));
+      if (!signal) return <span>{value ? Number(value).toFixed(2) : '-'}</span>;
+      const entry = signal.entry_price ? Number(signal.entry_price).toFixed(2) : '-';
+      const sl = signal.sl_price ? Number(signal.sl_price).toFixed(2) : '-';
+      const tp = signal.tp_price ? Number(signal.tp_price).toFixed(2) : '-';
+      const rr = Number(signal.rr_ratio) || 0;
+      const rrColor = rr >= 2.0 ? '#24a148' : '#a8a8a8';
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', lineHeight: '1.2' }}>
+          <div>
+            <span style={{ fontWeight: 'bold' }}>{entry}</span>
+            {signal.rr_ratio !== undefined && (
+              <span style={{ fontSize: '10px', color: rrColor, marginLeft: '6px' }}>
+                (R:R {rr.toFixed(2)})
+              </span>
+            )}
+          </div>
+          <div style={{ fontSize: '10px', color: '#a8a8a8' }}>
+            <span style={{ color: '#fa4d56' }}>{sl}</span>
+            <span style={{ margin: '0 4px' }}>|</span>
+            <span style={{ color: '#24a148' }}>{tp}</span>
+          </div>
+        </div>
+      );
     }
     if (col.includes("regime")) {
       const format = getRegimeFormat(value);
@@ -88,13 +131,40 @@ export default function SignalsPage() {
       );
     }
     if (col.includes("model")) {
-      if (!value) return <Tag type="purple" style={{ margin: 0 }}>-</Tag>;
-      const words = value.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
-      const readableModel = words.length > 1 ? <>{words[0]}<br/>{words.slice(1).join(' ')}</> : words[0];
+      const rowId = cellId.split(':')[0];
+      const signal = signals.find((s: any) => String(s.id) === String(rowId));
+      if (!signal) return <span>-</span>;
+      const modelName = signal.model || signal.model_version;
+      const conf = signal.confidence;
+      const confColor = conf >= 0.7 ? '#24a148' : conf >= 0.5 ? '#f1c21b' : '#fa4d56';
+      
+      let readableModelText = '-';
+      if (modelName) {
+        const words = modelName.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
+        readableModelText = words.join(' ');
+      }
+      
       return (
-        <Tag type="purple" style={{ margin: 0, height: 'auto', minHeight: '24px', whiteSpace: 'normal', lineHeight: '1.2', padding: '4px 8px', textAlign: 'left' }}>
-          {readableModel}
-        </Tag>
+        <div style={{ display: 'flex', flexDirection: 'row', gap: '6px', alignItems: 'center', flexWrap: 'nowrap' }}>
+          {modelName ? (
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+              <svg width="12" height="12" viewBox="0 0 32 32" style={{ fill: '#4589ff', flexShrink: 0 }}>
+                <path d="M26,8V6a2,2,0,0,0-2-2H22V2H20V4H18V2H16V4H14V2H12V4H10V2H8V4H6A2,2,0,0,0,4,6V8H2v2H4v2H2v2H4v2H2v2H4v2H2v2H4v2H2v2H4v2A2,2,0,0,0,6,28H8v2h2V28h2v2h2V28h2v2h2V28h2v2h2V28h2A2,2,0,0,0,28,26V24h2V22H28V20h2V18H28V16h2V14H28V12h2V10H28V8ZM26,26H6V6H26Z" />
+                <rect x="10" y="10" width="12" height="12" />
+              </svg>
+              <span style={{ color: '#ffffff', fontWeight: 'bold', fontSize: '11px', whiteSpace: 'nowrap' }}>
+                {readableModelText}
+              </span>
+            </div>
+          ) : (
+            <span>-</span>
+          )}
+          {conf !== undefined && conf !== null && (
+            <span style={{ color: confColor, fontWeight: 'bold', fontSize: '10px', whiteSpace: 'nowrap' }}>
+              {(conf * 100).toFixed(2)}%
+            </span>
+          )}
+        </div>
       );
     }
     return value;
@@ -180,7 +250,22 @@ export default function SignalsPage() {
             formatCell={(cellId, value) => {
               const col = cellId.split('__')[1] || cellId.split(':').pop() || '';
               if (col.includes("edge_status")) {
-                return <Tag type={value === "VALID" ? "green" : "red"}>{value}</Tag>;
+                const isValid = value === "VALID";
+                const color = isValid ? "#24a148" : "#fa4d56";
+                return (
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 'bold', fontSize: '11px' }}>
+                    {isValid ? (
+                      <svg width="12" height="12" viewBox="0 0 32 32" style={{ fill: color, flexShrink: 0 }}>
+                        <path d="M14 21.414l-5.707-5.707-1.414 1.414 7.121 7.121 12-12-1.414-1.414z" />
+                      </svg>
+                    ) : (
+                      <svg width="12" height="12" viewBox="0 0 32 32" style={{ fill: color, flexShrink: 0 }}>
+                        <path d="M24 9.4L22.6 8 16 14.6 9.4 8 8 9.4 14.6 16 8 22.6 9.4 24 16 17.4 22.6 24 24 22.6 17.4 16z" />
+                      </svg>
+                    )}
+                    <span style={{ color, whiteSpace: 'nowrap' }}>{value}</span>
+                  </div>
+                );
               }
               return formatCell(cellId, value);
             }}

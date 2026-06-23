@@ -135,23 +135,25 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     const acc = state.account_info;
     const isLive = acc.mode === 'LIVE';
     return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0 0.5rem' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', lineHeight: 1 }}>
-          <span style={{ fontSize: '0.65rem', color: '#a8a8a8' }}>{acc.login} | {acc.server}</span>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', height: '100%' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '2px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', lineHeight: 1.1 }}>
+            <span style={{ fontSize: '0.65rem', color: '#a8a8a8' }}>{acc.login} | {acc.server}</span>
+            <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '1px 3px', backgroundColor: isLive ? '#24a148' : '#0f62fe', color: 'white', fontSize: '8px', fontWeight: 600, borderRadius: '2px', lineHeight: 1, height: '12px' }}>
+              {acc.mode}
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'baseline', lineHeight: 1.1 }}>
              <strong style={{ fontSize: '0.875rem', color: '#fff' }}>
                ${(acc.equity || acc.balance || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}
              </strong>
              {acc.profit !== undefined && acc.profit !== 0 && (
-                <span style={{ fontSize: '0.65rem', color: acc.profit >= 0 ? '#24a148' : '#fa4d56' }}>
+                <span style={{ fontSize: '0.65rem', color: acc.profit >= 0 ? '#24a148' : '#fa4d56', marginLeft: '4px' }}>
                   ({acc.profit > 0 ? '+' : ''}{acc.profit.toLocaleString(undefined, {minimumFractionDigits: 2})})
                 </span>
              )}
           </div>
         </div>
-        <span style={{ padding: '2px 6px', backgroundColor: isLive ? '#fa4d56' : '#0f62fe', color: 'white', borderRadius: '2px', fontSize: '10px', fontWeight: 600 }}>
-          {acc.mode}
-        </span>
       </div>
     );
   };
@@ -177,13 +179,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               {/* Group 1 — starts flush after brand, aligns with page content */}
               <HeaderNavigation aria-label="Main" style={{ border: 'none' }}>
                 {navItem('/', 'Dashboard', Dashboard)}
-                {navItem('/signals', 'Signals', Activity)}
                 {navItem('/account', 'Account', User)}
+                {navItem('/signals', 'Signals', Activity)}
                 {navItem('/thresholds', 'Thresholds', SettingsAdjust)}
               </HeaderNavigation>
 
               {/* Spacer — pushes Group 2 toward the right */}
-              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1.5rem' }}>
+              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1.5rem', height: '100%' }}>
                 <MarketClock />
                 <HeaderAccountBadge />
               </div>

@@ -240,6 +240,7 @@ export default function GlobalTable({
                       onClick={() => handleSort(header.key)}
                       style={{ 
                         cursor: "pointer",
+                        whiteSpace: "nowrap",
                         ...(w ? { width: w } : {})
                       }}
                     >

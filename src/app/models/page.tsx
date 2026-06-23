@@ -440,7 +440,7 @@ function ModelsContent() {
 
       <Grid fullWidth>
       <Column lg={16} md={8} sm={4} className="landing-page__banner">
-        <h3 style={{ marginBottom: "1rem", fontWeight: 400 }}>Models & AI Lifecycle</h3>
+        <h3 style={{ marginBottom: "1rem", fontWeight: 400 }}>Models AI Lifecycle</h3>
       </Column>
 
       <Column lg={16} md={8} sm={4}>

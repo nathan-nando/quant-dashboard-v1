@@ -453,7 +453,7 @@ function SimulationPageContent() {
 
       <Grid fullWidth>
         <Column lg={16} md={8} sm={4} className="landing-page__banner">
-          <h3 style={{ marginBottom: "1rem", fontWeight: 400 }}>Simulation Engine</h3>
+          <h3 style={{ marginBottom: "1rem", fontWeight: 400 }}>Simulation</h3>
       </Column>
 
       <Column lg={16} md={8} sm={4}>

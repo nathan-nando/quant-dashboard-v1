@@ -14,7 +14,19 @@ const TIMEFRAMES: Record<string, number> = {
   "D1": 86400
 };
 
-export default function CandlestickChart({ symbol = "XAUUSD", onHistoryUpdate, signals = [] }: { symbol?: string, onHistoryUpdate?: (data: any[]) => void, signals?: any[] }) {
+export default function CandlestickChart({ 
+  symbol = "XAUUSD", 
+  onHistoryUpdate, 
+  signals = [],
+  maxHistoryLimit,
+  visibleBarsCount
+}: { 
+  symbol?: string, 
+  onHistoryUpdate?: (data: any[]) => void, 
+  signals?: any[],
+  maxHistoryLimit?: number,
+  visibleBarsCount?: number
+}) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
@@ -123,9 +135,9 @@ export default function CandlestickChart({ symbol = "XAUUSD", onHistoryUpdate, s
           setIsInitialized(false);
           try {
               const tfSeconds = TIMEFRAMES[timeframe] || 3600;
-              let limit = 150; // Default minimum 150 candles
+              let limit = maxHistoryLimit || 150; // Default minimum 150 candles if no limit
               
-              if (signals && signals.length > 0) {
+              if (!maxHistoryLimit && signals && signals.length > 0) {
                   const minTimestamp = Math.min(...signals.map(s => new Date(s.timestamp).getTime()));
                   const timeSinceEarliestSignal = Math.floor(Date.now() / 1000) - Math.floor(minTimestamp / 1000);
                   const candlesNeeded = Math.ceil(timeSinceEarliestSignal / tfSeconds) + 20; // + 20 candles padding
@@ -165,6 +177,15 @@ export default function CandlestickChart({ symbol = "XAUUSD", onHistoryUpdate, s
                   lastCandleRef.current = history[history.length - 1];
                   setIsInitialized(true);
                   if (onHistoryUpdate) onHistoryUpdate(history);
+                   
+                   if (visibleBarsCount && history.length > 0) {
+                       setTimeout(() => {
+                           chartRef.current?.timeScale().setVisibleLogicalRange({
+                               from: history.length - visibleBarsCount - 0.5,
+                               to: history.length + 1.5
+                           });
+                       }, 50);
+                   }
               }
           } catch (e) {
               console.error("Error fetching history:", e);

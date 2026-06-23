@@ -1,6 +1,6 @@
 @import 'react-grid-layout/css/styles.css';
 @import 'react-resizable/css/styles.css';
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap');
 
 html {
   font-size: 12px !important; /* Scale down all rem-based sizes significantly more */
@@ -13,7 +13,7 @@ html, body {
   width: 100%;
   background-color: #161616 !important; /* Force dark background */
   color: #f4f4f4;
-  font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
 }
 
 /* Custom override for compactness */
@@ -28,7 +28,7 @@ main {
 }
 
 * {
-  font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
 }
 
 /* Header Navigation Overrides */
@@ -250,6 +250,13 @@ main {
 @media (min-width: 1056px) {
   .model-health-grid {
     grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.chart-market-summary-hud {
+  display: block;
+  @media (max-width: 768px) {
+    display: none !important;
   }
 }
 

@@ -1,12 +1,13 @@
 "use client";
 
 import { Grid, Column, Button, ToastNotification, Tag, Tile } from "@carbon/react";
-import { CurrencyDollar, Activity, Power, Wallet, MachineLearningModel } from "@carbon/icons-react";
 import { useEffect, useState, useRef } from "react";
 import dynamic from 'next/dynamic';
 import GlobalTable from '../components/GlobalTable';
 import GlobalDetailTable from '../components/GlobalDetailTable';
+import TradeHistoryTable from '../components/TradeHistoryTable';
 import DashboardPanel from '../components/DashboardPanel';
+import DashboardMetrics from '../components/DashboardMetrics';
 import { Responsive, WidthProvider } from 'react-grid-layout/legacy';
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
@@ -25,34 +26,76 @@ const getRegimeFormat = (regime: string) => {
 };
 
 export default function Home() {
-  const { state, signals, analytics } = useGlobalState();
+  const { signals } = useGlobalState();
 
   const latestSignalIdRef = useRef<number | null>(null);
   const chartHistoryRef = useRef<any[]>([]);
+  const [trades, setTrades] = useState<any[]>([]);
+
+  const fetchTrades = () => {
+    fetch("http://127.0.0.1:8000/api/dashboard/trades")
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data.data)) setTrades(data.data);
+        else if (data.items) setTrades(data.items);
+        else if (Array.isArray(data)) setTrades(data);
+        else setTrades([]);
+      })
+      .catch(err => console.error("Failed to fetch trades in dashboard", err));
+  };
+
+  useEffect(() => {
+    fetchTrades();
+  }, [signals]);
 
   const signalHeaders = [
     { key: "timestamp", header: "Time" },
-    { key: "direction", header: "Signal", width: "1%" },
-    { key: "entry_price", header: "Price" },
-    { key: "sl_price", header: "SL $" },
-    { key: "tp_price", header: "TP $" },
-    { key: "rr_ratio", header: "R:R", width: "1%" },
-    { key: "confidence", header: "Conf" },
-    { key: "regime", header: "Regime", width: "1%" },
-    { key: "model", header: "Model" },
+    { key: "direction", header: "Signal" },
+    { key: "entry_price", header: "Price / SL / TP / R:R" },
+    { key: "model", header: "Model / Conf" },
+    { key: "regime", header: "Regime" },
     { key: "status", header: "Status" },
   ];
-
   const [selectedSignal, setSelectedSignal] = useState<number | null>(null);
 
-  const defaultLayout = [
-    { i: 'chart', x: 0, y: 0, w: 7, h: 5, minW: 4, minH: 3 },
-    { i: 'signals', x: 7, y: 0, w: 9, h: 5, minW: 4, minH: 3 }
-  ];
-  const [layouts, setLayouts] = useState<any>({ lg: defaultLayout });
+  const defaultLayouts = {
+    lg: [
+      { i: 'trades', x: 0, y: 0, w: 8, h: 3, minW: 2, minH: 2 },
+      { i: 'signals', x: 8, y: 0, w: 8, h: 6, minW: 2, minH: 2 },
+      { i: 'chart', x: 0, y: 3, w: 8, h: 6, minW: 2, minH: 2 }
+    ],
+    md: [
+      { i: 'trades', x: 0, y: 0, w: 4, h: 3, minW: 2, minH: 2 },
+      { i: 'signals', x: 4, y: 0, w: 4, h: 6, minW: 2, minH: 2 },
+      { i: 'chart', x: 0, y: 3, w: 4, h: 6, minW: 2, minH: 2 }
+    ],
+    sm: [
+      { i: 'trades', x: 0, y: 0, w: 4, h: 3, minW: 2, minH: 2 },
+      { i: 'signals', x: 0, y: 3, w: 4, h: 6, minW: 2, minH: 2 },
+      { i: 'chart', x: 0, y: 9, w: 4, h: 4, minW: 2, minH: 2 }
+    ],
+    xs: [
+      { i: 'trades', x: 0, y: 0, w: 2, h: 3 },
+      { i: 'signals', x: 0, y: 3, w: 2, h: 6 },
+      { i: 'chart', x: 0, y: 9, w: 2, h: 4 }
+    ]
+  };
+  const [layouts, setLayouts] = useState<any>(defaultLayouts);
 
   useEffect(() => {
-    const saved = localStorage.getItem("quantDashboardLayout_v6");
+    // Clear all older layout keys from localStorage
+    try {
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith("quantDashboardLayout_") && key !== "quantDashboardLayout_v20") {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach(k => localStorage.removeItem(k));
+    } catch (e) {}
+
+    const saved = localStorage.getItem("quantDashboardLayout_v20");
     if (saved) {
       try {
         setLayouts(JSON.parse(saved));
@@ -62,9 +105,8 @@ export default function Home() {
 
   const handleLayoutChange = (layout: any, allLayouts: any) => {
     setLayouts(allLayouts);
-    localStorage.setItem("quantDashboardLayout_v6", JSON.stringify(allLayouts));
+    localStorage.setItem("quantDashboardLayout_v20", JSON.stringify(allLayouts));
   };
-
   return (
     <div style={{ maxWidth: '100%', padding: '0 2rem', position: 'relative' }}>
 
@@ -72,59 +114,9 @@ export default function Home() {
         <h3 style={{ marginBottom: ".5rem", fontWeight: 400 }}>Dashboard</h3>
       </Column>
 
-      {/* --- ROW 1: STATIC LIVE STATE METRICS --- */}
-      <div style={{ marginBottom: "0.2rem", width: '100%' }}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "0.2rem" }}>
-          <Tile style={{ padding: "1rem", height: "100%" }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: "0.25rem" }}>
-              <CurrencyDollar size={16} color="#a8a8a8" />
-              <p style={{ fontSize: "12px", color: "#a8a8a8", margin: 0 }}>Live Price</p>
-            </div>
-            <h3 style={{ margin: 0, color: "#f4f4f4" }}>
-              {state?.price ? (
-                state.price.ask > 0 ? state.price.ask.toFixed(2) : state.price.last?.toFixed(2) || "0.00"
-              ) : "Loading..."}
-            </h3>
-          </Tile>
-
-          <Tile style={{ padding: "1rem", height: "100%" }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: "0.25rem" }}>
-              <Activity size={16} color="#a8a8a8" />
-              <p style={{ fontSize: "12px", color: "#a8a8a8", margin: 0 }}>Regime</p>
-            </div>
-            <h3 style={{ margin: 0, fontSize: '1.25rem', color: getRegimeFormat(state?.regime).color }}>{getRegimeFormat(state?.regime).text}</h3>
-          </Tile>
-
-          <Tile style={{ padding: "1rem", height: "100%" }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: "0.25rem" }}>
-              <Power size={16} color="#a8a8a8" />
-              <p style={{ fontSize: "12px", color: "#a8a8a8", margin: 0 }}>Engine</p>
-            </div>
-            <h3 style={{ margin: 0, color: state?.engine_active ? "#24a148" : "#fa4d56" }}>
-              {state?.engine_active ? "ON" : "OFF"}
-            </h3>
-          </Tile>
-
-          <Tile style={{ padding: "1rem", height: "100%" }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: "0.25rem" }}>
-              <MachineLearningModel size={16} color="#a8a8a8" />
-              <p style={{ fontSize: "12px", color: "#a8a8a8", margin: 0 }}>Auto Trade</p>
-            </div>
-            <h3 style={{ margin: 0, color: state?.auto_execution ? "#24a148" : "#fa4d56" }}>
-              {state?.auto_execution ? "ON" : "OFF"}
-            </h3>
-          </Tile>
-
-          <Tile style={{ padding: "1rem", height: "100%" }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: "0.25rem" }}>
-              <Wallet size={16} color="#a8a8a8" />
-              <p style={{ fontSize: "12px", color: "#a8a8a8", margin: 0 }}>Total PnL</p>
-            </div>
-            <h3 style={{ margin: 0, color: analytics?.total_pnl >= 0 ? "#24a148" : "#fa4d56" }}>
-              {analytics ? `$${analytics.total_pnl.toFixed(2)}` : "..."}
-            </h3>
-          </Tile>
-        </div>
+      {/* --- ROW 1: STATIC LIVE STATE METRICS & MARKET SUMMARY --- */}
+      <div style={{ display: "flex", gap: "0.2rem", marginBottom: "0.2rem", width: '100%', alignItems: 'stretch' }}>
+        <DashboardMetrics />
       </div>
 
       {/* --- ROW 2: DYNAMIC CHARTS AND SIGNALS --- */}
@@ -183,7 +175,27 @@ export default function Home() {
                    Neutral
                  </span>
                </div>
-               <CandlestickChart symbol="XAUUSD" onHistoryUpdate={(data) => chartHistoryRef.current = data} signals={signals} />
+
+               {/* Market Summary Overlay HUD */}
+               <div 
+                 className="chart-market-summary-hud"
+                 style={{
+                   position: 'absolute',
+                   top: '5px',
+                   left: '100px',
+                   right: '185px',
+                   zIndex: 5,
+                   background: 'none',
+                   padding: '0',
+                   border: 'none',
+                   boxShadow: 'none',
+                   pointerEvents: 'none' // Let clicks pass through to chart
+                 }}
+               >
+                 <MarketSummaryWidget />
+               </div>
+
+                <CandlestickChart symbol="XAUUSD" onHistoryUpdate={(data) => chartHistoryRef.current = data} signals={signals} maxHistoryLimit={50} visibleBarsCount={12} />
              </div>
           </DashboardPanel>
         </div>
@@ -244,29 +256,75 @@ export default function Home() {
                   if (col.includes("status")) {
                     if (value === "PENDING_EXECUTION") {
                       return (
-                        <Tag type="cyan" style={{ height: 'auto', padding: '4px 6px', lineHeight: '1.2', textAlign: 'left' }}>
-                          Pending<br/>Execution
-                        </Tag>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 'bold', fontSize: '11px' }}>
+                          <svg width="12" height="12" viewBox="0 0 32 32" style={{ fill: '#11a3c6', flexShrink: 0 }}>
+                            <path d="M16 4C9.383 4 4 9.383 4 16s5.383 12 12 12 12-5.383 12-12S22.617 4 16 4zm0 2c5.523 0 10 4.477 10 10s-4.477 10-10 10S6 21.523 6 16 10.477 6 16 6zm-1 3v8h6v-2h-4v-6h-2z" />
+                          </svg>
+                          <span style={{ color: '#11a3c6', whiteSpace: 'nowrap' }}>Pending Execution</span>
+                        </div>
                       );
                     }
-                    const readableStatus = value === "NEW" ? "New" : value;
-                    return <Tag type={value === "NEW" ? "blue" : "gray"}>{readableStatus}</Tag>;
+                    if (value === "EXECUTED") {
+                      return (
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 'bold', fontSize: '11px' }}>
+                          <svg width="12" height="12" viewBox="0 0 32 32" style={{ fill: '#24a148', flexShrink: 0 }}>
+                            <path d="M14 21.414l-5.707-5.707-1.414 1.414 7.121 7.121 12-12-1.414-1.414z" />
+                          </svg>
+                          <span style={{ color: '#ffffff', whiteSpace: 'nowrap' }}>Executed</span>
+                        </div>
+                      );
+                    }
+                    if (value === "NEW") {
+                      return (
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 'bold', fontSize: '11px' }}>
+                          <svg width="12" height="12" viewBox="0 0 32 32" style={{ fill: '#fa4d56', flexShrink: 0 }}>
+                            <circle cx="16" cy="16" r="8" />
+                          </svg>
+                          <span style={{ color: '#ffffff', whiteSpace: 'nowrap' }}>New</span>
+                        </div>
+                      );
+                    }
+                    // Fallback
+                    const readableValue = value ? value.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ') : '';
+                    return (
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 'bold', fontSize: '11px' }}>
+                        <svg width="12" height="12" viewBox="0 0 32 32" style={{ fill: '#6f6f6f', flexShrink: 0 }}>
+                          <circle cx="16" cy="16" r="8" />
+                        </svg>
+                        <span style={{ color: '#a8a8a8', whiteSpace: 'nowrap' }}>{readableValue}</span>
+                      </div>
+                    );
                   }
                   if (col.includes("direction")) {
                     const readableVal = value ? value.charAt(0).toUpperCase() + value.slice(1).toLowerCase() : '';
                     return <span style={{ color: value === 'BUY' ? '#24a148' : value === 'SELL' ? '#fa4d56' : '#f4f4f4', fontWeight: 'bold' }}>{readableVal}</span>;
                   }
-                  if (col.includes("confidence")) {
-                    const conf = Number(value);
-                    const color = conf >= 0.7 ? '#24a148' : conf >= 0.5 ? '#f1c21b' : '#fa4d56';
-                    return <span style={{ color, fontWeight: 'bold' }}>{(conf * 100).toFixed(2)}%</span>;
-                  }
-                  if (col.includes("entry_price")) return <span>{value ? Number(value).toFixed(2) : '-'}</span>;
-                  if (col.includes("sl_price") || col.includes("sl_pips")) return <span style={{ color: '#fa4d56' }}>{value ? Number(value).toFixed(2) : '-'}</span>;
-                  if (col.includes("tp_price") || col.includes("tp_pips")) return <span style={{ color: '#24a148' }}>{value ? Number(value).toFixed(2) : '-'}</span>;
-                  if (col.includes("rr_ratio")) {
-                    const rr = Number(value) || 0;
-                    return <span style={{ color: rr >= 2.0 ? '#24a148' : '#f4f4f4' }}>{rr.toFixed(2)}</span>;
+                  if (col.includes("entry_price")) {
+                    const rowId = cellId.split(':')[0];
+                    const signal = signals.find((s: any) => String(s.id) === String(rowId));
+                    if (!signal) return <span>{value ? Number(value).toFixed(2) : '-'}</span>;
+                    const entry = signal.entry_price ? Number(signal.entry_price).toFixed(2) : '-';
+                    const sl = signal.sl_price ? Number(signal.sl_price).toFixed(2) : '-';
+                    const tp = signal.tp_price ? Number(signal.tp_price).toFixed(2) : '-';
+                    const rr = Number(signal.rr_ratio) || 0;
+                    const rrColor = rr >= 2.0 ? '#24a148' : '#a8a8a8';
+                    return (
+                      <div style={{ display: 'flex', flexDirection: 'column', lineHeight: '1.2' }}>
+                        <div>
+                          <span style={{ fontWeight: 'bold' }}>{entry}</span>
+                          {signal.rr_ratio !== undefined && (
+                            <span style={{ fontSize: '10px', color: rrColor, marginLeft: '6px' }}>
+                              (R:R {rr.toFixed(2)})
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ fontSize: '10px', color: '#a8a8a8' }}>
+                          <span style={{ color: '#fa4d56' }}>{sl}</span>
+                          <span style={{ margin: '0 4px' }}>|</span>
+                          <span style={{ color: '#24a148' }}>{tp}</span>
+                        </div>
+                      </div>
+                    );
                   }
                   if (col.includes("regime")) {
                     const format = getRegimeFormat(value);
@@ -278,13 +336,40 @@ export default function Home() {
                     );
                   }
                   if (col.includes("model")) {
-                    if (!value) return <Tag type="purple" style={{ margin: 0 }}>-</Tag>;
-                    const words = value.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
-                    const readableModel = words.length > 1 ? <>{words[0]}<br/>{words.slice(1).join(' ')}</> : words[0];
+                    const rowId = cellId.split(':')[0];
+                    const signal = signals.find((s: any) => String(s.id) === String(rowId));
+                    if (!signal) return <span>-</span>;
+                    const modelName = signal.model || signal.model_version;
+                    const conf = signal.confidence;
+                    const confColor = conf >= 0.7 ? '#24a148' : conf >= 0.5 ? '#f1c21b' : '#fa4d56';
+                    
+                    let readableModelText = '-';
+                    if (modelName) {
+                      const words = modelName.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
+                      readableModelText = words.join(' ');
+                    }
+                    
                     return (
-                      <Tag type="purple" style={{ margin: 0, height: 'auto', minHeight: '24px', whiteSpace: 'normal', lineHeight: '1.2', padding: '4px 8px', textAlign: 'left' }}>
-                        {readableModel}
-                      </Tag>
+                      <div style={{ display: 'flex', flexDirection: 'row', gap: '6px', alignItems: 'center', flexWrap: 'nowrap' }}>
+                        {modelName ? (
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                            <svg width="12" height="12" viewBox="0 0 32 32" style={{ fill: '#4589ff', flexShrink: 0 }}>
+                              <path d="M26,8V6a2,2,0,0,0-2-2H22V2H20V4H18V2H16V4H14V2H12V4H10V2H8V4H6A2,2,0,0,0,4,6V8H2v2H4v2H2v2H4v2H2v2H4v2H2v2H4v2H2v2H4v2A2,2,0,0,0,6,28H8v2h2V28h2v2h2V28h2v2h2V28h2v2h2V28h2A2,2,0,0,0,28,26V24h2V22H28V20h2V18H28V16h2V14H28V12h2V10H28V8ZM26,26H6V6H26Z" />
+                              <rect x="10" y="10" width="12" height="12" />
+                            </svg>
+                            <span style={{ color: '#ffffff', fontWeight: 'bold', fontSize: '11px', whiteSpace: 'nowrap' }}>
+                              {readableModelText}
+                            </span>
+                          </div>
+                        ) : (
+                          <span>-</span>
+                        )}
+                        {conf !== undefined && conf !== null && (
+                          <span style={{ color: confColor, fontWeight: 'bold', fontSize: '10px', whiteSpace: 'nowrap' }}>
+                            {(conf * 100).toFixed(2)}%
+                          </span>
+                        )}
+                      </div>
                     );
                   }
                   return value;
@@ -293,21 +378,42 @@ export default function Home() {
             </div>
           </DashboardPanel>
         </div>
-      </ResponsiveGridLayout>
-
-      {/* --- ROW 3: STATIC MARKET SUMMARY --- */}
-      <div style={{ marginTop: '0.2rem', display: 'flex' }}>
-        <div style={{ width: 'fit-content' }}>
+        <div key="trades">
           <DashboardPanel 
-            title="Market Summary" 
-            tooltipInfo="Daily market statistics and current trading session overlap."
+            title="Recent Trades" 
+            tooltipInfo="Recent executed trades and their PnL details."
+            onExportCsv={() => {
+              const headers = ["Direction", "Entry Time", "Exit Time", "Entry", "Exit", "Lots", "Reason", "Regime", "Model", "Conf", "PnL"];
+              const rows = trades.map(t => [
+                t.direction,
+                t.entry_time ? new Date(t.entry_time).toLocaleString() : '',
+                t.exit_time ? new Date(t.exit_time).toLocaleString() : '',
+                t.entry_price || '',
+                t.exit_price || '',
+                t.volume || '',
+                t.close_reason || '',
+                t.regime || '',
+                t.model_version || '',
+                t.confidence ? (t.confidence * 100).toFixed(2) + '%' : '',
+                t.pnl_money || ''
+              ].join(","));
+              
+              const csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n" + rows.join("\n");
+              const encodedUri = encodeURI(csvContent);
+              const link = document.createElement("a");
+              link.setAttribute("href", encodedUri);
+              link.setAttribute("download", `recent_trades_${new Date().toISOString().split('T')[0]}.csv`);
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+            }}
           >
-            <div style={{ paddingBottom: '0.2rem' }}>
-              <MarketSummaryWidget />
+            <div style={{ height: "100%" }}>
+              <TradeHistoryTable trades={trades.slice(0, 5)} title="" hidePagination hideSearch />
             </div>
           </DashboardPanel>
         </div>
-      </div>
+      </ResponsiveGridLayout>
       
       {/* --- SIGNAL DETAIL MODAL --- */}
       <GlobalDetailTable 
