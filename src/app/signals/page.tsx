@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import GlobalTable from "../../components/GlobalTable";
 import GlobalDetailTable from "../../components/GlobalDetailTable";
+import { useGlobalState } from "../../contexts/GlobalStateContext";
 
 const CandlestickChart = dynamic(() => import("../../components/CandlestickChart"), { ssr: false });
 
@@ -18,8 +19,9 @@ const getRegimeFormat = (regime: string) => {
 };
 
 export default function SignalsPage() {
-  const [selectedSignal, setSelectedSignal] = useState<number | null>(null);
+  const [selectedItem, setSelectedItem] = useState<{ id: number; type: 'signal' | 'feature_snapshot' } | null>(null);
   const [signals, setSignals] = useState<any[]>([]);
+  const { signals: liveSignals } = useGlobalState();
 
   const headers = [
     { key: "timestamp", header: "Time" },
@@ -144,24 +146,53 @@ export default function SignalsPage() {
             <CandlestickChart symbol="XAUUSD" signals={signals} />
           </div>
 
-          {/* Table */}
+      {/* Table */}
           <div style={{ flex: '1 1 0', overflow: 'auto', background: '#262626', border: '1px solid #393939', borderRadius: 0 }}>
             <GlobalTable 
               title="Signal History"
               headers={headers}
               fetchUrl="http://127.0.0.1:8000/api/dashboard/signals"
-              onViewDetails={(id) => setSelectedSignal(Number(id))}
+              onViewDetails={(id) => setSelectedItem({ id: Number(id), type: 'signal' })}
               formatCell={formatCell}
               onPageDataChange={setSignals}
+              refreshTrigger={liveSignals.length > 0 ? liveSignals[0].id : 0}
             />
           </div>
 
         </div>
       </Column>
+
+      <Column lg={16} md={8} sm={4} style={{ marginTop: '0.2rem', paddingBottom: '2rem' }}>
+        <div style={{ background: '#262626', border: '1px solid #393939', borderRadius: 0 }}>
+          <GlobalTable 
+            title="Feature Snapshots"
+            headers={[
+              { key: "timestamp", header: "Time" },
+              { key: "symbol", header: "Symbol" },
+              { key: "timeframe", header: "TF" },
+              { key: "regime", header: "Regime" },
+              { key: "edge_status", header: "Edge Status" },
+              { key: "remarks", header: "Remarks" },
+              { key: "edge_psi", header: "PSI" },
+            ]}
+            fetchUrl="http://127.0.0.1:8000/api/dashboard/feature-snapshots"
+            onViewDetails={(id) => setSelectedItem({ id: Number(id), type: 'feature_snapshot' })}
+            formatCell={(cellId, value) => {
+              const col = cellId.split('__')[1] || cellId.split(':').pop() || '';
+              if (col.includes("edge_status")) {
+                return <Tag type={value === "VALID" ? "green" : "red"}>{value}</Tag>;
+              }
+              return formatCell(cellId, value);
+            }}
+            refreshTrigger={liveSignals.length > 0 ? liveSignals[0].id : 0}
+          />
+        </div>
+      </Column>
       
       <GlobalDetailTable 
-        id={selectedSignal} 
-        onClose={() => setSelectedSignal(null)} 
+        id={selectedItem?.id || null} 
+        type={selectedItem?.type || 'signal'}
+        onClose={() => setSelectedItem(null)} 
       />
     </Grid>
   );

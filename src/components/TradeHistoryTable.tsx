@@ -64,12 +64,12 @@ export default function TradeHistoryTable({ trades }: TradeHistoryTableProps) {
     ...trade,
     id: trade.trade_id || `trade-${idx}`,
     formatted_entry_time: trade.entry_time,
-    formatted_exit_time: trade.exit_time,
-    formatted_pnl_money: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(trade.pnl_money),
-    formatted_entry_price: trade.entry_price.toFixed(2),
-    formatted_exit_price: trade.exit_price.toFixed(2),
-    formatted_volume: trade.volume.toFixed(2),
-    formatted_confidence: trade.confidence ? `${(trade.confidence * 100).toFixed(1)}%` : '-',
+    formatted_exit_time: trade.exit_time || '-',
+    formatted_pnl_money: trade.pnl_money != null ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(trade.pnl_money) : '-',
+    formatted_entry_price: trade.entry_price != null ? Number(trade.entry_price).toFixed(2) : '-',
+    formatted_exit_price: trade.exit_price != null ? Number(trade.exit_price).toFixed(2) : '-',
+    formatted_volume: trade.volume != null ? Number(trade.volume).toFixed(2) : '-',
+    formatted_confidence: trade.confidence != null ? `${(Number(trade.confidence) * 100).toFixed(1)}%` : '-',
     model_version: trade.model_version || '-',
   }));
 
@@ -121,6 +121,7 @@ export default function TradeHistoryTable({ trades }: TradeHistoryTableProps) {
       );
     }
     if (cellId.endsWith(":formatted_pnl_money")) {
+      if (value === '-') return <span style={{ color: '#c6c6c6' }}>-</span>;
       const isProfit = value.includes("-") === false && value !== "$0.00";
       const pnlColor = isProfit ? "#24a148" : (value.includes("-") ? "#da1e28" : "#c6c6c6");
       return <span style={{ color: pnlColor, fontWeight: 'bold' }}>{value}</span>;
@@ -193,7 +194,7 @@ export default function TradeHistoryTable({ trades }: TradeHistoryTableProps) {
             <div>
               <p style={{ color: '#a8a8a8', fontSize: '0.75rem', marginBottom: '4px' }}>Prices (Entry &rarr; Exit)</p>
               <p style={{ fontSize: '0.875rem' }}>
-                {selectedTrade.entry_price.toFixed(5)} &rarr; {selectedTrade.exit_price ? selectedTrade.exit_price.toFixed(5) : '-'}
+                {selectedTrade.entry_price != null ? Number(selectedTrade.entry_price).toFixed(5) : '-'} &rarr; {selectedTrade.exit_price != null ? Number(selectedTrade.exit_price).toFixed(5) : '-'}
               </p>
             </div>
             <div>
@@ -216,9 +217,9 @@ export default function TradeHistoryTable({ trades }: TradeHistoryTableProps) {
 
             <div>
               <p style={{ color: '#a8a8a8', fontSize: '0.75rem', marginBottom: '4px' }}>Net PnL (Money / Pips)</p>
-              <p style={{ fontSize: '0.875rem', color: selectedTrade.pnl_money >= 0 ? "#24a148" : "#da1e28", fontWeight: 'bold' }}>
-                {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(selectedTrade.pnl_money)} 
-                <span style={{ fontWeight: 'normal', color: '#c6c6c6', marginLeft: '0.5rem' }}>({selectedTrade.pnl_pips?.toFixed(1) || '-'} pips)</span>
+              <p style={{ fontSize: '0.875rem', color: selectedTrade.pnl_money != null ? (selectedTrade.pnl_money >= 0 ? "#24a148" : "#da1e28") : "#c6c6c6", fontWeight: 'bold' }}>
+                {selectedTrade.pnl_money != null ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(selectedTrade.pnl_money) : '-'} 
+                <span style={{ fontWeight: 'normal', color: '#c6c6c6', marginLeft: '0.5rem' }}>({selectedTrade.pnl_pips != null ? Number(selectedTrade.pnl_pips).toFixed(1) : '-'} pips)</span>
               </p>
             </div>
             <div>

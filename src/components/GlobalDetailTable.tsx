@@ -67,7 +67,7 @@ const getRegimeFormat = (regime: string) => {
 
 interface GlobalDetailTableProps {
   id?: number | string | null;
-  type?: 'signal' | 'model' | 'dataset';
+  type?: 'signal' | 'model' | 'dataset' | 'feature_snapshot';
   dataObj?: any;
   onClose: () => void;
 }
@@ -96,7 +96,11 @@ export default function GlobalDetailTable({ id, type = 'signal', dataObj, onClos
     setLoading(true);
     setError(null);
     
-    fetch(`http://127.0.0.1:8000/api/dashboard/signals/${id}`)
+    const url = type === 'feature_snapshot' 
+      ? `http://127.0.0.1:8000/api/dashboard/feature-snapshots/${id}`
+      : `http://127.0.0.1:8000/api/dashboard/signals/${id}`;
+    
+    fetch(url)
       .then(res => {
         if (!res.ok) throw new Error("Failed to fetch signal details");
         return res.json();
@@ -120,7 +124,7 @@ export default function GlobalDetailTable({ id, type = 'signal', dataObj, onClos
     <Modal
       open={(id !== null && id !== undefined) || !!dataObj}
       onRequestClose={onClose}
-      modalHeading={type === 'signal' ? `Signal Details #${id}` : type === 'dataset' ? `Dataset Details` : `Model Details`}
+      modalHeading={type === 'signal' ? `Signal Details #${id}` : type === 'dataset' ? `Dataset Details` : type === 'feature_snapshot' ? `Feature Snapshot #${id}` : `Model Details`}
       primaryButtonText="Close"
       onRequestSubmit={onClose}
       size="lg"
@@ -194,7 +198,7 @@ export default function GlobalDetailTable({ id, type = 'signal', dataObj, onClos
         </div>
       )}
 
-      {data && (type === 'model' || type === 'dataset') && (() => {
+      {data && (type === 'model' || type === 'dataset' || type === 'feature_snapshot') && (() => {
          const entries = Object.entries(data).filter(([key]) => key !== 'id');
          const flatEntries: [string, any][] = [];
          const nestedEntries: [string, any][] = [];

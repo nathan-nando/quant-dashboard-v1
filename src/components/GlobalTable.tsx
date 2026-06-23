@@ -34,6 +34,7 @@ interface GlobalTableProps {
   defaultCollapsed?: boolean;
   onReload?: () => void | Promise<void>;
   hideReload?: boolean;
+  refreshTrigger?: any;
 }
 
 export default function GlobalTable({
@@ -51,7 +52,8 @@ export default function GlobalTable({
   collapsible = false,
   defaultCollapsed = false,
   onReload,
-  hideReload = false
+  hideReload = false,
+  refreshTrigger
 }: GlobalTableProps) {
   // State
   const [data, setData] = useState<any[]>([]);
@@ -103,12 +105,12 @@ export default function GlobalTable({
     }
   }, [fetchUrl, page, pageSize, search, sortKey, sortDesc]);
 
-  // Effect to re-fetch on Server Side when params change
+  // Effect to re-fetch on Server Side when params change or refreshTrigger changes
   useEffect(() => {
     if (isServerSide) {
       fetchData();
     }
-  }, [fetchData, isServerSide]);
+  }, [fetchData, isServerSide, refreshTrigger]);
 
   // Derived state for Client Side
   const filteredData = useMemo(() => {
