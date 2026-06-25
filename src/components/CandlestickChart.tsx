@@ -38,6 +38,7 @@ export default function CandlestickChart({
   const [isInitialized, setIsInitialized] = useState(false);
   const [timeframe, setTimeframe] = useState<string>("H1");
   const [marketStatus, setMarketStatus] = useState<string>("OPEN");
+  const [showMarkers, setShowMarkers] = useState<boolean>(true);
 
   // Reset chart and markers when timeframe changes
   useEffect(() => {
@@ -212,7 +213,7 @@ export default function CandlestickChart({
         markersRef.current = createSeriesMarkers(seriesRef.current, []);
     }
 
-    if (!signals || signals.length === 0 || dataRef.current.length === 0) {
+    if (!showMarkers || !signals || signals.length === 0 || dataRef.current.length === 0) {
         markersRef.current.setMarkers([]);
         return;
     }
@@ -278,7 +279,7 @@ export default function CandlestickChart({
     } catch (e) {
         console.error('Failed to set markers:', e);
     }
-  }, [signals, isInitialized, timeframe]);
+  }, [signals, isInitialized, timeframe, showMarkers]);
 
   // Real-time updates via Global Context
   useEffect(() => {
@@ -360,24 +361,75 @@ export default function CandlestickChart({
               </span>
           )}
           
-          <select 
-             value={timeframe} 
-             onChange={(e) => setTimeframe(e.target.value)}
-             style={{
-                background: "#353535",
-                color: "#f4f4f4",
-                border: "1px solid #393939",
-                padding: "2px 8px",
-                borderRadius: "4px",
-                fontSize: "12px",
-                cursor: "pointer",
-                outline: "none"
-             }}
-          >
-              {Object.keys(TIMEFRAMES).map(tf => (
-                  <option key={tf} value={tf}>{tf}</option>
-              ))}
-          </select>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>
+            <select 
+               value={timeframe} 
+               onChange={(e) => setTimeframe(e.target.value)}
+               style={{
+                  background: "#353535",
+                  color: "#f4f4f4",
+                  border: "1px solid #393939",
+                  padding: "1px 4px",
+                  borderRadius: "0",
+                  fontSize: "10px",
+                  cursor: "pointer",
+                  outline: "none"
+               }}
+            >
+                {Object.keys(TIMEFRAMES).map(tf => (
+                    <option key={tf} value={tf}>{tf}</option>
+                ))}
+            </select>
+
+            {/* Toggle for Signal Markers */}
+            <label style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '6px', 
+              cursor: 'pointer', 
+              fontSize: '10px', 
+              color: '#a8a8a8', 
+              userSelect: 'none',
+              marginTop: '2px'
+            }}>
+              <span style={{ 
+                position: 'relative', 
+                display: 'inline-block', 
+                width: '22px', 
+                height: '12px' 
+              }}>
+                <input 
+                  type="checkbox" 
+                  checked={showMarkers} 
+                  onChange={(e) => setShowMarkers(e.target.checked)}
+                  style={{ opacity: 0, width: 0, height: 0, position: 'absolute' }} 
+                />
+                <span style={{
+                  position: 'absolute', 
+                  cursor: 'pointer', 
+                  top: 0, 
+                  left: 0, 
+                  right: 0, 
+                  bottom: 0,
+                  backgroundColor: showMarkers ? '#24a148' : '#525252',
+                  transition: '0.2s', 
+                  borderRadius: '0'
+                }} />
+                <span style={{
+                  position: 'absolute', 
+                  content: '""', 
+                  height: '8px', 
+                  width: '8px', 
+                  left: showMarkers ? '11px' : '3px', 
+                  bottom: '2px',
+                  backgroundColor: '#ffffff', 
+                  transition: '0.2s', 
+                  borderRadius: '0'
+                }} />
+              </span>
+              <span>Signals</span>
+            </label>
+          </div>
       </h4>
       <div ref={chartContainerRef} style={{ width: "100%", height: "100%" }} />
     </div>

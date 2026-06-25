@@ -32,7 +32,8 @@ import {
   ToastNotification,
   Modal,
   RadioButtonGroup,
-  RadioButton
+  RadioButton,
+  Loading
 } from '@carbon/react';
 import { Play, ChartLineData, Compare, Maximize, Minimize, Settings as SettingsIcon, Renew, Catalog, TrashCan, Document } from '@carbon/icons-react';
 
@@ -72,6 +73,28 @@ function SimulationPageContent() {
     body: '',
     onConfirm: () => {}
   });
+  const [confirmLoading, setConfirmLoading] = useState(false);
+
+  const [runs, setRuns] = useState<any[]>([]);
+  const handleSetRuns = (data: any[]) => {
+    if (Array.isArray(data)) {
+      const sorted = [...data].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      setRuns(sorted);
+    }
+  };
+  const [selectedRunId, setSelectedRunId] = useState<string>(runIdParam || '');
+  const [activeRunData, setActiveRunData] = useState<any>(null);
+
+  const handleConfirmSubmit = async () => {
+    setConfirmLoading(true);
+    try {
+      await confirmModalConfig.onConfirm();
+    } catch (e) {
+      console.error("Confirmation action failed:", e);
+    } finally {
+      setConfirmLoading(false);
+    }
+  };
 
   const openJobDetails = (jobId: string) => {
     window.dispatchEvent(new CustomEvent('open-job-details', { detail: { jobId } }));
@@ -90,10 +113,10 @@ function SimulationPageContent() {
           if (res.ok) {
             setNotification({ kind: "success", title: "Simulation Deleted", subtitle: "The simulation run has been deleted." });
             // Refresh list
-            const runsRes = await fetch('http://127.0.0.1:8000/api/simulation/runs');
+            const runsRes = await fetch('http://127.0.0.1:8000/api/simulation/runs?limit=1000');
             if (runsRes.ok) {
               const data = await runsRes.json();
-              if (Array.isArray(data)) setRuns(data);
+              handleSetRuns(data);
             }
           } else {
             setNotification({ kind: "error", title: "Delete Failed", subtitle: "Failed to delete simulation run." });
@@ -111,13 +134,8 @@ function SimulationPageContent() {
   const simHeaders = [
     { key: "name", header: "Simulation Name" },
     { key: "created_at", header: "Date" },
-    { key: "initial_capital", header: "Initial Capital" },
-    { key: "final_equity", header: "Final Equity" },
-    { key: "total_pnl", header: "Net PnL" },
-    { key: "win_rate", header: "Win Rate" },
-    { key: "total_trades", header: "Trades" },
-    { key: "sharpe_ratio", header: "Sharpe" },
-    { key: "max_drawdown", header: "Max DD" },
+    { key: "capital_summary", header: "Capital / Equity / PnL" },
+    { key: "stats_summary", header: "Trades / Win Rate / Max DD" },
     { key: "status", header: "Status" },
     { key: "actions", header: "Actions" }
   ];
@@ -151,33 +169,145 @@ function SimulationPageContent() {
     }
     
     if (cellId.endsWith(':created_at')) {
-      return value ? new Date(value).toLocaleString() : 'N/A';
+      if (!value) return 'N/A';
+      const d = new Date(value);
+      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      const day = d.getDate().toString().padStart(2, '0');
+      const month = months[d.getMonth()];
+      const year = d.getFullYear().toString().slice(-2);
+      const time = d.toTimeString().split(' ')[0];
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', lineHeight: '1.2' }}>
+          <span>{`${day} ${month} ${year}`}</span>
+          <span style={{ color: '#a8a8a8', fontSize: '0.9em' }}>{time}</span>
+        </div>
+      );
     }
     
-    if (cellId.endsWith(':initial_capital') || cellId.endsWith(':final_equity')) {
-      return value !== null ? `$${value.toLocaleString()}` : '-';
+    if (cellId.endsWith(':capital_summary')) {
+      const rowId = cellId.split(':')[0];
+      const run = runs.find(r => String(r.id) === String(rowId));
+      if (!run) return '-';
+      
+      const initialCapital = run.initial_capital;
+      const finalEquity = run.final_equity;
+      const totalPnL = run.total_pnl;
+
+      const pnlPct = (initialCapital && totalPnL !== undefined && totalPnL !== null) 
+        ? ((totalPnL / initialCapital) * 100).toFixed(2) 
+        : null;
+
+      const pnlColor = totalPnL >= 0 ? '#24a148' : '#fa4d56';
+      const pnlSign = totalPnL >= 0 ? '+' : '';
+
+      const formatCurrency = (val: any, showSign = false) => {
+        if (val === undefined || val === null) return '-';
+        const isNegative = val < 0;
+        const absVal = Math.abs(val);
+        const formatted = absVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        if (showSign) {
+          return `${isNegative ? '-' : '+'}$${formatted}`;
+        }
+        return `${isNegative ? '-' : ''}$${formatted}`;
+      };
+
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', lineHeight: '1.2' }}>
+          <div>
+            <span style={{ color: '#a8a8a8' }}>Cap: </span>
+            <span>{formatCurrency(initialCapital)}</span>
+          </div>
+          <div>
+            <span style={{ color: '#a8a8a8' }}>Eq: </span>
+            <span>{formatCurrency(finalEquity)}</span>
+          </div>
+          {totalPnL !== undefined && totalPnL !== null ? (
+            <div style={{ color: pnlColor, fontWeight: 'bold' }}>
+              <span>PnL: {formatCurrency(totalPnL, true)}</span>
+              {pnlPct !== null && <span style={{ fontSize: '0.9em', marginLeft: '4px' }}>({pnlSign}{pnlPct}%)</span>}
+            </div>
+          ) : (
+            <div><span style={{ color: '#a8a8a8' }}>PnL: </span><span>-</span></div>
+          )}
+        </div>
+      );
     }
     
-    if (cellId.endsWith(':total_pnl')) {
-      if (value === null) return '-';
-      const color = value >= 0 ? '#24a148' : '#fa4d56';
-      return <span style={{ color, fontWeight: 'bold' }}>{value >= 0 ? '+' : ''}${value.toLocaleString()}</span>;
+    if (cellId.endsWith(':stats_summary')) {
+      const rowId = cellId.split(':')[0];
+      const run = runs.find(r => String(r.id) === String(rowId));
+      if (!run) return '-';
+      
+      const totalTrades = run.total_trades;
+      const winRate = run.win_rate;
+      const maxDrawdown = run.max_drawdown;
+
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', lineHeight: '1.2' }}>
+          <div>
+            <span style={{ color: '#a8a8a8' }}>Trades: </span>
+            <span>{totalTrades !== undefined && totalTrades !== null ? totalTrades : '-'}</span>
+          </div>
+          <div>
+            <span style={{ color: '#a8a8a8' }}>Win Rate: </span>
+            <span>{winRate !== undefined && winRate !== null ? `${(winRate * 100).toFixed(1)}%` : '-'}</span>
+          </div>
+          <div>
+            <span style={{ color: '#a8a8a8' }}>Max DD: </span>
+            <span style={{ color: maxDrawdown ? '#fa4d56' : 'inherit' }}>
+              {maxDrawdown !== undefined && maxDrawdown !== null ? `${(maxDrawdown * 100).toFixed(1)}%` : '-'}
+            </span>
+          </div>
+        </div>
+      );
     }
     
-    if (cellId.endsWith(':win_rate') || cellId.endsWith(':max_drawdown')) {
-      return value !== null ? `${(value * 100).toFixed(1)}%` : '-';
-    }
-    
-    if (cellId.endsWith(':sharpe_ratio')) {
-      return value !== null ? value.toFixed(2) : '-';
+    if (cellId.endsWith(':status')) {
+      const statusUpper = value ? String(value).toUpperCase() : '';
+      if (statusUpper === "COMPLETED" || statusUpper === "SUCCESS" || statusUpper === "DONE") {
+        return (
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 'bold', fontSize: '11px' }}>
+            <svg width="12" height="12" viewBox="0 0 32 32" style={{ fill: '#24a148', flexShrink: 0 }}>
+              <path d="M14 21.414l-5.707-5.707-1.414 1.414 7.121 7.121 12-12-1.414-1.414z" />
+            </svg>
+            <span style={{ color: '#ffffff', whiteSpace: 'nowrap' }}>Completed</span>
+          </div>
+        );
+      }
+      if (statusUpper === "RUNNING" || statusUpper === "PENDING" || statusUpper === "STARTED") {
+        return (
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 'bold', fontSize: '11px' }}>
+            <svg width="12" height="12" viewBox="0 0 32 32" style={{ fill: '#11a3c6', flexShrink: 0 }}>
+              <path d="M16 4C9.383 4 4 9.383 4 16s5.383 12 12 12 12-5.383 12-12S22.617 4 16 4zm0 2c5.523 0 10 4.477 10 10s-4.477 10-10 10S6 21.523 6 16 10.477 6 16 6zm-1 3v8h6v-2h-4v-6h-2z" />
+            </svg>
+            <span style={{ color: '#11a3c6', whiteSpace: 'nowrap' }}>{statusUpper === 'RUNNING' ? 'Running' : 'Pending'}</span>
+          </div>
+        );
+      }
+      if (statusUpper === "FAILED" || statusUpper === "ERROR") {
+        return (
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 'bold', fontSize: '11px' }}>
+            <svg width="12" height="12" viewBox="0 0 32 32" style={{ fill: '#fa4d56', flexShrink: 0 }}>
+              <circle cx="16" cy="16" r="8" />
+            </svg>
+            <span style={{ color: '#fa4d56', whiteSpace: 'nowrap' }}>Failed</span>
+          </div>
+        );
+      }
+      // Fallback
+      const readableValue = value ? String(value).split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ') : 'Unknown';
+      return (
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 'bold', fontSize: '11px' }}>
+          <svg width="12" height="12" viewBox="0 0 32 32" style={{ fill: '#6f6f6f', flexShrink: 0 }}>
+            <circle cx="16" cy="16" r="8" />
+          </svg>
+          <span style={{ color: '#a8a8a8', whiteSpace: 'nowrap' }}>{readableValue}</span>
+        </div>
+      );
     }
 
     return value;
   };
-  
-  const [runs, setRuns] = useState<any[]>([]);
-  const [selectedRunId, setSelectedRunId] = useState<string>(runIdParam || '');
-  const [activeRunData, setActiveRunData] = useState<any>(null);
   
   // Compare State
   const [selectedCompareRunIds, setSelectedCompareRunIds] = useState<string[]>([]);
@@ -258,9 +388,9 @@ function SimulationPageContent() {
       })
       .catch(console.error);
       
-    fetch('http://127.0.0.1:8000/api/simulation/runs')
+    fetch('http://127.0.0.1:8000/api/simulation/runs?limit=1000')
       .then(res => res.json())
-      .then(data => { if (Array.isArray(data)) setRuns(data); })
+      .then(data => { handleSetRuns(data); })
       .catch(console.error);
       
     fetch('http://127.0.0.1:8000/api/configurations')
@@ -424,9 +554,9 @@ function SimulationPageContent() {
         });
         
         // Refresh runs list to include the new run (which will be in RUNNING status)
-        fetch('http://127.0.0.1:8000/api/simulation/runs')
+        fetch('http://127.0.0.1:8000/api/simulation/runs?limit=1000')
           .then(res => res.json())
-          .then(r => { if (Array.isArray(r)) setRuns(r); });
+          .then(r => { handleSetRuns(r); });
       } else {
         setNotification({ kind: "error", title: "Launch Failed", subtitle: data.detail || 'Unknown error' });
       }
@@ -822,10 +952,10 @@ function SimulationPageContent() {
                       renderIcon={Renew}
                       onClick={async () => {
                         try {
-                          const res = await fetch('http://127.0.0.1:8000/api/simulation/runs');
+                          const res = await fetch('http://127.0.0.1:8000/api/simulation/runs?limit=1000');
                           if (res.ok) {
                             const data = await res.json();
-                            if (Array.isArray(data)) setRuns(data);
+                            handleSetRuns(data);
                           }
                           if (selectedRunId) {
                             const detailRes = await fetch(`http://127.0.0.1:8000/api/simulation/runs/${selectedRunId}`);
@@ -990,7 +1120,15 @@ function SimulationPageContent() {
                     <Tile style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                       <h4 style={{ marginBottom: '1rem' }}>Regime Performance</h4>
                       <div style={{ flex: 1 }}>
-                        <RegimeBreakdown regimeStats={activeRunData.metrics_report?.regime_breakdown || {}} />
+                        <RegimeBreakdown 
+                          regimeStats={activeRunData.metrics_report?.regime_breakdown || {}} 
+                          models={{
+                            TREND_BULL: activeRunData.config?.models?.bull_trend || 'NONE',
+                            TREND_BEAR: activeRunData.config?.models?.bear_trend || 'NONE',
+                            MEAN_REVERTING: activeRunData.config?.models?.mean_reverting || 'NONE',
+                            VOLATILE_CHOP: 'NONE'
+                          }}
+                        />
                       </div>
                     </Tile>
                   </div>
@@ -1035,8 +1173,9 @@ function SimulationPageContent() {
                     id="compare-multiselect"
                     label="Select runs to compare"
                     titleText="Simulation Runs"
-                    items={runs.filter(r => r.status === 'COMPLETED').map(r => ({ id: r.id, text: `${r.name} (${new Date(r.created_at).toLocaleDateString()})` }))}
-                    itemToString={(item: any) => (item ? item.text : '')}
+                    items={runs.filter(r => r.status === 'COMPLETED')}
+                    itemToString={(item: any) => (item ? `${item.name} (${new Date(item.created_at).toLocaleDateString()})` : '')}
+                    sortItems={(items) => [...items].sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())}
                     onChange={({ selectedItems }) => setSelectedCompareRunIds(selectedItems ? selectedItems.map((item: any) => item.id) : [])}
                   />
                 </div>
@@ -1184,10 +1323,10 @@ function SimulationPageContent() {
                   initialData={runs}
                   formatCell={formatSimCell}
                   onReload={async () => {
-                    const res = await fetch('http://127.0.0.1:8000/api/simulation/runs');
+                    const res = await fetch('http://127.0.0.1:8000/api/simulation/runs?limit=1000');
                     if (res.ok) {
                       const data = await res.json();
-                      if (Array.isArray(data)) setRuns(data);
+                      handleSetRuns(data);
                     }
                   }}
                 />
@@ -1197,10 +1336,10 @@ function SimulationPageContent() {
                   refreshTrigger={refreshJobsTrigger}
                   openJobDetails={openJobDetails}
                   onJobChange={async () => {
-                    const res = await fetch('http://127.0.0.1:8000/api/simulation/runs');
+                    const res = await fetch('http://127.0.0.1:8000/api/simulation/runs?limit=1000');
                     if (res.ok) {
                       const data = await res.json();
-                      if (Array.isArray(data)) setRuns(data);
+                      handleSetRuns(data);
                     }
                   }}
                 />
@@ -1298,12 +1437,20 @@ function SimulationPageContent() {
     <Modal
       open={confirmModalConfig.isOpen}
       modalHeading={confirmModalConfig.title}
-      primaryButtonText="Confirm"
+      primaryButtonText={confirmLoading ? "Processing..." : "Confirm"}
       secondaryButtonText="Cancel"
-      onRequestClose={() => setConfirmModalConfig(prev => ({ ...prev, isOpen: false }))}
-      onRequestSubmit={confirmModalConfig.onConfirm}
+      primaryButtonDisabled={confirmLoading}
+      onRequestClose={() => !confirmLoading && setConfirmModalConfig(prev => ({ ...prev, isOpen: false }))}
+      onRequestSubmit={handleConfirmSubmit}
     >
-      <p style={{ padding: '1rem 0', fontSize: '0.875rem' }}>{confirmModalConfig.body}</p>
+      {confirmLoading ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem 0' }}>
+          <Loading withOverlay={false} small />
+          <span style={{ fontSize: '0.875rem', color: '#a8a8a8' }}>Please wait...</span>
+        </div>
+      ) : (
+        <p style={{ padding: '1rem 0', fontSize: '0.875rem' }}>{confirmModalConfig.body}</p>
+      )}
     </Modal>
     </>
   );

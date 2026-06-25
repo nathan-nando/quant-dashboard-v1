@@ -95,9 +95,8 @@ export default function TradeHistoryTable({
     { key: "status", header: "Status" },
     { key: "formatted_entry_time", header: "Time (Entry / Exit)" },
     { key: "formatted_entry_price", header: "Price (Entry/Exit) / Lots" },
-    { key: "formatted_pnl_money", header: "PnL" },
+    { key: "formatted_pnl_money", header: "PnL / Exit Reason" },
     { key: "model_version", header: "Model / Conf" },
-    { key: "close_reason", header: "Reason" },
   ];
 
   const formatCell = (cellId: string, value: any) => {
@@ -113,16 +112,6 @@ export default function TradeHistoryTable({
           <span style={{ color, whiteSpace: 'nowrap' }}>{label}</span>
         </div>
       );
-    }
-    if (cellId.endsWith(":close_reason")) {
-      if (!value || value === '-') return '-';
-      if (value === "SL_HIT") return <span style={{ color: '#fa4d56', whiteSpace: 'nowrap', fontWeight: 'bold', fontSize: '11px' }}>SL Hit</span>;
-      if (value === "TP_HIT") return <span style={{ color: '#24a148', whiteSpace: 'nowrap', fontWeight: 'bold', fontSize: '11px' }}>TP Hit</span>;
-      if (value === "SIGNAL_REVERSE") return <span style={{ whiteSpace: 'nowrap', fontWeight: 'bold', fontSize: '11px' }}>Signal Reverse</span>;
-      if (value === "END_OF_DATA") return <span style={{ whiteSpace: 'nowrap', fontWeight: 'bold', fontSize: '11px' }}>End of Data</span>;
-      if (value === "MANUAL") return <span style={{ whiteSpace: 'nowrap', fontWeight: 'bold', fontSize: '11px' }}>Manual</span>;
-      const readable = value.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
-      return <span style={{ whiteSpace: 'nowrap', fontWeight: 'bold', fontSize: '11px' }}>{readable}</span>;
     }
     if (cellId.endsWith(":direction")) {
       const isBuy = value === "BUY";
@@ -210,10 +199,46 @@ export default function TradeHistoryTable({
       );
     }
     if (cellId.endsWith(":formatted_pnl_money")) {
-      if (value === '-') return <span style={{ color: '#c6c6c6' }}>-</span>;
-      const isProfit = value.includes("-") === false && value !== "$0.00";
-      const pnlColor = isProfit ? "#24a148" : (value.includes("-") ? "#da1e28" : "#c6c6c6");
-      return <span style={{ color: pnlColor, fontWeight: 'bold' }}>{value}</span>;
+      const rowId = cellId.split(':')[0];
+      const trade = trades.find((t, idx) => (t.trade_id || `trade-${idx}`) === rowId);
+      if (!trade) return "-";
+      
+      const pnlMoney = trade.pnl_money;
+      const closeReason = trade.close_reason;
+      
+      let pnlDisplay = "-";
+      let pnlColor = "#c6c6c6";
+      
+      if (pnlMoney != null) {
+        pnlDisplay = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(pnlMoney);
+        const isProfit = pnlMoney > 0;
+        pnlColor = isProfit ? "#24a148" : (pnlMoney < 0 ? "#da1e28" : "#c6c6c6");
+      }
+      
+      const formatReason = (reason: string) => {
+        if (!reason || reason === '-') return null;
+        if (reason === "SL_HIT") return <span style={{ color: '#fa4d56', fontWeight: 'bold', fontSize: '10px', whiteSpace: 'nowrap' }}>SL Hit</span>;
+        if (reason === "TP_HIT") return <span style={{ color: '#24a148', fontWeight: 'bold', fontSize: '10px', whiteSpace: 'nowrap' }}>TP Hit</span>;
+        if (reason === "SIGNAL_REVERSE") return <span style={{ fontWeight: 'bold', fontSize: '10px', color: '#a8a8a8', whiteSpace: 'nowrap' }}>Signal Reverse</span>;
+        if (reason === "END_OF_DATA") return <span style={{ fontWeight: 'bold', fontSize: '10px', color: '#a8a8a8', whiteSpace: 'nowrap' }}>End of Data</span>;
+        if (reason === "MANUAL") return <span style={{ fontWeight: 'bold', fontSize: '10px', color: '#a8a8a8', whiteSpace: 'nowrap' }}>Manual</span>;
+        
+        const readable = reason.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+        return <span style={{ fontWeight: 'bold', fontSize: '10px', color: '#a8a8a8', whiteSpace: 'nowrap' }}>{readable}</span>;
+      };
+      
+      const reasonBadge = formatReason(closeReason);
+
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', lineHeight: '1.2' }}>
+          <span style={{ color: pnlColor, fontWeight: 'bold' }}>{pnlDisplay}</span>
+          {reasonBadge && (
+            <div style={{ marginTop: '2px' }}>
+              {reasonBadge}
+            </div>
+          )}
+        </div>
+      );
     }
     if (cellId.endsWith(":model_version")) {
       const rowId = cellId.split(':')[0];

@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Activity, Power, MachineLearningModel, DataBase } from '@carbon/icons-react';
-import { Toggle, Modal } from '@carbon/react';
+import { Toggle, Modal, Loading } from '@carbon/react';
 import { useGlobalState } from '@/contexts/GlobalStateContext';
 
 const getRegimeFormat = (regime: string) => {
@@ -20,13 +20,25 @@ export default function HeaderMetrics() {
     isOpen: boolean;
     title: string;
     body: string;
-    onConfirm: () => void;
+    onConfirm: () => void | Promise<void>;
   }>({
     isOpen: false,
     title: '',
     body: '',
     onConfirm: () => {}
   });
+  const [confirmLoading, setConfirmLoading] = useState(false);
+
+  const handleConfirmSubmit = async () => {
+    setConfirmLoading(true);
+    try {
+      await modalConfig.onConfirm();
+    } catch (e) {
+      console.error("Confirmation action failed:", e);
+    } finally {
+      setConfirmLoading(false);
+    }
+  };
 
   if (!state) return null;
 
@@ -151,12 +163,20 @@ export default function HeaderMetrics() {
       <Modal
         open={modalConfig.isOpen}
         modalHeading={modalConfig.title}
-        primaryButtonText="Confirm"
+        primaryButtonText={confirmLoading ? "Processing..." : "Confirm"}
         secondaryButtonText="Cancel"
-        onRequestClose={() => setModalConfig(prev => ({ ...prev, isOpen: false }))}
-        onRequestSubmit={modalConfig.onConfirm}
+        primaryButtonDisabled={confirmLoading}
+        onRequestClose={() => !confirmLoading && setModalConfig(prev => ({ ...prev, isOpen: false }))}
+        onRequestSubmit={handleConfirmSubmit}
       >
-        <p style={{ padding: '1rem 0', fontSize: '0.875rem' }}>{modalConfig.body}</p>
+        {confirmLoading ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem 0' }}>
+            <Loading withOverlay={false} small />
+            <span style={{ fontSize: '0.875rem', color: '#a8a8a8' }}>Please wait...</span>
+          </div>
+        ) : (
+          <p style={{ padding: '1rem 0', fontSize: '0.875rem' }}>{modalConfig.body}</p>
+        )}
       </Modal>
     </>
   );

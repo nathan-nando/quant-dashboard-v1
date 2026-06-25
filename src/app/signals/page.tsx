@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import GlobalTable from "../../components/GlobalTable";
 import GlobalDetailTable from "../../components/GlobalDetailTable";
 import { useGlobalState } from "../../contexts/GlobalStateContext";
+import DashboardPanel from "../../components/DashboardPanel";
 
 const CandlestickChart = dynamic(() => import("../../components/CandlestickChart"), { ssr: false });
 
@@ -189,89 +190,128 @@ export default function SignalsPage() {
           {/* Chart */}
           <div style={{
             flex: '0 0 50%',
-            background: '#262626',
-            border: '1px solid #393939',
-            borderRadius: 0,
             position: 'relative',
-            overflow: 'hidden',
           }}>
-            {/* Legend */}
-            <div style={{
-              position: 'absolute', top: 10, right: 16, zIndex: 20,
-              display: 'flex', gap: '16px', alignItems: 'center', fontSize: '11px', color: '#a8a8a8'
-            }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: '#24a148' }}/>
-                BUY
-              </span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: '#fa4d56' }}/>
-                SELL
-              </span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: '#e8e8e8' }}/>
-                Neutral
-              </span>
-            </div>
-            <CandlestickChart symbol="XAUUSD" signals={signals} />
+            <DashboardPanel 
+              title="XAUUSD" 
+              tooltipInfo="Interactive candlestick chart with technical indicators."
+            >
+              <div style={{ height: "100%", overflow: "hidden", position: "absolute", top: 0, left: 0, right: 0, bottom: 0, background: '#262626' }}>
+                {/* Legend */}
+                <div style={{
+                  position: 'absolute', top: 10, right: 16, zIndex: 20,
+                  display: 'flex', gap: '10px', alignItems: 'center', fontSize: '9px', color: '#a8a8a8'
+                }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                    <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#24a148' }}/>
+                    BUY
+                  </span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                    <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#fa4d56' }}/>
+                    SELL
+                  </span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                    <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#e8e8e8' }}/>
+                    Neutral
+                  </span>
+                </div>
+                <CandlestickChart symbol="XAUUSD" signals={signals} />
+              </div>
+            </DashboardPanel>
           </div>
 
-      {/* Table */}
-          <div style={{ flex: '1 1 0', overflow: 'auto', background: '#262626', border: '1px solid #393939', borderRadius: 0 }}>
-            <GlobalTable 
+          {/* Table */}
+          <div style={{ flex: '1 1 0', position: 'relative' }}>
+            <DashboardPanel 
               title="Signal History"
-              headers={headers}
-              fetchUrl="http://127.0.0.1:8000/api/dashboard/signals"
-              onViewDetails={(id) => setSelectedItem({ id: Number(id), type: 'signal' })}
-              formatCell={formatCell}
-              onPageDataChange={setSignals}
-              refreshTrigger={liveSignals.length > 0 ? liveSignals[0].id : 0}
-            />
+              tooltipInfo="List of generated strategy signals and their details."
+              onExportCsv={() => {
+                const headers = ["Time", "Signal", "Price", "SL", "TP", "R:R", "Conf", "Regime", "Model", "Status"];
+                const rows = signals.map(s => [
+                  new Date(s.timestamp).toLocaleString(),
+                  s.direction,
+                  s.entry_price || '',
+                  s.sl_price || '',
+                  s.tp_price || '',
+                  s.rr_ratio || '',
+                  (s.confidence * 100).toFixed(2) + '%',
+                  s.regime,
+                  s.model || '',
+                  s.status
+                ].join(","));
+                
+                const csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n" + rows.join("\n");
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", `signal_history_${new Date().toISOString().split('T')[0]}.csv`);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+              }}
+            >
+              <div style={{ height: "100%" }}>
+                <GlobalTable 
+                  title=""
+                  headers={headers}
+                  fetchUrl="http://127.0.0.1:8000/api/dashboard/signals"
+                  onViewDetails={(id) => setSelectedItem({ id: Number(id), type: 'signal' })}
+                  formatCell={formatCell}
+                  onPageDataChange={setSignals}
+                  refreshTrigger={liveSignals.length > 0 ? liveSignals[0].id : 0}
+                />
+              </div>
+            </DashboardPanel>
           </div>
 
         </div>
       </Column>
 
-      <Column lg={16} md={8} sm={4} style={{ marginTop: '0.2rem', paddingBottom: '2rem' }}>
-        <div style={{ background: '#262626', border: '1px solid #393939', borderRadius: 0 }}>
-          <GlobalTable 
-            title="Feature Snapshots"
-            headers={[
-              { key: "timestamp", header: "Time" },
-              { key: "symbol", header: "Symbol" },
-              { key: "timeframe", header: "TF" },
-              { key: "regime", header: "Regime" },
-              { key: "edge_status", header: "Edge Status" },
-              { key: "remarks", header: "Remarks" },
-              { key: "edge_psi", header: "PSI" },
-            ]}
-            fetchUrl="http://127.0.0.1:8000/api/dashboard/feature-snapshots"
-            onViewDetails={(id) => setSelectedItem({ id: Number(id), type: 'feature_snapshot' })}
-            formatCell={(cellId, value) => {
-              const col = cellId.split('__')[1] || cellId.split(':').pop() || '';
-              if (col.includes("edge_status")) {
-                const isValid = value === "VALID";
-                const color = isValid ? "#24a148" : "#fa4d56";
-                return (
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 'bold', fontSize: '11px' }}>
-                    {isValid ? (
-                      <svg width="12" height="12" viewBox="0 0 32 32" style={{ fill: color, flexShrink: 0 }}>
-                        <path d="M14 21.414l-5.707-5.707-1.414 1.414 7.121 7.121 12-12-1.414-1.414z" />
-                      </svg>
-                    ) : (
-                      <svg width="12" height="12" viewBox="0 0 32 32" style={{ fill: color, flexShrink: 0 }}>
-                        <path d="M24 9.4L22.6 8 16 14.6 9.4 8 8 9.4 14.6 16 8 22.6 9.4 24 16 17.4 22.6 24 24 22.6 17.4 16z" />
-                      </svg>
-                    )}
-                    <span style={{ color, whiteSpace: 'nowrap' }}>{value}</span>
-                  </div>
-                );
-              }
-              return formatCell(cellId, value);
-            }}
-            refreshTrigger={liveSignals.length > 0 ? liveSignals[0].id : 0}
-          />
-        </div>
+      <Column lg={16} md={8} sm={4} style={{ marginTop: '0.2rem', paddingBottom: '2rem', position: 'relative' }}>
+        <DashboardPanel 
+          title="Feature Snapshots"
+          tooltipInfo="PSI and feature indicators value at generation time."
+        >
+          <div style={{ height: "100%" }}>
+            <GlobalTable 
+              title=""
+              headers={[
+                { key: "timestamp", header: "Time" },
+                { key: "symbol", header: "Symbol" },
+                { key: "timeframe", header: "TF" },
+                { key: "regime", header: "Regime" },
+                { key: "edge_status", header: "Edge Status" },
+                { key: "remarks", header: "Remarks" },
+                { key: "edge_psi", header: "PSI" },
+              ]}
+              fetchUrl="http://127.0.0.1:8000/api/dashboard/feature-snapshots"
+              onViewDetails={(id) => setSelectedItem({ id: Number(id), type: 'feature_snapshot' })}
+              formatCell={(cellId, value) => {
+                const col = cellId.split('__')[1] || cellId.split(':').pop() || '';
+                if (col.includes("edge_status")) {
+                  const isValid = value === "VALID";
+                  const color = isValid ? "#24a148" : "#fa4d56";
+                  return (
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 'bold', fontSize: '11px' }}>
+                      {isValid ? (
+                        <svg width="12" height="12" viewBox="0 0 32 32" style={{ fill: color, flexShrink: 0 }}>
+                          <path d="M14 21.414l-5.707-5.707-1.414 1.414 7.121 7.121 12-12-1.414-1.414z" />
+                        </svg>
+                      ) : (
+                        <svg width="12" height="12" viewBox="0 0 32 32" style={{ fill: color, flexShrink: 0 }}>
+                          <path d="M24 9.4L22.6 8 16 14.6 9.4 8 8 9.4 14.6 16 8 22.6 9.4 24 16 17.4 22.6 24 24 22.6 17.4 16z" />
+                        </svg>
+                      )}
+                      <span style={{ color, whiteSpace: 'nowrap' }}>{value}</span>
+                    </div>
+                  );
+                }
+                return formatCell(cellId, value);
+              }}
+              refreshTrigger={liveSignals.length > 0 ? liveSignals[0].id : 0}
+            />
+          </div>
+        </DashboardPanel>
       </Column>
       
       <GlobalDetailTable 

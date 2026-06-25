@@ -1,6 +1,6 @@
 "use client";
 
-import { Grid, Column, Tile, Form, FormGroup, TextInput, Select, SelectItem, Button, Modal, Tabs, TabList, Tab, TabPanels, TabPanel, ProgressBar, NumberInput, CodeSnippet, ToastNotification, Toggle } from "@carbon/react";
+import { Grid, Column, Tile, Form, FormGroup, TextInput, Select, SelectItem, Button, Modal, Tabs, TabList, Tab, TabPanels, TabPanel, ProgressBar, NumberInput, CodeSnippet, ToastNotification, Toggle, Loading } from "@carbon/react";
 import { Add, Edit, TrashCan, Play, Save, View, ArrowUpRight, ArrowDownRight, Activity, Lightning, Information, Close, Fork, DataSet, MachineLearningModel } from "@carbon/icons-react";
 import { useState, useEffect, Suspense, useRef, useCallback } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
@@ -69,7 +69,7 @@ function ModelsContent() {
 
   const [isTrainModalOpen, setTrainModalOpen] = useState(false);
   const [trainRegime, setTrainRegime] = useState<string>("");
-  const [trainForm, setTrainForm] = useState({ algorithm: "XGBoost", model_name: "", optuna_trials: 10, skip_ingestion: true, dataset_id: "", use_meta_labeling: true });
+  const [trainForm, setTrainForm] = useState({ algorithm: "XGBoost", model_name: "", optuna_trials: 50, skip_ingestion: true, dataset_id: "", use_meta_labeling: false });
   const [showDatasetInfo, setShowDatasetInfo] = useState(false);
   
   const [notification, setNotification] = useState<{kind: "success" | "error" | "info", title: string, subtitle: string} | null>(null);
@@ -85,6 +85,18 @@ function ModelsContent() {
     body: '',
     onConfirm: () => {}
   });
+  const [confirmLoading, setConfirmLoading] = useState(false);
+
+  const handleConfirmSubmit = async () => {
+    setConfirmLoading(true);
+    try {
+      await confirmModalConfig.onConfirm();
+    } catch (e) {
+      console.error("Confirmation action failed:", e);
+    } finally {
+      setConfirmLoading(false);
+    }
+  };
 
   // Detail Modal
   const [detailModel, setDetailModel] = useState<any>(null);
@@ -291,7 +303,15 @@ function ModelsContent() {
 
   const openTrainModal = (regime: string) => {
     setTrainRegime(regime);
-    setTrainForm({ algorithm: "XGBoost", model_name: "", optuna_trials: 10, skip_ingestion: true, dataset_id: datasets.length > 0 ? datasets[0].id : "", use_meta_labeling: true });
+    const defaultDs = datasets.find(ds => ds.name?.toLowerCase().includes("default") || ds.file_name?.toLowerCase().includes("default")) || datasets[0];
+    setTrainForm({ 
+      algorithm: "XGBoost", 
+      model_name: "", 
+      optuna_trials: 50, 
+      skip_ingestion: true, 
+      dataset_id: defaultDs ? defaultDs.id : "", 
+      use_meta_labeling: false 
+    });
     setShowDatasetInfo(false);
     setTrainModalOpen(true);
   };
@@ -331,8 +351,7 @@ function ModelsContent() {
   const datasetHeaders = [
     { key: "name", header: "Dataset Name" },
     { key: "timeframe", header: "Timeframe" },
-    { key: "start_date", header: "Start Date" },
-    { key: "end_date", header: "End Date" },
+    { key: "date_range", header: "Date Range" },
     { key: "file_name", header: "File Name" },
     { key: "total_rows", header: "Total Rows" },
     { key: "status", header: "Status" },
@@ -407,18 +426,67 @@ function ModelsContent() {
         </div>
       );
     }
-    if (cellId.endsWith(':start_date') || cellId.endsWith(':end_date')) {
-      if (!value) return "-";
-      const dateStr = value.endsWith('Z') || value.includes('+') ? value : value + 'Z';
-      const d = new Date(dateStr);
-      if (isNaN(d.getTime())) return value;
+    if (cellId.endsWith(':date_range')) {
+      const rowId = cellId.split(':')[0];
+      const dataset = datasets.find(d => d.id === rowId);
+      if (!dataset) return "-";
       
-      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-      const day = d.getDate().toString().padStart(2, '0');
-      const month = months[d.getMonth()];
-      const year = d.getFullYear().toString().slice(-2);
+      const formatDate = (val: any) => {
+        if (!val) return "-";
+        const dateStr = val.endsWith('Z') || val.includes('+') ? val : val + 'Z';
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return val;
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const day = d.getDate().toString().padStart(2, '0');
+        const month = months[d.getMonth()];
+        const year = d.getFullYear().toString().slice(-2);
+        return `${day} ${month} ${year}`;
+      };
       
-      return `${day} ${month} ${year}`;
+      return `${formatDate(dataset.start_date)} - ${formatDate(dataset.end_date)}`;
+    }
+    if (cellId.endsWith(':status')) {
+      const statusUpper = value ? String(value).toUpperCase() : '';
+      if (statusUpper === "READY" || statusUpper === "COMPLETED" || statusUpper === "SUCCESS" || statusUpper === "DONE") {
+        return (
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 'bold', fontSize: '11px' }}>
+            <svg width="12" height="12" viewBox="0 0 32 32" style={{ fill: '#24a148', flexShrink: 0 }}>
+              <path d="M14 21.414l-5.707-5.707-1.414 1.414 7.121 7.121 12-12-1.414-1.414z" />
+            </svg>
+            <span style={{ color: '#ffffff', whiteSpace: 'nowrap' }}>{statusUpper === 'READY' ? 'Ready' : 'Completed'}</span>
+          </div>
+        );
+      }
+      if (statusUpper === "INGESTING" || statusUpper === "RUNNING" || statusUpper === "PENDING" || statusUpper === "STARTED" || statusUpper === "PROCESSING") {
+        return (
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 'bold', fontSize: '11px' }}>
+            <svg width="12" height="12" viewBox="0 0 32 32" style={{ fill: '#11a3c6', flexShrink: 0 }}>
+              <path d="M16 4C9.383 4 4 9.383 4 16s5.383 12 12 12 12-5.383 12-12S22.617 4 16 4zm0 2c5.523 0 10 4.477 10 10s-4.477 10-10 10S6 21.523 6 16 10.477 6 16 6zm-1 3v8h6v-2h-4v-6h-2z" />
+            </svg>
+            <span style={{ color: '#11a3c6', whiteSpace: 'nowrap' }}>{statusUpper === 'INGESTING' ? 'Ingesting' : 'Running'}</span>
+          </div>
+        );
+      }
+      if (statusUpper === "FAILED" || statusUpper === "ERROR") {
+        return (
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 'bold', fontSize: '11px' }}>
+            <svg width="12" height="12" viewBox="0 0 32 32" style={{ fill: '#fa4d56', flexShrink: 0 }}>
+              <circle cx="16" cy="16" r="8" />
+            </svg>
+            <span style={{ color: '#fa4d56', whiteSpace: 'nowrap' }}>Failed</span>
+          </div>
+        );
+      }
+      // Fallback
+      const readableValue = value ? String(value).split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ') : 'Unknown';
+      return (
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 'bold', fontSize: '11px' }}>
+          <svg width="12" height="12" viewBox="0 0 32 32" style={{ fill: '#6f6f6f', flexShrink: 0 }}>
+            <circle cx="16" cy="16" r="8" />
+          </svg>
+          <span style={{ color: '#a8a8a8', whiteSpace: 'nowrap' }}>{readableValue}</span>
+        </div>
+      );
     }
     return value;
   };
@@ -695,12 +763,20 @@ function ModelsContent() {
       <Modal
         open={confirmModalConfig.isOpen}
         modalHeading={confirmModalConfig.title}
-        primaryButtonText="Confirm"
+        primaryButtonText={confirmLoading ? "Processing..." : "Confirm"}
         secondaryButtonText="Cancel"
-        onRequestClose={() => setConfirmModalConfig(prev => ({ ...prev, isOpen: false }))}
-        onRequestSubmit={confirmModalConfig.onConfirm}
+        primaryButtonDisabled={confirmLoading}
+        onRequestClose={() => !confirmLoading && setConfirmModalConfig(prev => ({ ...prev, isOpen: false }))}
+        onRequestSubmit={handleConfirmSubmit}
       >
-        <p style={{ padding: '1rem 0', fontSize: '0.875rem' }}>{confirmModalConfig.body}</p>
+        {confirmLoading ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem 0' }}>
+            <Loading withOverlay={false} small />
+            <span style={{ fontSize: '0.875rem', color: '#a8a8a8' }}>Please wait...</span>
+          </div>
+        ) : (
+          <p style={{ padding: '1rem 0', fontSize: '0.875rem' }}>{confirmModalConfig.body}</p>
+        )}
       </Modal>
     </>
   );

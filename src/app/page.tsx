@@ -176,18 +176,18 @@ export default function Home() {
                {/* Legend */}
                <div style={{
                  position: 'absolute', top: 10, right: 16, zIndex: 20,
-                 display: 'flex', gap: '16px', alignItems: 'center', fontSize: '11px', color: '#a8a8a8'
+                 display: 'flex', gap: '10px', alignItems: 'center', fontSize: '9px', color: '#a8a8a8'
                }}>
-                 <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                   <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: '#24a148' }}/>
+                 <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                   <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#24a148' }}/>
                    BUY
                  </span>
-                 <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                   <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: '#fa4d56' }}/>
+                 <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                   <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#fa4d56' }}/>
                    SELL
                  </span>
-                 <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                   <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: '#e8e8e8' }}/>
+                 <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                   <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#e8e8e8' }}/>
                    Neutral
                  </span>
                </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { Grid, Column, Tabs, TabList, Tab, TabPanels, TabPanel, Tile, Form, FormGroup, TextInput, Select, SelectItem, Button, Toggle, Modal, ToastNotification } from "@carbon/react";
+import { Grid, Column, Tabs, TabList, Tab, TabPanels, TabPanel, Tile, Form, FormGroup, TextInput, Select, SelectItem, Button, Toggle, Modal, ToastNotification, Loading } from "@carbon/react";
 import { Add, Edit, TrashCan } from "@carbon/icons-react";
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
@@ -45,6 +45,18 @@ function SettingsContent() {
     body: '',
     onConfirm: () => {}
   });
+  const [confirmLoading, setConfirmLoading] = useState(false);
+
+  const handleConfirmSubmit = async () => {
+    setConfirmLoading(true);
+    try {
+      await confirmModalConfig.onConfirm();
+    } catch (e) {
+      console.error("Confirmation action failed:", e);
+    } finally {
+      setConfirmLoading(false);
+    }
+  };
   
     const fetchData = async () => {
     setIsLoadingData(true);
@@ -228,12 +240,20 @@ function SettingsContent() {
         <Modal
           open={confirmModalConfig.isOpen}
           modalHeading={confirmModalConfig.title}
-          primaryButtonText="Confirm"
+          primaryButtonText={confirmLoading ? "Processing..." : "Confirm"}
           secondaryButtonText="Cancel"
-          onRequestClose={() => setConfirmModalConfig(prev => ({ ...prev, isOpen: false }))}
-          onRequestSubmit={confirmModalConfig.onConfirm}
+          primaryButtonDisabled={confirmLoading}
+          onRequestClose={() => !confirmLoading && setConfirmModalConfig(prev => ({ ...prev, isOpen: false }))}
+          onRequestSubmit={handleConfirmSubmit}
         >
-          <p style={{ padding: '1rem 0', fontSize: '0.875rem' }}>{confirmModalConfig.body}</p>
+          {confirmLoading ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem 0' }}>
+              <Loading withOverlay={false} small />
+              <span style={{ fontSize: '0.875rem', color: '#a8a8a8' }}>Please wait...</span>
+            </div>
+          ) : (
+            <p style={{ padding: '1rem 0', fontSize: '0.875rem' }}>{confirmModalConfig.body}</p>
+          )}
         </Modal>
       </Grid>
     </>
