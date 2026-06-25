@@ -340,7 +340,7 @@ function SimulationPageContent() {
     },
     start_date: "2024-01-01",
     end_date: "2024-06-01",
-    initial_capital: 10000,
+    initial_capital: 1000,
     slippage_pips: 0.5,
     spread_pips: 2.0,
     commission_per_lot: 0.0,
@@ -1192,7 +1192,7 @@ function SimulationPageContent() {
                         runs={compareRunsData.map(r => ({
                           id: r.id,
                           name: r.name,
-                          initialCapital: r.config?.initial_capital || 10000,
+                          initialCapital: r.config?.initial_capital || 1000,
                           equityData: r.equity_curve || []
                         }))} 
                       />
@@ -1262,7 +1262,7 @@ function SimulationPageContent() {
                           <tr style={{ borderBottom: '1px solid #393939' }}>
                             <td style={{ padding: '1rem', fontWeight: 'bold', borderRight: '1px solid #393939' }}>Initial Capital</td>
                             {compareRunsData.map(r => (
-                              <td key={r.id} style={{ padding: '1rem' }}>${(r.config?.initial_capital || 10000).toLocaleString()}</td>
+                              <td key={r.id} style={{ padding: '1rem' }}>${(r.config?.initial_capital || 1000).toLocaleString()}</td>
                             ))}
                           </tr>
                           <tr style={{ borderBottom: '1px solid #393939' }}>
