@@ -8,17 +8,18 @@ import DashboardPanel from '@/components/DashboardPanel';
 import GlobalTable from '@/components/GlobalTable';
 import GlobalHealthWidget from '@/components/GlobalHealthWidget';
 import GlobalJobsTable from '@/components/GlobalJobsTable';
+import DriftMetricsWidget from '@/components/DriftMetricsWidget';
 import { API_BASE_URL } from '@/config/env';
 
 function MonitoringPageContent() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const currentTab = searchParams.get('tab') || 'logs';
+  const currentTab = searchParams.get('tab') || 'health';
 
   const navItems = [
-    { id: 'logs', label: 'Audit Logs', icon: Terminal },
     { id: 'health', label: 'Model Health', icon: Activity },
+    { id: 'logs', label: 'Audit Logs', icon: Terminal },
     { id: 'jobs', label: 'Background Jobs', icon: Task }
   ];
 
@@ -149,7 +150,10 @@ function MonitoringPageContent() {
 
               {/* Tab 2: Model Health */}
               {currentTab === 'health' && (
-                <GlobalHealthWidget models={models} />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                  <GlobalHealthWidget models={models} />
+                  <DriftMetricsWidget models={models} />
+                </div>
               )}
 
               {/* Tab 3: Background Jobs */}

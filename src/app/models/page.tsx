@@ -8,7 +8,6 @@ import GlobalTable from "../../components/GlobalTable";
 import GlobalDetailTable from "../../components/GlobalDetailTable";
 import GlobalJobsWidget from "../../components/GlobalJobsWidget";
 import GlobalJobsTable from "../../components/GlobalJobsTable";
-import GlobalHealthWidget from "../../components/GlobalHealthWidget";
 import { API_BASE_URL } from '@/config/env';
 
 const getRegimeFormat = (regime: string) => {
@@ -33,7 +32,6 @@ function ModelsContent() {
 
   const navItems = [
     { id: 'routes', label: 'Routes', icon: Fork },
-    { id: 'health', label: 'Health', icon: Activity },
     { id: 'train', label: 'Train', icon: Play },
     { id: 'registry', label: 'Registry', icon: MachineLearningModel },
     { id: 'datasets', label: 'Datasets', icon: DataSet }
@@ -584,11 +582,6 @@ function ModelsContent() {
                 </div>
                 <Button type="button" size="sm" renderIcon={Save} onClick={saveRouting} disabled={savingRouting || JSON.stringify(modelRouting) === JSON.stringify(initialModelRouting)}>{savingRouting ? "Saving..." : "Save"}</Button>
               </Form>
-            )}
-
-            {/* TAB 1.5: HEALTH */}
-            {currentTab === 'health' && (
-              <GlobalHealthWidget models={models} />
             )}
 
             {/* TAB 2: TRAIN */}

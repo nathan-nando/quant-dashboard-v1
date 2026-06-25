@@ -15,7 +15,7 @@ import {
   Modal,
   CodeSnippet
 } from '@carbon/react';
-import { Settings, Notification, Dashboard, SettingsAdjust, Activity, MachineLearningModel, Analytics, User, Terminal } from '@carbon/icons-react';
+import { Settings, Notification, Dashboard, SettingsAdjust, Activity, MachineLearningModel, Analytics, User, Terminal, Meter } from '@carbon/icons-react';
 import MarketClock from './MarketClock';
 import HeaderMetrics from './HeaderMetrics';
 import GlobalJobsWidget from './GlobalJobsWidget';
@@ -176,14 +176,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               >
                 QuantV1
               </HeaderName>
-
               {/* Group 1 — starts flush after brand, aligns with page content */}
               <HeaderNavigation aria-label="Main" style={{ border: 'none' }}>
                 {navItem('/', 'Dashboard', Dashboard)}
                 {navItem('/account', 'Account', User)}
                 {navItem('/signals', 'Signals', Activity)}
                 {navItem('/thresholds', 'Thresholds', SettingsAdjust)}
-                {navItem('/monitoring', 'Monitoring', Terminal)}
+                {navItem('/monitoring', 'Monitoring', Meter)}
               </HeaderNavigation>
 
               {/* Spacer — pushes Group 2 toward the right */}
