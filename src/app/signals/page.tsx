@@ -7,6 +7,7 @@ import GlobalTable from "../../components/GlobalTable";
 import GlobalDetailTable from "../../components/GlobalDetailTable";
 import { useGlobalState } from "../../contexts/GlobalStateContext";
 import DashboardPanel from "../../components/DashboardPanel";
+import { API_BASE_URL } from '@/config/env';
 
 const CandlestickChart = dynamic(() => import("../../components/CandlestickChart"), { ssr: false });
 
@@ -254,7 +255,7 @@ export default function SignalsPage() {
                 <GlobalTable 
                   title=""
                   headers={headers}
-                  fetchUrl="http://127.0.0.1:8000/api/dashboard/signals"
+                  fetchUrl={`${API_BASE_URL}/dashboard/signals`}
                   onViewDetails={(id) => setSelectedItem({ id: Number(id), type: 'signal' })}
                   formatCell={formatCell}
                   onPageDataChange={setSignals}
@@ -284,7 +285,7 @@ export default function SignalsPage() {
                 { key: "remarks", header: "Remarks" },
                 { key: "edge_psi", header: "PSI" },
               ]}
-              fetchUrl="http://127.0.0.1:8000/api/dashboard/feature-snapshots"
+              fetchUrl={`${API_BASE_URL}/dashboard/feature-snapshots`}
               onViewDetails={(id) => setSelectedItem({ id: Number(id), type: 'feature_snapshot' })}
               formatCell={(cellId, value) => {
                 const col = cellId.split('__')[1] || cellId.split(':').pop() || '';

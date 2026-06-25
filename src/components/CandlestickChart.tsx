@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createChart, ColorType, IChartApi, ISeriesApi, Time, CandlestickSeries, HistogramSeries, createSeriesMarkers } from "lightweight-charts";
 import { useGlobalState } from '../contexts/GlobalStateContext';
+import { API_BASE_URL } from '@/config/env';
 
 const TIMEFRAMES: Record<string, number> = {
   "M1": 60,
@@ -149,7 +150,7 @@ export default function CandlestickChart({
               }
 
               // Use 'limit' instead of time range to automatically skip weekend gaps in MT5
-              const url = `http://127.0.0.1:8000/api/dashboard/history?symbol=${symbol}&timeframe=${timeframe}&limit=${limit}`;
+              const url = `${API_BASE_URL}/dashboard/history?symbol=${symbol}&timeframe=${timeframe}&limit=${limit}`;
               
               const res = await fetch(url);
               if (!res.ok) throw new Error("Failed to fetch history");

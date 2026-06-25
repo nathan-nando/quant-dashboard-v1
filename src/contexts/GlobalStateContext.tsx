@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { ToastNotification } from "@carbon/react";
+import { API_BASE_URL } from '@/config/env';
 
 interface GlobalStateContextType {
   state: any;
@@ -42,7 +43,7 @@ export function GlobalStateProvider({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     // 1. Subscribe to lightning-fast SSE for ALL live state
-    const eventSource = new EventSource("http://127.0.0.1:8000/api/dashboard/stream");
+    const eventSource = new EventSource(`${API_BASE_URL}/dashboard/stream`);
     eventSource.onmessage = (event) => {
       try {
         const payload = JSON.parse(event.data);
@@ -86,7 +87,7 @@ export function GlobalStateProvider({ children }: { children: React.ReactNode })
     };
 
     // 2. Fetch Analytics snapshot
-    fetch("http://127.0.0.1:8000/api/dashboard/analytics")
+    fetch(`${API_BASE_URL}/dashboard/analytics`)
       .then(res => res.json())
       .then(data => setAnalytics(data))
       .catch(err => console.error("Failed to load analytics", err));

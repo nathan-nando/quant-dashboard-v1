@@ -17,6 +17,7 @@ import ShapPanel from '../components/ShapPanel';
 import RegimeTimeline from '../components/RegimeTimeline';
 import AttributionPanel from '../components/AttributionPanel';
 import { useGlobalState } from '../contexts/GlobalStateContext';
+import { API_BASE_URL } from '@/config/env';
 
 const getRegimeFormat = (regime: string) => {
   if (!regime) return { text: 'UNKNOWN', color: '#f4f4f4' };
@@ -35,7 +36,7 @@ export default function Home() {
   const [trades, setTrades] = useState<any[]>([]);
 
   const fetchTrades = () => {
-    fetch("http://127.0.0.1:8000/api/dashboard/trades")
+    fetch(`${API_BASE_URL}/dashboard/trades`)
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data.data)) setTrades(data.data);

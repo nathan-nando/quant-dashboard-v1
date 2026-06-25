@@ -44,6 +44,7 @@ import TradeHistoryTable from '../../components/TradeHistoryTable';
 import GlobalTable from '../../components/GlobalTable';
 import GlobalJobsTable from '../../components/GlobalJobsTable';
 import ComparisonChart from '../../components/ComparisonChart';
+import { API_BASE_URL } from '@/config/env';
 
 function SimulationPageContent() {
   const router = useRouter();
@@ -107,13 +108,13 @@ function SimulationPageContent() {
       body: "Are you sure you want to completely delete this simulation run? This action cannot be undone.",
       onConfirm: async () => {
         try {
-          const res = await fetch(`http://127.0.0.1:8000/api/simulation/runs/${runId}`, {
+          const res = await fetch(`${API_BASE_URL}/simulation/runs/${runId}`, {
             method: 'DELETE'
           });
           if (res.ok) {
             setNotification({ kind: "success", title: "Simulation Deleted", subtitle: "The simulation run has been deleted." });
             // Refresh list
-            const runsRes = await fetch('http://127.0.0.1:8000/api/simulation/runs?limit=1000');
+            const runsRes = await fetch(`${API_BASE_URL}/simulation/runs?limit=1000`);
             if (runsRes.ok) {
               const data = await runsRes.json();
               handleSetRuns(data);
@@ -365,7 +366,7 @@ function SimulationPageContent() {
   // Tab state synchronized via URL
 
   useEffect(() => {
-    fetch('http://127.0.0.1:8000/api/models')
+    fetch(`${API_BASE_URL}/models`)
       .then(res => res.json())
       .then(data => { 
         if (Array.isArray(data)) {
@@ -388,12 +389,12 @@ function SimulationPageContent() {
       })
       .catch(console.error);
       
-    fetch('http://127.0.0.1:8000/api/simulation/runs?limit=1000')
+    fetch(`${API_BASE_URL}/simulation/runs?limit=1000`)
       .then(res => res.json())
       .then(data => { handleSetRuns(data); })
       .catch(console.error);
       
-    fetch('http://127.0.0.1:8000/api/configurations')
+    fetch(`${API_BASE_URL}/configurations`)
       .then(res => res.json())
       .then(data => { 
         if (Array.isArray(data)) {
@@ -437,11 +438,11 @@ function SimulationPageContent() {
 
   useEffect(() => {
     if (selectedRunId) {
-      fetch(`http://127.0.0.1:8000/api/simulation/runs/${selectedRunId}`)
+      fetch(`${API_BASE_URL}/simulation/runs/${selectedRunId}`)
         .then(res => res.json())
         .then(data => {
           // Also fetch trades
-          fetch(`http://127.0.0.1:8000/api/simulation/runs/${selectedRunId}/trades?limit=10000`)
+          fetch(`${API_BASE_URL}/simulation/runs/${selectedRunId}/trades?limit=10000`)
             .then(res => res.json())
             .then(trades => {
               setActiveRunData({ ...data, tradeList: trades });
@@ -458,7 +459,7 @@ function SimulationPageContent() {
     }
 
     const fetchPromises = selectedCompareRunIds.map(id => 
-      fetch(`http://127.0.0.1:8000/api/simulation/runs/${id}`).then(res => res.json())
+      fetch(`${API_BASE_URL}/simulation/runs/${id}`).then(res => res.json())
     );
 
     Promise.all(fetchPromises)
@@ -491,7 +492,7 @@ function SimulationPageContent() {
     }
 
     try {
-      const res = await fetch('http://127.0.0.1:8000/api/simulation/dataset/reingest', {
+      const res = await fetch(`${API_BASE_URL}/simulation/dataset/reingest`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(ingestForm)
@@ -537,7 +538,7 @@ function SimulationPageContent() {
     }
 
     try {
-      const res = await fetch('http://127.0.0.1:8000/api/simulation/backtest', {
+      const res = await fetch(`${API_BASE_URL}/simulation/backtest`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -554,7 +555,7 @@ function SimulationPageContent() {
         });
         
         // Refresh runs list to include the new run (which will be in RUNNING status)
-        fetch('http://127.0.0.1:8000/api/simulation/runs?limit=1000')
+        fetch(`${API_BASE_URL}/simulation/runs?limit=1000`)
           .then(res => res.json())
           .then(r => { handleSetRuns(r); });
       } else {
@@ -952,16 +953,16 @@ function SimulationPageContent() {
                       renderIcon={Renew}
                       onClick={async () => {
                         try {
-                          const res = await fetch('http://127.0.0.1:8000/api/simulation/runs?limit=1000');
+                          const res = await fetch(`${API_BASE_URL}/simulation/runs?limit=1000`);
                           if (res.ok) {
                             const data = await res.json();
                             handleSetRuns(data);
                           }
                           if (selectedRunId) {
-                            const detailRes = await fetch(`http://127.0.0.1:8000/api/simulation/runs/${selectedRunId}`);
+                            const detailRes = await fetch(`${API_BASE_URL}/simulation/runs/${selectedRunId}`);
                             if (detailRes.ok) {
                               const detailData = await detailRes.json();
-                              const tradesRes = await fetch(`http://127.0.0.1:8000/api/simulation/runs/${selectedRunId}/trades?limit=10000`);
+                              const tradesRes = await fetch(`${API_BASE_URL}/simulation/runs/${selectedRunId}/trades?limit=10000`);
                               if (tradesRes.ok) {
                                 const tradesData = await tradesRes.json();
                                 setActiveRunData({ ...detailData, tradeList: tradesData });
@@ -1323,7 +1324,7 @@ function SimulationPageContent() {
                   initialData={runs}
                   formatCell={formatSimCell}
                   onReload={async () => {
-                    const res = await fetch('http://127.0.0.1:8000/api/simulation/runs?limit=1000');
+                    const res = await fetch(`${API_BASE_URL}/simulation/runs?limit=1000`);
                     if (res.ok) {
                       const data = await res.json();
                       handleSetRuns(data);
@@ -1336,7 +1337,7 @@ function SimulationPageContent() {
                   refreshTrigger={refreshJobsTrigger}
                   openJobDetails={openJobDetails}
                   onJobChange={async () => {
-                    const res = await fetch('http://127.0.0.1:8000/api/simulation/runs?limit=1000');
+                    const res = await fetch(`${API_BASE_URL}/simulation/runs?limit=1000`);
                     if (res.ok) {
                       const data = await res.json();
                       handleSetRuns(data);

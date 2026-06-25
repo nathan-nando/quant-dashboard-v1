@@ -7,6 +7,7 @@ import { Wallet, ChartLine, Settings, ArrowUpRight, ArrowDownRight, Information,
 import TradeHistoryTable from '@/components/TradeHistoryTable';
 import PnLChart from '@/components/PnLChart';
 import GlobalDetailTable from '@/components/GlobalDetailTable';
+import { API_BASE_URL } from '@/config/env';
 
 function AccountContent() {
   const searchParams = useSearchParams();
@@ -40,7 +41,7 @@ function AccountContent() {
   const switchAccount = async (accountId: number) => {
     try {
       setNotification({ kind: "info", title: "Switching Account", subtitle: "Connecting to MT5..." });
-      const res = await fetch(`http://127.0.0.1:8000/api/account/switch/${accountId}`, { method: 'POST' });
+      const res = await fetch(`${API_BASE_URL}/account/switch/${accountId}`, { method: 'POST' });
       const data = await res.json();
       if (res.ok) {
         setNotification({ kind: "success", title: "Success", subtitle: data.message });
@@ -69,7 +70,7 @@ function AccountContent() {
   };
 
   const fetchTrades = useCallback(() => {
-    return fetch('http://localhost:8000/api/dashboard/trades')
+    return fetch(`${API_BASE_URL}/dashboard/trades`)
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data.data)) setTrades(data.data);
@@ -83,7 +84,7 @@ function AccountContent() {
   useEffect(() => {
     setMounted(true);
     // Fetch Metadata once
-    fetch('http://localhost:8000/api/account/info')
+    fetch(`${API_BASE_URL}/account/info`)
       .then(res => res.json())
       .then(data => {
         if (data.status === 'success') {
@@ -93,7 +94,7 @@ function AccountContent() {
       .catch(console.error);
 
     // Fetch account list for dropdown
-    fetch('http://localhost:8000/api/account/list')
+    fetch(`${API_BASE_URL}/account/list`)
       .then(res => res.json())
       .then(data => {
          if (data.status === 'success') {
@@ -103,7 +104,7 @@ function AccountContent() {
       .catch(console.error);
 
     // Subscribe to Dedicated Account SSE Stream
-    const eventSource = new EventSource('http://localhost:8000/api/account/stream');
+    const eventSource = new EventSource(`${API_BASE_URL}/account/stream`);
     eventSource.onmessage = (event) => {
       try {
         const payload = JSON.parse(event.data);
@@ -124,7 +125,7 @@ function AccountContent() {
     fetchTrades();
 
     // Fetch Analytics
-    fetch('http://localhost:8000/api/dashboard/analytics')
+    fetch(`${API_BASE_URL}/dashboard/analytics`)
       .then(res => res.json())
       .then(data => {
         setAnalytics(data);

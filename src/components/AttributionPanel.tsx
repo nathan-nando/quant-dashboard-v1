@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Loading } from '@carbon/react';
+import { API_BASE_URL } from '@/config/env';
 
 interface AttributionData {
   attribution_waterfall: { category: string; value: number }[];
@@ -11,7 +12,7 @@ const AttributionPanel: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('http://127.0.0.1:8000/api/attribution/')
+    fetch(`${API_BASE_URL}/attribution/`)
       .then(res => res.json())
       .then(d => {
         setData(d);

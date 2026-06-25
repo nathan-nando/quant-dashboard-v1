@@ -261,3 +261,13 @@ main {
   }
 }
 
+/* Remove border-radius from Toggle switches */
+.cds--toggle__switch,
+.bx--toggle__switch,
+.cds--toggle__switch::before,
+.bx--toggle__switch::before,
+.cds--toggle__switch::after,
+.bx--toggle__switch::after {
+  border-radius: 0 !important;
+}
+

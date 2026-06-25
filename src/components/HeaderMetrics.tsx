@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Activity, Power, MachineLearningModel, DataBase } from '@carbon/icons-react';
 import { Toggle, Modal, Loading } from '@carbon/react';
 import { useGlobalState } from '@/contexts/GlobalStateContext';
+import { API_BASE_URL } from '@/config/env';
 
 const getRegimeFormat = (regime: string) => {
   if (!regime) return { text: 'UNKNOWN', color: '#f4f4f4' };
@@ -64,7 +65,7 @@ export default function HeaderMetrics() {
       body: `Are you sure you want to ${checked ? 'start' : 'stop'} the Trading Engine?`,
       onConfirm: async () => {
         try {
-          await fetch("http://127.0.0.1:8000/api/configurations/thresholds", {
+          await fetch(`${API_BASE_URL}/configurations/thresholds`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ engine_active: checked })
@@ -84,7 +85,7 @@ export default function HeaderMetrics() {
       body: `Are you sure you want to ${checked ? 'enable' : 'disable'} Auto Trade Execution?`,
       onConfirm: async () => {
         try {
-          await fetch("http://127.0.0.1:8000/api/configurations/thresholds", {
+          await fetch(`${API_BASE_URL}/configurations/thresholds`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ auto_execution_enabled: checked })

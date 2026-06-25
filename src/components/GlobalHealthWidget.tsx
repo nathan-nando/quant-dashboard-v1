@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { Tile, ProgressBar } from "@carbon/react";
 import { Activity, Warning, CheckmarkOutline, ErrorOutline } from "@carbon/icons-react";
+import { API_BASE_URL } from '@/config/env';
 
 export default function GlobalHealthWidget({ models }: { models: any[] }) {
   const [healthData, setHealthData] = useState<any[]>([]);
@@ -15,7 +16,7 @@ export default function GlobalHealthWidget({ models }: { models: any[] }) {
       for (const m of models) {
         if (m.status === "Active") {
           try {
-            const res = await fetch(`http://127.0.0.1:8000/api/models/${m.id}/health`);
+            const res = await fetch(`${API_BASE_URL}/models/${m.id}/health`);
             if (res.ok) {
               const h = await res.json();
               data.push(h);

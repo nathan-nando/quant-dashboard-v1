@@ -20,6 +20,7 @@ import MarketClock from './MarketClock';
 import HeaderMetrics from './HeaderMetrics';
 import GlobalJobsWidget from './GlobalJobsWidget';
 import { useGlobalState } from '@/contexts/GlobalStateContext';
+import { API_BASE_URL } from '@/config/env';
 
 const HeaderAny = Header as any;
 
@@ -59,7 +60,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     try {
       // Check if job is currently running
       let isRunning = false;
-      const activeRes = await fetch("http://127.0.0.1:8000/api/jobs/active");
+      const activeRes = await fetch(`${API_BASE_URL}/jobs/active`);
       if (activeRes.ok) {
         const activeData = await activeRes.json();
         isRunning = activeData.jobs.some((j: any) => j.task_id === jobId && j.status === "running");
@@ -67,7 +68,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
       if (isRunning) {
         let isFirstLine = true;
-        const eventSource = new EventSource(`http://127.0.0.1:8000/api/jobs/stream/${jobId}`);
+        const eventSource = new EventSource(`${API_BASE_URL}/jobs/stream/${jobId}`);
         detailEventSourceRef.current = eventSource;
 
         eventSource.onmessage = (event) => {
@@ -96,7 +97,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         };
       } else {
         // Fetch static logs
-        const res = await fetch(`http://127.0.0.1:8000/api/jobs/logs/${jobId}`);
+        const res = await fetch(`${API_BASE_URL}/jobs/logs/${jobId}`);
         if (res.ok) {
           const data = await res.json();
           setDetailLogs(data.logs || "No logs available.");

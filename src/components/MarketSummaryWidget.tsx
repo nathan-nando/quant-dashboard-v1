@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useGlobalState } from '../contexts/GlobalStateContext';
+import { API_BASE_URL } from '@/config/env';
 
 interface DailyStats {
   yesterday_close: number;
@@ -20,7 +21,7 @@ export default function MarketSummaryWidget() {
     let isMounted = true;
     const fetchStats = async () => {
       try {
-        const res = await fetch("http://127.0.0.1:8000/api/dashboard/daily_stats?symbol=XAUUSD");
+        const res = await fetch(`${API_BASE_URL}/dashboard/daily_stats?symbol=XAUUSD`);
         if (!res.ok) throw new Error("Failed to fetch daily stats");
         const data = await res.json();
         if (isMounted && data && data.today_open) {

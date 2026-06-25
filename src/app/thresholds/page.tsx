@@ -3,6 +3,7 @@
 import { Grid, Column, Tile, FormGroup, NumberInput, Button, Toggle, ToastNotification } from "@carbon/react";
 import { View, ViewOff, Save } from "@carbon/icons-react";
 import { useEffect, useState } from "react";
+import { API_BASE_URL } from '@/config/env';
 
 export default function ThresholdsPage() {
   const [config, setConfig] = useState<any>({
@@ -50,7 +51,7 @@ export default function ThresholdsPage() {
   const [toastMsg, setToastMsg] = useState<{ kind: any, title: string, subtitle: string, caption?: string } | null>(null);
 
   useEffect(() => {
-    fetch("http://127.0.0.1:8000/api/configurations/thresholds")
+    fetch(`${API_BASE_URL}/configurations/thresholds`)
       .then(res => res.json())
       .then(data => {
         setConfig(data);
@@ -79,7 +80,7 @@ export default function ThresholdsPage() {
         }
       }
 
-      const res = await fetch("http://127.0.0.1:8000/api/configurations/thresholds", {
+      const res = await fetch(`${API_BASE_URL}/configurations/thresholds`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { Button, ToastNotification, Modal } from "@carbon/react";
 import { Document, TrashCan, Play } from "@carbon/icons-react";
 import GlobalTable from "./GlobalTable";
+import { API_BASE_URL } from '@/config/env';
 
 interface GlobalJobsTableProps {
   target?: string;
@@ -39,8 +40,8 @@ export default function GlobalJobsTable({
   const fetchHistoryJobs = async () => {
     try {
       const url = target
-        ? `http://127.0.0.1:8000/api/jobs/history?target=${target}`
-        : `http://127.0.0.1:8000/api/jobs/history`;
+        ? `${API_BASE_URL}/jobs/history?target=${target}`
+        : `${API_BASE_URL}/jobs/history`;
       const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
@@ -62,7 +63,7 @@ export default function GlobalJobsTable({
       body: "Are you sure you want to completely delete this job record?",
       onConfirm: async () => {
         try {
-            const res = await fetch(`http://127.0.0.1:8000/api/jobs/${jobId}`, { method: 'DELETE' });
+            const res = await fetch(`${API_BASE_URL}/jobs/${jobId}`, { method: 'DELETE' });
             if(res.ok) {
                 setNotification({ kind: 'success', title: 'Job Deleted', subtitle: 'Job has been completely removed.' });
                 fetchHistoryJobs();
@@ -76,7 +77,7 @@ export default function GlobalJobsTable({
 
   const handleRetryJob = async (jobId: string) => {
     try {
-      const res = await fetch(`http://127.0.0.1:8000/api/jobs/retry/${jobId}`, { method: 'POST' });
+      const res = await fetch(`${API_BASE_URL}/jobs/retry/${jobId}`, { method: 'POST' });
       if(res.ok) {
         setNotification({ kind: 'success', title: 'Retry Started', subtitle: 'Job has been restarted.' });
         fetchHistoryJobs();

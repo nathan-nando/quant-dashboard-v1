@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { ProgressBar, Button, ToastNotification, Modal } from "@carbon/react";
 import { Document, ChevronUp, ChevronDown, View, Stop, TrashCan, Play } from "@carbon/icons-react";
 import { useGlobalState } from "../contexts/GlobalStateContext";
+import { API_BASE_URL } from '@/config/env';
 
 interface GlobalJobsWidgetProps {
   target?: string;
@@ -83,7 +84,7 @@ export default function GlobalJobsWidget({ target, onJobComplete, openJobDetails
 
   const handleRetryJob = async (jobId: string) => {
     try {
-      const res = await fetch(`http://127.0.0.1:8000/api/jobs/retry/${jobId}`, { method: 'POST' });
+      const res = await fetch(`${API_BASE_URL}/jobs/retry/${jobId}`, { method: 'POST' });
       if(res.ok) {
         setNotification({ kind: 'success', title: 'Retry Started', subtitle: 'Job has been restarted.' });
         if (onJobComplete) onJobComplete();
@@ -93,7 +94,7 @@ export default function GlobalJobsWidget({ target, onJobComplete, openJobDetails
 
   const handleCancelJob = async (jobId: string) => {
     try {
-        const res = await fetch(`http://127.0.0.1:8000/api/jobs/cancel/${jobId}`, { method: 'POST' });
+        const res = await fetch(`${API_BASE_URL}/jobs/cancel/${jobId}`, { method: 'POST' });
         if(res.ok) {
              setNotification({ kind: 'info', title: 'Job Cancelled', subtitle: 'Sent cancellation signal.' });
         }
@@ -107,7 +108,7 @@ export default function GlobalJobsWidget({ target, onJobComplete, openJobDetails
       body: "Are you sure you want to completely delete this job record?",
       onConfirm: async () => {
         try {
-            const res = await fetch(`http://127.0.0.1:8000/api/jobs/${jobId}`, { method: 'DELETE' });
+            const res = await fetch(`${API_BASE_URL}/jobs/${jobId}`, { method: 'DELETE' });
             if(res.ok) {
                  setNotification({ kind: 'success', title: 'Job Deleted', subtitle: 'Job has been completely removed.' });
                  if(onJobComplete) onJobComplete();

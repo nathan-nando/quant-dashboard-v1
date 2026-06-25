@@ -8,6 +8,7 @@ import DashboardPanel from '@/components/DashboardPanel';
 import GlobalTable from '@/components/GlobalTable';
 import GlobalHealthWidget from '@/components/GlobalHealthWidget';
 import GlobalJobsTable from '@/components/GlobalJobsTable';
+import { API_BASE_URL } from '@/config/env';
 
 function MonitoringPageContent() {
   const router = useRouter();
@@ -43,7 +44,7 @@ function MonitoringPageContent() {
   useEffect(() => {
     if (selectedLogId !== null) {
       setDetailLoading(true);
-      fetch(`http://127.0.0.1:8000/api/dashboard/audit-logs/${selectedLogId}`)
+      fetch(`${API_BASE_URL}/dashboard/audit-logs/${selectedLogId}`)
         .then(res => res.json())
         .then(data => {
           setLogDetail(data);
@@ -60,7 +61,7 @@ function MonitoringPageContent() {
 
   // Fetch models for health widget
   useEffect(() => {
-    fetch('http://127.0.0.1:8000/api/models')
+    fetch(`${API_BASE_URL}/models`)
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) {
@@ -139,7 +140,7 @@ function MonitoringPageContent() {
                   <GlobalTable 
                     title=""
                     headers={headers}
-                    fetchUrl="http://127.0.0.1:8000/api/dashboard/audit-logs"
+                    fetchUrl={`${API_BASE_URL}/dashboard/audit-logs`}
                     formatCell={formatCell}
                     onViewDetails={(id) => setSelectedLogId(Number(id))}
                   />

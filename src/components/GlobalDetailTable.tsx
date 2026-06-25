@@ -6,6 +6,7 @@ import {
   Loading
 } from '@carbon/react';
 import { ChevronDown, ChevronUp, Copy } from '@carbon/icons-react';
+import { API_BASE_URL } from '@/config/env';
 
 const CollapsibleJSON = ({ 
   displayValue, 
@@ -96,7 +97,7 @@ export default function GlobalDetailTable({ id, type = 'signal', dataObj, onClos
         const sigId = dataObj.signal_id;
         if (sigId) {
           setLoadingSignal(true);
-          fetch(`http://127.0.0.1:8000/api/dashboard/signals/${sigId}`)
+          fetch(`${API_BASE_URL}/dashboard/signals/${sigId}`)
             .then(res => {
               if (!res.ok) throw new Error("Failed to fetch associated signal");
               return res.json();
@@ -124,8 +125,8 @@ export default function GlobalDetailTable({ id, type = 'signal', dataObj, onClos
     setError(null);
     
     const url = type === 'feature_snapshot' 
-      ? `http://127.0.0.1:8000/api/dashboard/feature-snapshots/${id}`
-      : `http://127.0.0.1:8000/api/dashboard/signals/${id}`;
+      ? `${API_BASE_URL}/dashboard/feature-snapshots/${id}`
+      : `${API_BASE_URL}/dashboard/signals/${id}`;
     
     fetch(url)
       .then(res => {

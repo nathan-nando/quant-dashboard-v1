@@ -9,6 +9,7 @@ import GlobalDetailTable from "../../components/GlobalDetailTable";
 import GlobalJobsWidget from "../../components/GlobalJobsWidget";
 import GlobalJobsTable from "../../components/GlobalJobsTable";
 import GlobalHealthWidget from "../../components/GlobalHealthWidget";
+import { API_BASE_URL } from '@/config/env';
 
 const getRegimeFormat = (regime: string) => {
   if (!regime) return { text: 'UNKNOWN', color: '#f4f4f4' };
@@ -106,9 +107,9 @@ function ModelsContent() {
     setIsLoadingData(true);
     try {
       const [modRes, routeRes, dsRes] = await Promise.all([
-        fetch("http://127.0.0.1:8000/api/models"),
-        fetch("http://127.0.0.1:8000/api/configurations/model-routing"),
-        fetch("http://127.0.0.1:8000/api/datasets")
+        fetch(`${API_BASE_URL}/models`),
+        fetch(`${API_BASE_URL}/configurations/model-routing`),
+        fetch(`${API_BASE_URL}/datasets`)
       ]);
       const modData = await modRes.json();
       const routeData = await routeRes.json();
@@ -161,7 +162,7 @@ function ModelsContent() {
     try {
       const { id, ...rest } = modelForm;
       const payload = id ? { id, ...rest } : rest;
-      await fetch("http://127.0.0.1:8000/api/models", {
+      await fetch(`${API_BASE_URL}/models`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
@@ -178,7 +179,7 @@ function ModelsContent() {
       body: "Are you sure you want to delete this model?",
       onConfirm: async () => {
         try {
-          await fetch(`http://127.0.0.1:8000/api/models/${id}`, { method: "DELETE" });
+          await fetch(`${API_BASE_URL}/models/${id}`, { method: "DELETE" });
           fetchData();
           setNotification({ kind: "success", title: "Model Deleted", subtitle: "Model was successfully deleted." });
         } catch(e) { console.error(e); }
@@ -204,7 +205,7 @@ function ModelsContent() {
     console.log("Sending status update:", { modelId: model.id, newStatus, payload: updatedModel });
 
     try {
-      const res = await fetch("http://127.0.0.1:8000/api/models", {
+      const res = await fetch(`${API_BASE_URL}/models`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updatedModel)
@@ -250,7 +251,7 @@ function ModelsContent() {
         payload.end_date = datasetForm.end_date;
       }
       
-      const res = await fetch("http://127.0.0.1:8000/api/datasets", {
+      const res = await fetch(`${API_BASE_URL}/datasets`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
@@ -265,7 +266,7 @@ function ModelsContent() {
 
   const updateDataset = async () => {
     try {
-      await fetch(`http://127.0.0.1:8000/api/datasets/${datasetForm.id}`, {
+      await fetch(`${API_BASE_URL}/datasets/${datasetForm.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: datasetForm.name, description: datasetForm.description })
@@ -283,7 +284,7 @@ function ModelsContent() {
       body: "Are you sure you want to delete this dataset? Physical file will also be deleted.",
       onConfirm: async () => {
         try {
-          await fetch(`http://127.0.0.1:8000/api/datasets/${id}`, { method: "DELETE" });
+          await fetch(`${API_BASE_URL}/datasets/${id}`, { method: "DELETE" });
           fetchData();
           setNotification({ kind: "success", title: "Dataset Deleted", subtitle: "Dataset was successfully deleted." });
         } catch(e) { console.error(e); }
@@ -305,7 +306,7 @@ function ModelsContent() {
   const saveRouting = async () => {
     setSavingRouting(true);
     try {
-      await fetch("http://127.0.0.1:8000/api/configurations/model-routing", {
+      await fetch(`${API_BASE_URL}/configurations/model-routing`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(modelRouting)
@@ -339,7 +340,7 @@ function ModelsContent() {
     setTrainModalOpen(false);
     
     try {
-      const res = await fetch("http://127.0.0.1:8000/api/models/train", {
+      const res = await fetch(`${API_BASE_URL}/models/train`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ regime: trainRegime, ...trainForm })

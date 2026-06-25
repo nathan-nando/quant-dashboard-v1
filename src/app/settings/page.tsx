@@ -5,6 +5,7 @@ import { Add, Edit, TrashCan } from "@carbon/icons-react";
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import GlobalTable from "../../components/GlobalTable";
+import { API_BASE_URL } from '@/config/env';
 
 function SettingsContent() {
   const searchParams = useSearchParams();
@@ -61,7 +62,7 @@ function SettingsContent() {
     const fetchData = async () => {
     setIsLoadingData(true);
     try {
-      const confRes = await fetch("http://127.0.0.1:8000/api/configurations");
+      const confRes = await fetch(`${API_BASE_URL}/configurations`);
       const confData = await confRes.json();
       setConfigs(confData);
     } catch (err) {
@@ -89,7 +90,7 @@ function SettingsContent() {
 
   const saveConfig = async () => {
     try {
-      await fetch("http://127.0.0.1:8000/api/configurations", {
+      await fetch(`${API_BASE_URL}/configurations`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(configForm)
@@ -107,7 +108,7 @@ function SettingsContent() {
       body: "Are you sure you want to delete this configuration?",
       onConfirm: async () => {
         try {
-          await fetch(`http://127.0.0.1:8000/api/configurations/${id}`, { method: "DELETE" });
+          await fetch(`${API_BASE_URL}/configurations/${id}`, { method: "DELETE" });
           fetchData();
           setNotification({ kind: "success", title: "Configuration Deleted", subtitle: "Configuration was successfully deleted." });
         } catch(e) { console.error(e); }
