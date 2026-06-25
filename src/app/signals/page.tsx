@@ -32,6 +32,7 @@ export default function SignalsPage() {
     { key: "model", header: "Model / Conf" },
     { key: "regime", header: "Regime" },
     { key: "status", header: "Status" },
+    { key: "remarks", header: "Remarks" },
   ];
 
   const formatCell = (cellId: string, value: any) => {
@@ -91,6 +92,11 @@ export default function SignalsPage() {
           <span style={{ color: '#a8a8a8', whiteSpace: 'nowrap' }}>{readableValue}</span>
         </div>
       );
+    }
+    if (col.includes("remarks")) {
+      if (!value) return <span style={{ color: '#525252' }}>-</span>;
+      const isError = String(value).toLowerCase().includes("error") || String(value).toLowerCase().includes("rejected") || String(value).toLowerCase().includes("blocked") || String(value).toLowerCase().includes("exceeded");
+      return <span style={{ color: isError ? '#fa4d56' : '#f1c21b', fontSize: '12px' }}>{value}</span>;
     }
     if (col.includes("direction")) {
       const readable = value ? value.charAt(0).toUpperCase() + value.slice(1).toLowerCase() : '';
@@ -227,7 +233,7 @@ export default function SignalsPage() {
               title="Signal History"
               tooltipInfo="List of generated strategy signals and their details."
               onExportCsv={() => {
-                const headers = ["Time", "Signal", "Price", "SL", "TP", "R:R", "Conf", "Regime", "Model", "Status"];
+                const headers = ["Time", "Signal", "Price", "SL", "TP", "R:R", "Conf", "Regime", "Model", "Status", "Remarks"];
                 const rows = signals.map(s => [
                   new Date(s.timestamp).toLocaleString(),
                   s.direction,
@@ -238,8 +244,9 @@ export default function SignalsPage() {
                   (s.confidence * 100).toFixed(2) + '%',
                   s.regime,
                   s.model || '',
-                  s.status
-                ].join(","));
+                  s.status,
+                  s.remarks || ''
+                ].map(v => `"${v}"`).join(","));
                 
                 const csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n" + rows.join("\n");
                 const encodedUri = encodeURI(csvContent);

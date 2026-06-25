@@ -27,8 +27,10 @@ export default function ThresholdsPage() {
     meta_conf_mean: 0.50,
     adx_trend_threshold: 25,
     bb_width_volatility_threshold: 5.0,
-    sl_mult_trend: 1.5,
-    tp_mult_trend: 3.0,
+    sl_mult_bull: 1.5,
+    tp_mult_bull: 3.0,
+    sl_mult_bear: 1.5,
+    tp_mult_bear: 1.5,
     sl_mult_mean_reverting: 1.5,
     tp_mult_mean_reverting: 1.5,
     sl_mult_volatile: 2.0,
@@ -129,7 +131,7 @@ export default function ThresholdsPage() {
     "ml_conf_mean", "ml_margin_mean", "meta_conf_mean"
   ];
   const regimeKeys = ["adx_trend_threshold", "bb_width_volatility_threshold"];
-  const sltpKeys = ["use_ai_sl_tp", "sl_mult_trend", "tp_mult_trend", "sl_mult_mean_reverting", "tp_mult_mean_reverting", "sl_mult_volatile", "tp_mult_volatile"];
+  const sltpKeys = ["use_ai_sl_tp", "sl_mult_bull", "tp_mult_bull", "sl_mult_bear", "tp_mult_bear", "sl_mult_mean_reverting", "tp_mult_mean_reverting", "sl_mult_volatile", "tp_mult_volatile"];
   const systemKeys = ["engine_active", "cron_interval_minutes"];
 
   if (loading) return <div>Loading configuration...</div>;
@@ -320,15 +322,27 @@ export default function ThresholdsPage() {
             </div>
             
             
-                <FormGroup legendText="Trend Regime" style={{ marginTop: "1rem" }}>
+                <FormGroup legendText="Bull Trend Regime" style={{ marginTop: "1rem" }}>
                   <div style={{ display: 'flex', gap: '1rem' }}>
                     <NumberInput 
-                      id="sl_trend" label="SL Multiplier" value={config.sl_mult_trend} 
-                      min={0.1} max={10.0} step={0.1} onChange={(e: any, { value }: any) => updateConfig("sl_mult_trend", value)}
+                      id="sl_bull" label="SL Multiplier" value={config.sl_mult_bull} 
+                      min={0.1} max={10.0} step={0.1} onChange={(e: any, { value }: any) => updateConfig("sl_mult_bull", value)}
                     />
                     <NumberInput 
-                      id="tp_trend" label="TP Multiplier" value={config.tp_mult_trend} 
-                      min={0.1} max={10.0} step={0.1} onChange={(e: any, { value }: any) => updateConfig("tp_mult_trend", value)}
+                      id="tp_bull" label="TP Multiplier" value={config.tp_mult_bull} 
+                      min={0.1} max={10.0} step={0.1} onChange={(e: any, { value }: any) => updateConfig("tp_mult_bull", value)}
+                    />
+                  </div>
+                </FormGroup>
+                <FormGroup legendText="Bear Trend Regime" style={{ marginTop: "1rem" }}>
+                  <div style={{ display: 'flex', gap: '1rem' }}>
+                    <NumberInput 
+                      id="sl_bear" label="SL Multiplier" value={config.sl_mult_bear} 
+                      min={0.1} max={10.0} step={0.1} onChange={(e: any, { value }: any) => updateConfig("sl_mult_bear", value)}
+                    />
+                    <NumberInput 
+                      id="tp_bear" label="TP Multiplier" value={config.tp_mult_bear} 
+                      min={0.1} max={10.0} step={0.1} onChange={(e: any, { value }: any) => updateConfig("tp_mult_bear", value)}
                     />
                   </div>
                 </FormGroup>

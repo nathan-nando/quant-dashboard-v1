@@ -1053,21 +1053,64 @@ function SimulationPageContent() {
                       </h2>
                     </Tile>
                     <Tile style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
-                        <span style={{ color: '#c6c6c6', fontSize: '0.75rem' }}>Total Trades</span>
-                        <strong style={{ fontSize: '0.875rem' }}>{activeRunData.total_trades || 0}</strong>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
-                        <span style={{ color: '#c6c6c6', fontSize: '0.75rem' }}>Win Rate</span>
-                        <strong style={{ fontSize: '0.875rem' }}>{((activeRunData.win_rate || 0) * 100).toFixed(1)}%</strong>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
-                        <span style={{ color: '#c6c6c6', fontSize: '0.75rem' }}>Profit Factor</span>
-                        <strong style={{ fontSize: '0.875rem' }}>{activeRunData.profit_factor?.toFixed(2) || '0.00'}</strong>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span style={{ color: '#c6c6c6', fontSize: '0.75rem' }}>Max Drawdown</span>
-                        <strong style={{ color: '#fa4d56', fontSize: '0.875rem' }}>{((activeRunData.max_drawdown || 0) * 100).toFixed(1)}%</strong>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem 1rem' }}>
+                        <div>
+                          <div style={{ color: '#c6c6c6', fontSize: '0.75rem', marginBottom: '2px' }}>Total Trades</div>
+                          <strong style={{ fontSize: '0.875rem' }}>{activeRunData.total_trades || 0}</strong>
+                        </div>
+                        <div>
+                          <div style={{ color: '#c6c6c6', fontSize: '0.75rem', marginBottom: '2px' }}>Win Rate</div>
+                          <strong style={{ fontSize: '0.875rem' }}>{((activeRunData.win_rate || 0) * 100).toFixed(1)}%</strong>
+                        </div>
+                        <div>
+                          <div style={{ color: '#c6c6c6', fontSize: '0.75rem', marginBottom: '2px' }}>Profit Factor</div>
+                          <strong style={{ fontSize: '0.875rem' }}>{activeRunData.profit_factor?.toFixed(2) || '0.00'}</strong>
+                        </div>
+                        <div>
+                          <div style={{ color: '#c6c6c6', fontSize: '0.75rem', marginBottom: '2px' }}>Max Drawdown</div>
+                          <strong style={{ color: '#fa4d56', fontSize: '0.875rem' }}>{((activeRunData.max_drawdown || 0) * 100).toFixed(1)}%</strong>
+                        </div>
+                      {(() => {
+                        let avgDurationStr = '-';
+                        let minDurationStr = '-';
+                        let maxDurationStr = '-';
+                        if (activeRunData?.tradeList && activeRunData.tradeList.length > 0) {
+                          const durations = activeRunData.tradeList.map((t: any) => {
+                            if (t.entry_time && t.exit_time) {
+                              return new Date(t.exit_time).getTime() - new Date(t.entry_time).getTime();
+                            }
+                            return null;
+                          }).filter((d: any) => d !== null);
+                        
+                          if (durations.length > 0) {
+                            const avg = durations.reduce((a: number, b: number) => a + b, 0) / durations.length;
+                            const min = Math.min(...durations);
+                            const max = Math.max(...durations);
+                        
+                            const formatDur = (ms: number) => {
+                              const hours = ms / (1000 * 60 * 60);
+                              if (hours < 24) return hours.toFixed(1) + 'h';
+                              return (hours / 24).toFixed(1) + 'd';
+                            };
+                        
+                            avgDurationStr = formatDur(avg);
+                            minDurationStr = formatDur(min);
+                            maxDurationStr = formatDur(max);
+                          }
+                        }
+                        return (
+                          <>
+                            <div>
+                              <div style={{ color: '#c6c6c6', fontSize: '0.75rem', marginBottom: '2px' }}>Avg Duration</div>
+                              <strong style={{ fontSize: '0.875rem' }}>{avgDurationStr}</strong>
+                            </div>
+                            <div>
+                              <div style={{ color: '#c6c6c6', fontSize: '0.75rem', marginBottom: '2px' }}>Shortest/Longest</div>
+                              <strong style={{ fontSize: '0.875rem' }}>{minDurationStr} / {maxDurationStr}</strong>
+                            </div>
+                          </>
+                        );
+                      })()}
                       </div>
                     </Tile>
                   </div>
@@ -1136,9 +1179,9 @@ function SimulationPageContent() {
 
                   <div style={{ marginBottom: '0.25rem' }}>
                     <Tile style={{ display: 'flex', flexDirection: 'column' }}>
-                      <h4 style={{ marginBottom: '1rem' }}>Monthly Returns Heatmap</h4>
+                      <h4 style={{ marginBottom: '1rem' }}>Monthly Heatmap</h4>
                       <div style={{ flex: 1 }}>
-                        <MonthlyHeatmap data={activeRunData.monthly_returns || []} />
+                        <MonthlyHeatmap data={activeRunData.monthly_returns || []} trades={activeRunData.tradeList || []} />
                       </div>
                     </Tile>
                   </div>

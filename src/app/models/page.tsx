@@ -1,6 +1,6 @@
 "use client";
 
-import { Grid, Column, Tile, Form, FormGroup, TextInput, Select, SelectItem, Button, Modal, Tabs, TabList, Tab, TabPanels, TabPanel, ProgressBar, NumberInput, CodeSnippet, ToastNotification, Toggle, Loading } from "@carbon/react";
+import { Grid, Column, Tile, Form, FormGroup, TextInput, Select, SelectItem, Button, Modal, Tabs, TabList, Tab, TabPanels, TabPanel, ProgressBar, NumberInput, CodeSnippet, ToastNotification, Toggle, Loading, RadioButtonGroup, RadioButton } from "@carbon/react";
 import { Add, Edit, TrashCan, Play, Save, View, ArrowUpRight, ArrowDownRight, Activity, Lightning, Information, Close, Fork, DataSet, MachineLearningModel } from "@carbon/icons-react";
 import { useState, useEffect, Suspense, useRef, useCallback } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
@@ -68,7 +68,7 @@ function ModelsContent() {
 
   const [isTrainModalOpen, setTrainModalOpen] = useState(false);
   const [trainRegime, setTrainRegime] = useState<string>("");
-  const [trainForm, setTrainForm] = useState({ algorithm: "XGBoost", model_name: "", optuna_trials: 50, skip_ingestion: true, dataset_id: "", use_meta_labeling: false });
+  const [trainForm, setTrainForm] = useState({ algorithm: "XGBoost", model_name: "", optuna_trials: 50, skip_ingestion: true, dataset_id: "", use_meta_labeling: false, device: "cpu" });
   const [showDatasetInfo, setShowDatasetInfo] = useState(false);
   
   const [notification, setNotification] = useState<{kind: "success" | "error" | "info", title: string, subtitle: string} | null>(null);
@@ -328,7 +328,8 @@ function ModelsContent() {
       optuna_trials: 50, 
       skip_ingestion: true, 
       dataset_id: defaultDs ? defaultDs.id : "", 
-      use_meta_labeling: false 
+      use_meta_labeling: false,
+      device: "cpu"
     });
     setShowDatasetInfo(false);
     setTrainModalOpen(true);
@@ -752,7 +753,19 @@ function ModelsContent() {
           </div>
           
           <NumberInput id="optuna-trials" label="Optuna Tuning Trials" value={trainForm.optuna_trials} onChange={(e, {value}) => setTrainForm({...trainForm, optuna_trials: Number(value)})} min={1} max={500} style={{ marginBottom: "1rem" }} />
-        <Toggle id="use-meta-labeling" labelText="Use Meta Labeling (The Hakim)" toggled={trainForm.use_meta_labeling} onToggle={(val) => setTrainForm({...trainForm, use_meta_labeling: val})} />
+          
+          <RadioButtonGroup
+            legendText="Compute Device"
+            name="device"
+            valueSelected={trainForm.device}
+            onChange={(val) => setTrainForm({ ...trainForm, device: val as string })}
+            style={{ marginBottom: "1.5rem" }}
+          >
+            <RadioButton labelText="GPU (CUDA) - Recommended" value="cuda" id="device-gpu" />
+            <RadioButton labelText="CPU Based" value="cpu" id="device-cpu" />
+          </RadioButtonGroup>
+
+          <Toggle id="use-meta-labeling" labelText="Use Meta Labeling (The Hakim)" toggled={trainForm.use_meta_labeling} onToggle={(val) => setTrainForm({...trainForm, use_meta_labeling: val})} />
         </FormGroup>
       </Modal>
 

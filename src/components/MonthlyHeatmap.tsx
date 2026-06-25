@@ -2,9 +2,10 @@ import React from 'react';
 
 interface MonthlyHeatmapProps {
   data: { year: number; month: number; return_pct: number }[];
+  trades?: any[];
 }
 
-export default function MonthlyHeatmap({ data }: MonthlyHeatmapProps) {
+export default function MonthlyHeatmap({ data, trades }: MonthlyHeatmapProps) {
   if (!data || data.length === 0) {
     return (
       <div style={{ padding: '2rem', textAlign: 'center', color: '#8d8d8d' }}>
@@ -27,6 +28,18 @@ export default function MonthlyHeatmap({ data }: MonthlyHeatmapProps) {
       maxAbsReturn = Math.abs(d.return_pct);
     }
   });
+
+  const tradeCountMap: Record<string, number> = {};
+  if (trades) {
+    trades.forEach(t => {
+      if (t.entry_time) {
+        const d = new Date(t.entry_time);
+        const y = d.getFullYear();
+        const m = d.getMonth() + 1;
+        tradeCountMap[`${y}-${m}`] = (tradeCountMap[`${y}-${m}`] || 0) + 1;
+      }
+    });
+  }
 
   // Ensure we don't divide by zero
   if (maxAbsReturn === 0) maxAbsReturn = 1;
@@ -78,7 +91,12 @@ export default function MonthlyHeatmap({ data }: MonthlyHeatmapProps) {
                       fontSize: '0.875rem'
                     }}
                   >
-                    {val !== undefined ? `${val > 0 ? '+' : ''}${val.toFixed(1)}%` : '-'}
+                    <div>{val !== undefined ? `${val > 0 ? '+' : ''}${val.toFixed(1)}%` : '-'}</div>
+                    {val !== undefined && trades && trades.length > 0 && (
+                      <div style={{ fontSize: '0.65rem', opacity: 0.7 }}>
+                        {tradeCountMap[`${year}-${month}`] || 0} trades
+                      </div>
+                    )}
                   </td>
                 );
               })}

@@ -522,6 +522,13 @@ export default function GlobalDetailTable({ id, type = 'signal', dataObj, onClos
                   </div>
                 </div>
               </div>
+              
+              {associatedSignal.remarks && (
+                <div style={{ marginTop: '0.75rem', padding: '8px', background: 'rgba(250, 77, 86, 0.1)', borderLeft: '3px solid #fa4d56' }}>
+                  <p style={{ color: '#a8a8a8', fontSize: '0.75rem', marginBottom: '4px' }}>Remarks (Error Details)</p>
+                  <p style={{ fontSize: '0.875rem', color: '#fa4d56' }}>{associatedSignal.remarks}</p>
+                </div>
+              )}
 
               {associatedSignal.features && Object.keys(associatedSignal.features).length > 0 && (
                 <>
