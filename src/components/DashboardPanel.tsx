@@ -80,7 +80,19 @@ export default function DashboardPanel({ title, tooltipInfo, onExportCsv, childr
         </div>
         <div style={{ display: 'flex', alignItems: 'center' }} className="nodrag">
           {onExportCsv && (
-            <OverflowMenu flipped size="sm" ariaLabel="Options" iconDescription="Options" renderIcon={() => <OverflowMenuVertical size={16} />}>
+            <OverflowMenu 
+              flipped 
+              size="sm" 
+              ariaLabel="Options" 
+              iconDescription="Options" 
+              renderIcon={() => <OverflowMenuVertical size={12} />}
+              style={{
+                height: '24px',
+                width: '24px',
+                minHeight: '24px',
+                padding: 0
+              }}
+            >
               <OverflowMenuItem itemText="Export CSV" onClick={onExportCsv} />
             </OverflowMenu>
           )}
@@ -89,8 +101,17 @@ export default function DashboardPanel({ title, tooltipInfo, onExportCsv, childr
             size="sm" 
             label={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
             onClick={toggleFullscreen}
+            style={{
+              height: '24px',
+              width: '24px',
+              minHeight: '24px',
+              padding: 0,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
           >
-            {isFullscreen ? <Minimize size={16} /> : <Maximize size={16} />}
+            {isFullscreen ? <Minimize size={12} /> : <Maximize size={12} />}
           </IconButton>
         </div>
       </div>

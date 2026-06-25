@@ -35,6 +35,7 @@ interface GlobalTableProps {
   onReload?: () => void | Promise<void>;
   hideReload?: boolean;
   refreshTrigger?: any;
+  compact?: boolean;
 }
 
 export default function GlobalTable({
@@ -53,7 +54,8 @@ export default function GlobalTable({
   defaultCollapsed = false,
   onReload,
   hideReload = false,
-  refreshTrigger
+  refreshTrigger,
+  compact = false
 }: GlobalTableProps) {
   // State
   const [data, setData] = useState<any[]>([]);
@@ -241,6 +243,8 @@ export default function GlobalTable({
                       style={{ 
                         cursor: "pointer",
                         whiteSpace: "nowrap",
+                        fontSize: compact ? "9.5px" : "inherit",
+                        padding: compact ? "0.3rem" : "inherit",
                         ...(w ? { width: w } : {})
                       }}
                     >
@@ -249,7 +253,7 @@ export default function GlobalTable({
                     );
                   })}
                   {onViewDetails && (
-                    <TableHeader style={{ textAlign: "center", width: "50px" }}>Actions</TableHeader>
+                    <TableHeader style={{ textAlign: "center", width: "50px", fontSize: compact ? "9.5px" : "inherit", padding: compact ? "0.3rem" : "inherit" }}>Actions</TableHeader>
                   )}
                 </TableRow>
               </TableHead>
@@ -257,12 +261,12 @@ export default function GlobalTable({
                 {rows.map((row: any) => (
                   <TableRow key={row.id}>
                     {row.cells.map((cell: any) => {
-                      const colKey = cell.id.split(':')[1];
+                      const colKey = cell.id.split(':').pop();
                       const headerConf = headers.find(h => h.key === colKey);
                       return (
                         <TableCell key={cell.id} style={{ 
-                          fontSize: "11px", 
-                          padding: "0.4rem",
+                          fontSize: compact ? "9.5px" : "11px", 
+                          padding: compact ? "0.15rem 0.3rem" : "0.4rem",
                           ...(headerConf?.width ? { width: headerConf.width } : {})
                         }}>
                           {formatCell ? formatCell(cell.id, cell.value) : cell.value}
@@ -270,14 +274,19 @@ export default function GlobalTable({
                       );
                     })}
                     {onViewDetails && (
-                      <TableCell style={{ padding: "0.2rem", textAlign: "center", width: "50px" }}>
+                      <TableCell style={{ padding: compact ? "0.15rem" : "0.2rem", textAlign: "center", width: "50px" }}>
                         <Button 
                           kind="ghost" 
                           size="sm" 
                           hasIconOnly 
-                          renderIcon={() => <View size={16} fill="#4589ff" />} 
+                          renderIcon={() => <View size={compact ? 12 : 16} fill="#4589ff" />} 
                           iconDescription="View Details" 
                           onClick={() => onViewDetails(row.id)} 
+                          style={{
+                            height: compact ? '24px' : 'auto',
+                            width: compact ? '24px' : 'auto',
+                            minHeight: compact ? '24px' : 'auto'
+                          }}
                         />
                       </TableCell>
                     )}

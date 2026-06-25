@@ -6,13 +6,22 @@ import { Document, TrashCan, Play } from "@carbon/icons-react";
 import GlobalTable from "./GlobalTable";
 
 interface GlobalJobsTableProps {
-  target: string;
+  target?: string;
   refreshTrigger: number;
   openJobDetails: (id: string) => void;
   onJobChange: () => void;
+  collapsible?: boolean;
+  defaultCollapsed?: boolean;
 }
 
-export default function GlobalJobsTable({ target, refreshTrigger, openJobDetails, onJobChange }: GlobalJobsTableProps) {
+export default function GlobalJobsTable({ 
+  target, 
+  refreshTrigger, 
+  openJobDetails, 
+  onJobChange,
+  collapsible = true,
+  defaultCollapsed = true
+}: GlobalJobsTableProps) {
   const [historyJobs, setHistoryJobs] = useState<any[]>([]);
   const [notification, setNotification] = useState<any>(null);
   const [confirmModalConfig, setConfirmModalConfig] = useState<{
@@ -29,7 +38,10 @@ export default function GlobalJobsTable({ target, refreshTrigger, openJobDetails
 
   const fetchHistoryJobs = async () => {
     try {
-      const res = await fetch(`http://127.0.0.1:8000/api/jobs/history?target=${target}`);
+      const url = target
+        ? `http://127.0.0.1:8000/api/jobs/history?target=${target}`
+        : `http://127.0.0.1:8000/api/jobs/history`;
+      const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
         setHistoryJobs(data.jobs);
@@ -75,6 +87,7 @@ export default function GlobalJobsTable({ target, refreshTrigger, openJobDetails
 
   const headers = [
     { key: "task_id", header: "ID" },
+    ...(!target ? [{ key: "target", header: "Type" }] : []),
     { key: "display_name", header: "Name" },
     { key: "created_date", header: "Created Date" },
     { key: "finished_date", header: "Finished Date" },
@@ -100,6 +113,9 @@ export default function GlobalJobsTable({ target, refreshTrigger, openJobDetails
           </div>
       );
     }
+    if (cellId.endsWith(':target')) {
+       return value ? String(value).toUpperCase() : "-";
+    }
     if (cellId.endsWith(':display_name')) {
        const rowId = cellId.split(':')[0];
        const job = historyJobs.find(j => j.task_id === rowId);
@@ -115,10 +131,10 @@ export default function GlobalJobsTable({ target, refreshTrigger, openJobDetails
        const year = d.getFullYear().toString().slice(-2);
        const time = d.toTimeString().split(' ')[0];
        return (
-         <div style={{ display: 'flex', flexDirection: 'column', lineHeight: '1.2' }}>
-           <span>{`${day} ${month} ${year}`}</span>
-           <span style={{ color: '#a8a8a8', fontSize: '0.9em' }}>{time}</span>
-         </div>
+          <div style={{ display: 'flex', flexDirection: 'column', lineHeight: '1.2' }}>
+            <span>{`${day} ${month} ${year}`}</span>
+            <span style={{ color: '#a8a8a8', fontSize: '0.9em' }}>{time}</span>
+          </div>
        );
     }
     if (cellId.endsWith(':status')) {
@@ -149,10 +165,10 @@ export default function GlobalJobsTable({ target, refreshTrigger, openJobDetails
       <GlobalTable 
         headers={headers} 
         initialData={formattedData} 
-        title={`History ${target.charAt(0).toUpperCase() + target.slice(1)} Jobs`} 
+        title={target ? `History ${target.charAt(0).toUpperCase() + target.slice(1)} Jobs` : "History Jobs"} 
         formatCell={(cellId, value) => formatCell(cellId, value, formattedData)}
-        collapsible
-        defaultCollapsed
+        collapsible={collapsible}
+        defaultCollapsed={defaultCollapsed}
         onReload={fetchHistoryJobs}
       />
 

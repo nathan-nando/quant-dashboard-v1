@@ -15,7 +15,7 @@ import {
   Modal,
   CodeSnippet
 } from '@carbon/react';
-import { Settings, Notification, Dashboard, SettingsAdjust, Activity, MachineLearningModel, Analytics, User } from '@carbon/icons-react';
+import { Settings, Notification, Dashboard, SettingsAdjust, Activity, MachineLearningModel, Analytics, User, Terminal } from '@carbon/icons-react';
 import MarketClock from './MarketClock';
 import HeaderMetrics from './HeaderMetrics';
 import GlobalJobsWidget from './GlobalJobsWidget';
@@ -149,7 +149,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
              </strong>
              {acc.profit !== undefined && acc.profit !== 0 && (
                 <span style={{ fontSize: '0.65rem', color: acc.profit >= 0 ? '#24a148' : '#fa4d56', marginLeft: '4px' }}>
-                  ({acc.profit > 0 ? '+' : ''}{acc.profit.toLocaleString(undefined, {minimumFractionDigits: 2})})
+                   ({acc.profit > 0 ? '+' : ''}{acc.profit.toLocaleString(undefined, {minimumFractionDigits: 2})})
                 </span>
              )}
           </div>
@@ -182,6 +182,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 {navItem('/account', 'Account', User)}
                 {navItem('/signals', 'Signals', Activity)}
                 {navItem('/thresholds', 'Thresholds', SettingsAdjust)}
+                {navItem('/monitoring', 'Monitoring', Terminal)}
               </HeaderNavigation>
 
               {/* Spacer — pushes Group 2 toward the right */}

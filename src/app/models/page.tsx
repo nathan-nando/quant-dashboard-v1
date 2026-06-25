@@ -187,19 +187,38 @@ function ModelsContent() {
     });
   };
 
-  const toggleModelStatus = async (model: any, checked: boolean) => {
-    const newStatus = checked ? "Active" : "Inactive";
+  const toggleModelStatus = async (model: any, checked: any) => {
+    console.log("toggleModelStatus clicked:", { modelId: model.id, currentStatus: model.status, checked, checkedType: typeof checked });
+    
+    let isChecked = false;
+    if (typeof checked === 'boolean') {
+      isChecked = checked;
+    } else if (checked && typeof checked === 'object' && 'target' in checked) {
+      isChecked = !!checked.target.checked;
+    } else {
+      isChecked = model.status !== "Active";
+    }
+
+    const newStatus = isChecked ? "Active" : "Inactive";
     const updatedModel = { ...model, status: newStatus };
+    console.log("Sending status update:", { modelId: model.id, newStatus, payload: updatedModel });
+
     try {
-      await fetch("http://127.0.0.1:8000/api/models", {
+      const res = await fetch("http://127.0.0.1:8000/api/models", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updatedModel)
       });
-      fetchData();
-      setNotification({ kind: "success", title: "Status Updated", subtitle: `Model status changed to ${newStatus}.` });
+      if (res.ok) {
+        fetchData();
+        setNotification({ kind: "success", title: "Status Updated", subtitle: `Model status changed to ${newStatus}.` });
+      } else {
+        const errText = await res.text();
+        console.error("Failed to update status, server responded with:", errText);
+        setNotification({ kind: "error", title: "Update Failed", subtitle: "Server rejected model status update." });
+      }
     } catch(e) { 
-      console.error(e); 
+      console.error("Error updating status:", e); 
       setNotification({ kind: "error", title: "Update Failed", subtitle: "Failed to update model status." });
     }
   };

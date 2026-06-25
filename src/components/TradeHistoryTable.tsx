@@ -33,6 +33,7 @@ interface Trade {
   close_reason: string;
   regime: string;
   confidence: number;
+  status?: string;
   model_version?: string;
   features_at_entry?: Record<string, any>;
 }
@@ -52,6 +53,7 @@ interface TradeHistoryTableProps {
   hideSearch?: boolean;
   hidePagination?: boolean;
   onReload?: () => void | Promise<void>;
+  compact?: boolean;
 }
 
 export default function TradeHistoryTable({ 
@@ -59,7 +61,8 @@ export default function TradeHistoryTable({
   title = "Trade History", 
   hideSearch = false, 
   hidePagination = false,
-  onReload
+  onReload,
+  compact = false
 }: TradeHistoryTableProps) {
   const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
   const [selectedSignalId, setSelectedSignalId] = useState<number | null>(null);
@@ -88,47 +91,54 @@ export default function TradeHistoryTable({
     formatted_volume: trade.volume != null ? Number(trade.volume).toFixed(2) : '-',
     formatted_confidence: trade.confidence != null ? `${(Number(trade.confidence) * 100).toFixed(1)}%` : '-',
     model_version: trade.model_version || '-',
+    formatted_dir_status: '',
   }));
 
   const headers = [
-    { key: "direction", header: "Dir" },
-    { key: "status", header: "Status" },
+    { key: "formatted_dir_status", header: "Status", width: "60px" },
     { key: "formatted_entry_time", header: "Time (Entry / Exit)" },
     { key: "formatted_entry_price", header: "Price (Entry/Exit) / Lots" },
-    { key: "formatted_pnl_money", header: "PnL / Exit Reason" },
+    { key: "formatted_pnl_money", header: "PnL", width: "65px" },
     { key: "model_version", header: "Model / Conf" },
   ];
 
   const formatCell = (cellId: string, value: any) => {
-    if (cellId.endsWith(":status")) {
-      const isOpen = value === "OPEN";
-      const color = isOpen ? '#24a148' : '#8d8d8d';
-      const label = isOpen ? 'Open' : 'Closed';
+    if (cellId.endsWith(":formatted_dir_status")) {
+      const rowId = cellId.split(':')[0];
+      const trade = trades.find((t, idx) => (t.trade_id || `trade-${idx}`) === rowId);
+      if (!trade) return "-";
+
+      const isBuy = trade.direction === "BUY";
+      const dirColor = isBuy ? '#24a148' : '#fa4d56';
+      const dirReadable = trade.direction ? trade.direction.charAt(0).toUpperCase() + trade.direction.slice(1).toLowerCase() : '';
+
+      const isOpen = trade.status === "OPEN";
+      const statusColor = isOpen ? '#24a148' : '#8d8d8d';
+      const statusLabel = isOpen ? 'Open' : 'Closed';
+
       return (
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 'bold', fontSize: '11px' }}>
-          <svg width="10" height="10" viewBox="0 0 32 32" style={{ fill: color, flexShrink: 0 }}>
-            <circle cx="16" cy="16" r="8" />
-          </svg>
-          <span style={{ color, whiteSpace: 'nowrap' }}>{label}</span>
-        </div>
-      );
-    }
-    if (cellId.endsWith(":direction")) {
-      const isBuy = value === "BUY";
-      const color = isBuy ? '#24a148' : '#fa4d56';
-      const readable = value ? value.charAt(0).toUpperCase() + value.slice(1).toLowerCase() : '';
-      return (
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 'bold', fontSize: '11px' }}>
-          {isBuy ? (
-            <svg width="10" height="10" viewBox="0 0 32 32" style={{ fill: color, flexShrink: 0 }}>
-              <path d="M16 4L6 14h7v14h6V14h7z" />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', lineHeight: '1.2', fontSize: compact ? '9.5px' : '11px' }}>
+          {/* Direction */}
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: compact ? '4px' : '6px', fontWeight: 'bold' }}>
+            {isBuy ? (
+              <svg width="10" height="10" viewBox="0 0 32 32" style={{ fill: dirColor, flexShrink: 0 }}>
+                <path d="M16 4L6 14h7v14h6V14h7z" />
+              </svg>
+            ) : (
+              <svg width="10" height="10" viewBox="0 0 32 32" style={{ fill: dirColor, flexShrink: 0 }}>
+                <path d="M16 28l10-10h-7V4h-6v14H6z" />
+              </svg>
+            )}
+            <span style={{ color: dirColor, whiteSpace: 'nowrap' }}>{dirReadable}</span>
+          </div>
+
+          {/* Status */}
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: compact ? '4px' : '6px', fontWeight: 'bold' }}>
+            <svg width="8" height="8" viewBox="0 0 32 32" style={{ fill: statusColor, flexShrink: 0 }}>
+              <circle cx="16" cy="16" r="8" />
             </svg>
-          ) : (
-            <svg width="10" height="10" viewBox="0 0 32 32" style={{ fill: color, flexShrink: 0 }}>
-              <path d="M16 28l10-10h-7V4h-6v14H6z" />
-            </svg>
-          )}
-          <span style={{ color, whiteSpace: 'nowrap' }}>{readable}</span>
+            <span style={{ color: statusColor, whiteSpace: 'nowrap' }}>{statusLabel}</span>
+          </div>
         </div>
       );
     }
@@ -145,21 +155,26 @@ export default function TradeHistoryTable({
         const day = d.getDate().toString().padStart(2, '0');
         const month = months[d.getMonth()];
         const year = d.getFullYear().toString().slice(-2);
-        const time = d.toTimeString().split(' ')[0];
-        return `${day} ${month} ${year} ${time}`;
+        const timeParts = d.toTimeString().split(' ')[0].split(':');
+        const time = `${timeParts[0]}:${timeParts[1]}`; // HH:MM
+        
+        if (compact) {
+          return `${day} ${month} ${time}`; // e.g. "23 Jun 13:00"
+        }
+        return `${day} ${month} ${year} ${timeParts.join(':')}`;
       };
       
       return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', lineHeight: '1.2' }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-            <svg width="10" height="10" viewBox="0 0 32 32" style={{ fill: '#24a148', flexShrink: 0 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: compact ? '2px' : '4px', lineHeight: '1.2', fontSize: compact ? '9.5px' : 'inherit' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: compact ? '4px' : '6px' }}>
+            <svg width={compact ? 8 : 10} height={compact ? 8 : 10} viewBox="0 0 32 32" style={{ fill: '#24a148', flexShrink: 0 }}>
               <title>Entry Time</title>
               <path d="M18 6l-1.43 1.39L22.47 13H4v2h18.47l-5.9 5.61L18 22l8-8z" />
             </svg>
             <span>{formatTime(trade.entry_time)}</span>
           </div>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-            <svg width="10" height="10" viewBox="0 0 32 32" style={{ fill: '#fa4d56', flexShrink: 0 }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: compact ? '4px' : '6px' }}>
+            <svg width={compact ? 8 : 10} height={compact ? 8 : 10} viewBox="0 0 32 32" style={{ fill: '#fa4d56', flexShrink: 0 }}>
               <title>Exit Time</title>
               <path d="M14 22l1.43-1.39L9.53 15H28v-2H9.53l5.9-5.61L14 6l-8 8z" />
             </svg>
@@ -175,6 +190,28 @@ export default function TradeHistoryTable({
       const entry = trade.entry_price != null ? Number(trade.entry_price).toFixed(2) : '-';
       const exit = trade.exit_price != null ? Number(trade.exit_price).toFixed(2) : '-';
       const lots = trade.volume != null ? Number(trade.volume).toFixed(2) : '-';
+      
+      if (compact) {
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', lineHeight: '1.1', fontSize: '9.5px' }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+              <svg width="8" height="8" viewBox="0 0 32 32" style={{ fill: '#24a148', flexShrink: 0 }}>
+                <title>Entry Price</title>
+                <path d="M18 6l-1.43 1.39L22.47 13H4v2h18.47l-5.9 5.61L18 22l8-8z" />
+              </svg>
+              <span style={{ fontWeight: 'bold' }}>{entry}</span>
+              <span style={{ fontSize: '8px', color: '#a8a8a8', marginLeft: '4px' }}>({lots} L)</span>
+            </div>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+              <svg width="8" height="8" viewBox="0 0 32 32" style={{ fill: '#fa4d56', flexShrink: 0 }}>
+                <title>Exit Price</title>
+                <path d="M14 22l1.43-1.39L9.53 15H28v-2H9.53l5.9-5.61L14 6l-8 8z" />
+              </svg>
+              <span style={{ fontWeight: 'bold', color: '#e0e0e0' }}>{exit}</span>
+            </div>
+          </div>
+        );
+      }
       
       return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', lineHeight: '1.2' }}>
@@ -217,21 +254,22 @@ export default function TradeHistoryTable({
       
       const formatReason = (reason: string) => {
         if (!reason || reason === '-') return null;
-        if (reason === "SL_HIT") return <span style={{ color: '#fa4d56', fontWeight: 'bold', fontSize: '10px', whiteSpace: 'nowrap' }}>SL Hit</span>;
-        if (reason === "TP_HIT") return <span style={{ color: '#24a148', fontWeight: 'bold', fontSize: '10px', whiteSpace: 'nowrap' }}>TP Hit</span>;
-        if (reason === "SIGNAL_REVERSE") return <span style={{ fontWeight: 'bold', fontSize: '10px', color: '#a8a8a8', whiteSpace: 'nowrap' }}>Signal Reverse</span>;
-        if (reason === "END_OF_DATA") return <span style={{ fontWeight: 'bold', fontSize: '10px', color: '#a8a8a8', whiteSpace: 'nowrap' }}>End of Data</span>;
-        if (reason === "MANUAL") return <span style={{ fontWeight: 'bold', fontSize: '10px', color: '#a8a8a8', whiteSpace: 'nowrap' }}>Manual</span>;
+        const fSize = compact ? '8.5px' : '10px';
+        if (reason === "SL_HIT") return <span style={{ color: '#fa4d56', fontWeight: 'bold', fontSize: fSize, whiteSpace: 'nowrap' }}>SL Hit</span>;
+        if (reason === "TP_HIT") return <span style={{ color: '#24a148', fontWeight: 'bold', fontSize: fSize, whiteSpace: 'nowrap' }}>TP Hit</span>;
+        if (reason === "SIGNAL_REVERSE") return <span style={{ fontWeight: 'bold', fontSize: fSize, color: '#a8a8a8', whiteSpace: 'nowrap' }}>Signal Reverse</span>;
+        if (reason === "END_OF_DATA") return <span style={{ fontWeight: 'bold', fontSize: fSize, color: '#a8a8a8', whiteSpace: 'nowrap' }}>End of Data</span>;
+        if (reason === "MANUAL") return <span style={{ fontWeight: 'bold', fontSize: fSize, color: '#a8a8a8', whiteSpace: 'nowrap' }}>Manual</span>;
         
         const readable = reason.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
-        return <span style={{ fontWeight: 'bold', fontSize: '10px', color: '#a8a8a8', whiteSpace: 'nowrap' }}>{readable}</span>;
+        return <span style={{ fontWeight: 'bold', fontSize: fSize, color: '#a8a8a8', whiteSpace: 'nowrap' }}>{readable}</span>;
       };
       
       const reasonBadge = formatReason(closeReason);
 
       return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', lineHeight: '1.2' }}>
-          <span style={{ color: pnlColor, fontWeight: 'bold' }}>{pnlDisplay}</span>
+          <span style={{ color: pnlColor, fontWeight: 'bold', fontSize: compact ? '9.5px' : 'inherit' }}>{pnlDisplay}</span>
           {reasonBadge && (
             <div style={{ marginTop: '2px' }}>
               {reasonBadge}
@@ -252,6 +290,27 @@ export default function TradeHistoryTable({
       if (modelName && modelName !== '-') {
         const words = modelName.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
         readableModelText = words.join(' ');
+      }
+      
+      if (compact) {
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', lineHeight: '1.1', fontSize: '9.5px' }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+              <svg width="10" height="10" viewBox="0 0 32 32" style={{ fill: '#4589ff', flexShrink: 0 }}>
+                <path d="M26,8V6a2,2,0,0,0-2-2H22V2H20V4H18V2H16V4H14V2H12V4H10V2H8V4H6A2,2,0,0,0,4,6V8H2v2H4v2H2v2H4v2H2v2H4v2H2v2H4v2H2v2H4v2A2,2,0,0,0,6,28H8v2h2V28h2v2h2V28h2v2h2V28h2v2h2V28h2A2,2,0,0,0,28,26V24h2V22H28V20h2V18H28V16h2V14H28V12h2V10H28V8ZM26,26H6V6H26Z" />
+                <rect x="10" y="10" width="12" height="12" />
+              </svg>
+              <span style={{ color: '#ffffff', fontWeight: 'bold', fontSize: '9.5px', whiteSpace: 'nowrap' }}>
+                {readableModelText}
+              </span>
+            </div>
+            {conf !== undefined && conf !== null && (
+              <span style={{ color: confColor, fontWeight: 'bold', fontSize: '8.5px', marginLeft: '13px' }}>
+                {(conf * 100).toFixed(1)}%
+              </span>
+            )}
+          </div>
+        );
       }
       
       return (
@@ -292,6 +351,7 @@ export default function TradeHistoryTable({
         hideSearch={hideSearch}
         hidePagination={hidePagination}
         onReload={onReload}
+        compact={compact}
       />
 
       {mounted && selectedTrade && (

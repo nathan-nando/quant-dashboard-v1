@@ -203,7 +203,7 @@ export default function ThresholdsPage() {
                   {config.use_daily_kill_switch && (
                     <div style={{marginTop: "1.5rem"}}>
                       <NumberInput 
-                        id="max_daily_drawdown" label="Max Daily Drawdown (%)" value={config.max_daily_drawdown_pct} 
+                        id="max_daily_drawdown" label="Daily Drawdown Floor (%)" value={config.max_daily_drawdown_pct} 
                         min={1} max={100} onChange={(e: any, { value }: any) => updateConfig("max_daily_drawdown_pct", value)}
                       />
                     </div>

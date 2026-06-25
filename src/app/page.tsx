@@ -13,7 +13,9 @@ import { Responsive, WidthProvider } from 'react-grid-layout/legacy';
 const ResponsiveGridLayout = WidthProvider(Responsive);
 const CandlestickChart = dynamic(() => import('../components/CandlestickChart'), { ssr: false });
 import MarketSummaryWidget from '../components/MarketSummaryWidget';
-
+import ShapPanel from '../components/ShapPanel';
+import RegimeTimeline from '../components/RegimeTimeline';
+import AttributionPanel from '../components/AttributionPanel';
 import { useGlobalState } from '../contexts/GlobalStateContext';
 
 const getRegimeFormat = (regime: string) => {
@@ -66,62 +68,74 @@ export default function Home() {
 
   const signalHeaders = [
     { key: "timestamp", header: "Time" },
-    { key: "direction", header: "Signal" },
+    { key: "direction", header: "Signal", width: "70px" },
     { key: "entry_price", header: "Price / SL / TP / R:R" },
     { key: "model", header: "Model / Conf" },
-    { key: "regime", header: "Regime" },
-    { key: "status", header: "Status" },
+    { key: "regime", header: "Regime", width: "90px" },
+    { key: "status", header: "Status", width: "80px" },
   ];
   const [selectedSignal, setSelectedSignal] = useState<number | null>(null);
 
   const defaultLayouts = {
     lg: [
-      { i: 'trades', x: 0, y: 0, w: 8, h: 3, minW: 2, minH: 2 },
-      { i: 'signals', x: 8, y: 0, w: 8, h: 6, minW: 2, minH: 2 },
-      { i: 'chart', x: 0, y: 3, w: 8, h: 6, minW: 2, minH: 2 }
+      { i: 'chart', x: 0, y: 0, w: 4, h: 4, minW: 3, minH: 2 },
+      { i: 'attribution', x: 4, y: 0, w: 2, h: 3, minW: 2, minH: 2 },
+      { i: 'shap', x: 4, y: 3, w: 2, h: 3, minW: 2, minH: 2 },
+      { i: 'regime', x: 0, y: 4, w: 4, h: 2, minW: 3, minH: 2 },
+      { i: 'trades', x: 6, y: 0, w: 4, h: 3, minW: 3, minH: 2 },
+      { i: 'signals', x: 6, y: 3, w: 4, h: 5, minW: 3, minH: 2 }
     ],
     md: [
-      { i: 'trades', x: 0, y: 0, w: 4, h: 3, minW: 2, minH: 2 },
-      { i: 'signals', x: 4, y: 0, w: 4, h: 6, minW: 2, minH: 2 },
-      { i: 'chart', x: 0, y: 3, w: 4, h: 6, minW: 2, minH: 2 }
+      { i: 'chart', x: 0, y: 0, w: 4, h: 3 },
+      { i: 'attribution', x: 4, y: 0, w: 4, h: 3 },
+      { i: 'shap', x: 4, y: 3, w: 4, h: 3 },
+      { i: 'regime', x: 0, y: 3, w: 4, h: 3 },
+      { i: 'trades', x: 0, y: 6, w: 8, h: 3 },
+      { i: 'signals', x: 0, y: 9, w: 8, h: 5 }
     ],
     sm: [
-      { i: 'trades', x: 0, y: 0, w: 4, h: 3, minW: 2, minH: 2 },
-      { i: 'signals', x: 0, y: 3, w: 4, h: 6, minW: 2, minH: 2 },
-      { i: 'chart', x: 0, y: 9, w: 4, h: 4, minW: 2, minH: 2 }
+      { i: 'chart', x: 0, y: 0, w: 4, h: 3 },
+      { i: 'attribution', x: 0, y: 3, w: 4, h: 3 },
+      { i: 'shap', x: 0, y: 9, w: 4, h: 3 },
+      { i: 'regime', x: 0, y: 6, w: 4, h: 3 },
+      { i: 'trades', x: 0, y: 12, w: 4, h: 3 },
+      { i: 'signals', x: 0, y: 15, w: 4, h: 5 }
     ],
     xs: [
-      { i: 'trades', x: 0, y: 0, w: 2, h: 3 },
-      { i: 'signals', x: 0, y: 3, w: 2, h: 6 },
-      { i: 'chart', x: 0, y: 9, w: 2, h: 4 }
+      { i: 'chart', x: 0, y: 0, w: 2, h: 3 },
+      { i: 'attribution', x: 0, y: 3, w: 2, h: 3 },
+      { i: 'shap', x: 0, y: 9, w: 2, h: 3 },
+      { i: 'regime', x: 0, y: 6, w: 2, h: 3 },
+      { i: 'trades', x: 0, y: 12, w: 2, h: 3 },
+      { i: 'signals', x: 0, y: 15, w: 2, h: 5 }
     ]
   };
   const [layouts, setLayouts] = useState<any>(defaultLayouts);
-
+ 
   useEffect(() => {
     // Clear all older layout keys from localStorage
     try {
       const keysToRemove: string[] = [];
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        if (key && key.startsWith("quantDashboardLayout_") && key !== "quantDashboardLayout_v20") {
+        if (key && key.startsWith("quantDashboardLayout_") && key !== "quantDashboardLayout_v26") {
           keysToRemove.push(key);
         }
       }
       keysToRemove.forEach(k => localStorage.removeItem(k));
     } catch (e) {}
-
-    const saved = localStorage.getItem("quantDashboardLayout_v20");
+ 
+    const saved = localStorage.getItem("quantDashboardLayout_v26");
     if (saved) {
       try {
         setLayouts(JSON.parse(saved));
       } catch (e) {}
     }
   }, []);
-
+ 
   const handleLayoutChange = (layout: any, allLayouts: any) => {
     setLayouts(allLayouts);
-    localStorage.setItem("quantDashboardLayout_v20", JSON.stringify(allLayouts));
+    localStorage.setItem("quantDashboardLayout_v26", JSON.stringify(allLayouts));
   };
   return (
     <div style={{ maxWidth: '100%', padding: '0 2rem', position: 'relative' }}>
@@ -140,7 +154,7 @@ export default function Home() {
         className="layout"
         layouts={layouts}
         breakpoints={{ lg: 1056, md: 672, sm: 320, xs: 0 }}
-        cols={{ lg: 16, md: 8, sm: 4, xs: 2 }}
+        cols={{ lg: 10, md: 8, sm: 4, xs: 2 }}
         rowHeight={90}
         draggableHandle=".panel-drag-handle"
         margin={[3, 3]} // 0.2rem gap
@@ -249,10 +263,11 @@ export default function Home() {
               <GlobalTable 
                 title=""
                 headers={signalHeaders}
-                initialData={signals.slice(0, 10)}
+                initialData={signals.slice(0, 15)}
                 hidePagination
                 hideSearch
                 onViewDetails={(id) => setSelectedSignal(Number(id))}
+                compact
                 formatCell={(cellId, value) => {
                   const col = cellId.split('__')[1] || cellId.split(':').pop() || '';
                   if (col.includes("timestamp") && value) {
@@ -263,17 +278,17 @@ export default function Home() {
                     const year = d.getFullYear().toString().slice(-2);
                     const time = d.toTimeString().split(' ')[0];
                     return (
-                      <div style={{ display: 'flex', flexDirection: 'column', lineHeight: '1.2' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', lineHeight: '1.2', fontSize: '9.5px' }}>
                         <span>{`${day} ${month} ${year}`}</span>
-                        <span style={{ color: '#a8a8a8', fontSize: '0.9em' }}>{time}</span>
+                        <span style={{ color: '#a8a8a8', fontSize: '8.5px' }}>{time}</span>
                       </div>
                     );
                   }
                   if (col.includes("status")) {
                     if (value === "PENDING_EXECUTION") {
                       return (
-                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 'bold', fontSize: '11px' }}>
-                          <svg width="12" height="12" viewBox="0 0 32 32" style={{ fill: '#11a3c6', flexShrink: 0 }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 'bold', fontSize: '9.5px' }}>
+                          <svg width="10" height="10" viewBox="0 0 32 32" style={{ fill: '#11a3c6', flexShrink: 0 }}>
                             <path d="M16 4C9.383 4 4 9.383 4 16s5.383 12 12 12 12-5.383 12-12S22.617 4 16 4zm0 2c5.523 0 10 4.477 10 10s-4.477 10-10 10S6 21.523 6 16 10.477 6 16 6zm-1 3v8h6v-2h-4v-6h-2z" />
                           </svg>
                           <span style={{ color: '#11a3c6', whiteSpace: 'nowrap' }}>Pending Execution</span>
@@ -282,8 +297,8 @@ export default function Home() {
                     }
                     if (value === "EXECUTED") {
                       return (
-                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 'bold', fontSize: '11px' }}>
-                          <svg width="12" height="12" viewBox="0 0 32 32" style={{ fill: '#24a148', flexShrink: 0 }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 'bold', fontSize: '9.5px' }}>
+                          <svg width="10" height="10" viewBox="0 0 32 32" style={{ fill: '#24a148', flexShrink: 0 }}>
                             <path d="M14 21.414l-5.707-5.707-1.414 1.414 7.121 7.121 12-12-1.414-1.414z" />
                           </svg>
                           <span style={{ color: '#ffffff', whiteSpace: 'nowrap' }}>Executed</span>
@@ -292,8 +307,8 @@ export default function Home() {
                     }
                     if (value === "NEW") {
                       return (
-                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 'bold', fontSize: '11px' }}>
-                          <svg width="12" height="12" viewBox="0 0 32 32" style={{ fill: '#fa4d56', flexShrink: 0 }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 'bold', fontSize: '9.5px' }}>
+                          <svg width="10" height="10" viewBox="0 0 32 32" style={{ fill: '#fa4d56', flexShrink: 0 }}>
                             <circle cx="16" cy="16" r="8" />
                           </svg>
                           <span style={{ color: '#ffffff', whiteSpace: 'nowrap' }}>New</span>
@@ -303,8 +318,8 @@ export default function Home() {
                     // Fallback
                     const readableValue = value ? value.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ') : '';
                     return (
-                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 'bold', fontSize: '11px' }}>
-                        <svg width="12" height="12" viewBox="0 0 32 32" style={{ fill: '#6f6f6f', flexShrink: 0 }}>
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 'bold', fontSize: '9.5px' }}>
+                        <svg width="10" height="10" viewBox="0 0 32 32" style={{ fill: '#6f6f6f', flexShrink: 0 }}>
                           <circle cx="16" cy="16" r="8" />
                         </svg>
                         <span style={{ color: '#a8a8a8', whiteSpace: 'nowrap' }}>{readableValue}</span>
@@ -318,23 +333,23 @@ export default function Home() {
                   if (col.includes("entry_price")) {
                     const rowId = cellId.split(':')[0];
                     const signal = signals.find((s: any) => String(s.id) === String(rowId));
-                    if (!signal) return <span>{value ? Number(value).toFixed(2) : '-'}</span>;
+                    if (!signal) return <span style={{ fontSize: '9.5px' }}>{value ? Number(value).toFixed(2) : '-'}</span>;
                     const entry = signal.entry_price ? Number(signal.entry_price).toFixed(2) : '-';
                     const sl = signal.sl_price ? Number(signal.sl_price).toFixed(2) : '-';
                     const tp = signal.tp_price ? Number(signal.tp_price).toFixed(2) : '-';
                     const rr = Number(signal.rr_ratio) || 0;
                     const rrColor = rr >= 2.0 ? '#24a148' : '#a8a8a8';
                     return (
-                      <div style={{ display: 'flex', flexDirection: 'column', lineHeight: '1.2' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', lineHeight: '1.2', fontSize: '9.5px' }}>
                         <div>
                           <span style={{ fontWeight: 'bold' }}>{entry}</span>
                           {signal.rr_ratio !== undefined && (
-                            <span style={{ fontSize: '10px', color: rrColor, marginLeft: '6px' }}>
+                            <span style={{ fontSize: '8.5px', color: rrColor, marginLeft: '4px' }}>
                               (R:R {rr.toFixed(2)})
                             </span>
                           )}
                         </div>
-                        <div style={{ fontSize: '10px', color: '#a8a8a8' }}>
+                        <div style={{ fontSize: '8.5px', color: '#a8a8a8' }}>
                           <span style={{ color: '#fa4d56' }}>{sl}</span>
                           <span style={{ margin: '0 4px' }}>|</span>
                           <span style={{ color: '#24a148' }}>{tp}</span>
@@ -346,7 +361,7 @@ export default function Home() {
                     const format = getRegimeFormat(value);
                     const parts = format.text.split(' ');
                     return (
-                      <span style={{ color: format.color, fontWeight: 'bold', fontSize: '0.85em', display: 'inline-block', lineHeight: '1.1' }}>
+                      <span style={{ color: format.color, fontWeight: 'bold', fontSize: '9px', display: 'inline-block', lineHeight: '1.1' }}>
                         {parts.map((p, i) => <span key={i}>{p}{i < parts.length - 1 && <br/>}</span>)}
                       </span>
                     );
@@ -366,14 +381,14 @@ export default function Home() {
                     }
                     
                     return (
-                      <div style={{ display: 'flex', flexDirection: 'row', gap: '6px', alignItems: 'center', flexWrap: 'nowrap' }}>
+                      <div style={{ display: 'flex', flexDirection: 'row', gap: '4px', alignItems: 'center', flexWrap: 'nowrap', fontSize: '9.5px' }}>
                         {modelName ? (
-                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                            <svg width="12" height="12" viewBox="0 0 32 32" style={{ fill: '#4589ff', flexShrink: 0 }}>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                            <svg width="10" height="10" viewBox="0 0 32 32" style={{ fill: '#4589ff', flexShrink: 0 }}>
                               <path d="M26,8V6a2,2,0,0,0-2-2H22V2H20V4H18V2H16V4H14V2H12V4H10V2H8V4H6A2,2,0,0,0,4,6V8H2v2H4v2H2v2H4v2H2v2H4v2H2v2H4v2H2v2H4v2A2,2,0,0,0,6,28H8v2h2V28h2v2h2V28h2v2h2V28h2v2h2V28h2A2,2,0,0,0,28,26V24h2V22H28V20h2V18H28V16h2V14H28V12h2V10H28V8ZM26,26H6V6H26Z" />
                               <rect x="10" y="10" width="12" height="12" />
                             </svg>
-                            <span style={{ color: '#ffffff', fontWeight: 'bold', fontSize: '11px', whiteSpace: 'nowrap' }}>
+                            <span style={{ color: '#ffffff', fontWeight: 'bold', fontSize: '9.5px', whiteSpace: 'nowrap' }}>
                               {readableModelText}
                             </span>
                           </div>
@@ -381,7 +396,7 @@ export default function Home() {
                           <span>-</span>
                         )}
                         {conf !== undefined && conf !== null && (
-                          <span style={{ color: confColor, fontWeight: 'bold', fontSize: '10px', whiteSpace: 'nowrap' }}>
+                          <span style={{ color: confColor, fontWeight: 'bold', fontSize: '8.5px', whiteSpace: 'nowrap' }}>
                             {(conf * 100).toFixed(2)}%
                           </span>
                         )}
@@ -425,8 +440,30 @@ export default function Home() {
             }}
           >
             <div style={{ height: "100%" }}>
-              <TradeHistoryTable trades={mergedTrades.slice(0, 5)} title="" hidePagination hideSearch />
+              <TradeHistoryTable trades={mergedTrades.slice(0, 5)} title="" hidePagination hideSearch compact />
             </div>
+          </DashboardPanel>
+        </div>
+
+        <div key="shap">
+          <DashboardPanel title="Latest Signal Explainability" tooltipInfo="Top 5 features contributing to the latest signal (Pseudo-SHAP)">
+            <ShapPanel 
+              shapValues={signals[0]?.signal_metadata?.model_output?.shap_values || signals[0]?.shap_values || []} 
+              direction={signals[0]?.direction || "NEUTRAL"} 
+              probabilities={signals[0]?.signal_metadata?.model_output?.probabilities || {}}
+            />
+          </DashboardPanel>
+        </div>
+
+        <div key="attribution">
+          <DashboardPanel title="Factor Attribution" tooltipInfo="Performance decomposition based on recent closed trades.">
+            <AttributionPanel />
+          </DashboardPanel>
+        </div>
+
+        <div key="regime">
+          <DashboardPanel title="Regime Timeline" tooltipInfo="Historical changes in market regime.">
+            <RegimeTimeline />
           </DashboardPanel>
         </div>
       </ResponsiveGridLayout>
