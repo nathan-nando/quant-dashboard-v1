@@ -52,6 +52,24 @@ export function GlobalStateProvider({ children }: { children: React.ReactNode })
         if (payload.total_trades !== undefined) setTotalTrades(payload.total_trades);
         if (payload.positions) setPositions(payload.positions);
         
+        if (payload.flash_message) {
+          const fm = payload.flash_message;
+          setToastMsg((prev) => {
+             // Only set toast if it's a new ID
+             if (!prev || (prev as any)._id !== fm.id) {
+                let msgKind = fm.type === "success" ? "success" : fm.type === "error" ? "error" : "info";
+                return {
+                  _id: fm.id,
+                  kind: msgKind,
+                  title: "⚡ System Action",
+                  subtitle: fm.message,
+                  caption: fm.command
+                } as any;
+             }
+             return prev;
+          });
+        }
+        
         if (payload.recent_signals && payload.recent_signals.length > 0) {
           const topSignal = payload.recent_signals[0];
           
