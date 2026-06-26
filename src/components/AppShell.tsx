@@ -24,10 +24,38 @@ import { API_BASE_URL } from '@/config/env';
 
 const HeaderAny = Header as any;
 
+const HeaderAccountBadge = () => {
+  const { state } = useGlobalState();
+  if (!state || !state.account_info) return null;
+  const acc = state.account_info;
+  const isLive = acc.mode === 'LIVE';
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', height: '100%' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '2px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', lineHeight: 1.1 }}>
+          <span style={{ fontSize: '0.65rem', color: '#a8a8a8' }}>{acc.login} | {acc.server}</span>
+          <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '1px 3px', backgroundColor: isLive ? '#24a148' : '#0f62fe', color: 'white', fontSize: '8px', fontWeight: 600, borderRadius: '2px', lineHeight: 1, height: '12px' }}>
+            {acc.mode}
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'baseline', lineHeight: 1.1 }}>
+           <strong style={{ fontSize: '0.875rem', color: '#fff' }}>
+             ${(acc.equity || acc.balance || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}
+           </strong>
+           {acc.profit !== undefined && acc.profit !== 0 && (
+              <span style={{ fontSize: '0.65rem', color: acc.profit >= 0 ? '#24a148' : '#fa4d56', marginLeft: '4px' }}>
+                 ({acc.profit > 0 ? '+' : ''}{acc.profit.toLocaleString(undefined, {minimumFractionDigits: 2})})
+              </span>
+           )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { state } = useGlobalState();
 
   // Job Logs Modal States
   const [detailLogs, setDetailLogs] = useState<string>("");
@@ -131,33 +159,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     </HeaderMenuItem>
   );
 
-  const HeaderAccountBadge = () => {
-    if (!state || !state.account_info) return null;
-    const acc = state.account_info;
-    const isLive = acc.mode === 'LIVE';
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', height: '100%' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '2px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', lineHeight: 1.1 }}>
-            <span style={{ fontSize: '0.65rem', color: '#a8a8a8' }}>{acc.login} | {acc.server}</span>
-            <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '1px 3px', backgroundColor: isLive ? '#24a148' : '#0f62fe', color: 'white', fontSize: '8px', fontWeight: 600, borderRadius: '2px', lineHeight: 1, height: '12px' }}>
-              {acc.mode}
-            </div>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'baseline', lineHeight: 1.1 }}>
-             <strong style={{ fontSize: '0.875rem', color: '#fff' }}>
-               ${(acc.equity || acc.balance || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}
-             </strong>
-             {acc.profit !== undefined && acc.profit !== 0 && (
-                <span style={{ fontSize: '0.65rem', color: acc.profit >= 0 ? '#24a148' : '#fa4d56', marginLeft: '4px' }}>
-                   ({acc.profit > 0 ? '+' : ''}{acc.profit.toLocaleString(undefined, {minimumFractionDigits: 2})})
-                </span>
-             )}
-          </div>
-        </div>
-      </div>
-    );
-  };
+
 
   return (
     <>

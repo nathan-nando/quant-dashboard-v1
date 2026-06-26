@@ -191,10 +191,32 @@ function MonitoringPageContent() {
               <strong>Event: </strong> {logDetail.event}
             </div>
             
-            <h5 style={{ marginBottom: '0.5rem' }}>Context / Details</h5>
-            <CodeSnippet type="multi" light>
-              {JSON.stringify(logDetail.context, null, 2)}
-            </CodeSnippet>
+            <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+              <div style={{ flex: 1 }}>
+                <h5 style={{ marginBottom: '0.5rem' }}>Context / Details</h5>
+                <CodeSnippet type="multi" light>
+                  {JSON.stringify(logDetail.context, null, 2)}
+                </CodeSnippet>
+              </div>
+
+              {logDetail.request_data && (
+                <div style={{ flex: 1 }}>
+                  <h5 style={{ marginBottom: '0.5rem' }}>Request Data</h5>
+                  <CodeSnippet type="multi" light>
+                    {JSON.stringify(logDetail.request_data, null, 2)}
+                  </CodeSnippet>
+                </div>
+              )}
+
+              {logDetail.response_data && (
+                <div style={{ flex: 1 }}>
+                  <h5 style={{ marginBottom: '0.5rem' }}>Response Data</h5>
+                  <CodeSnippet type="multi" light>
+                    {JSON.stringify(logDetail.response_data, null, 2)}
+                  </CodeSnippet>
+                </div>
+              )}
+            </div>
           </div>
         ) : (
           <p>Failed to load log details.</p>

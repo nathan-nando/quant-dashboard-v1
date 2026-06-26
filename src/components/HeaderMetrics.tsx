@@ -11,7 +11,7 @@ const getRegimeFormat = (regime: string) => {
   if (regime === 'TREND_BULL') return { text: 'Bull', color: '#24a148' };
   if (regime === 'TREND_BEAR') return { text: 'Bear', color: '#fa4d56' };
   if (regime === 'VOLATILE_CHOP') return { text: 'Chop', color: '#f1c21b' };
-  if (regime === 'MEAN_REVERTING') return { text: 'Range', color: '#4589ff' };
+  if (regime === 'MEAN_REVERTING') return { text: 'Mean', color: '#4589ff' };
   return { text: regime, color: '#f4f4f4' };
 };
 

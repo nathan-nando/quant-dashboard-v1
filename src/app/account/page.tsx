@@ -3,7 +3,7 @@
 import React, { Suspense, useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { Grid, Column, Tile, Button, Toggle, TextInput, Select, SelectItem, Dropdown, Modal, ToastNotification } from '@carbon/react';
-import { Wallet, ChartLine, Settings, ArrowUpRight, ArrowDownRight, Information, Activity, DataBase } from '@carbon/icons-react';
+import { Wallet, Settings, ArrowUpRight, ArrowDownRight, Information, Activity, DataBase } from '@carbon/icons-react';
 import TradeHistoryTable from '@/components/TradeHistoryTable';
 import PnLChart from '@/components/PnLChart';
 import GlobalDetailTable from '@/components/GlobalDetailTable';
@@ -145,25 +145,10 @@ function AccountContent() {
   const navItems = [
     { id: 'portfolio', label: 'Portfolio', icon: Wallet },
     { id: 'trades', label: 'Trades', icon: Activity },
-    { id: 'performance', label: 'Performance', icon: ChartLine },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
-  // Derive Asset Allocation from Open Positions
-  const assetAllocation = useMemo(() => {
-    if (positions.length === 0) return [];
-    const allocation: Record<string, { volume: number, pnl: number }> = {};
-    positions.forEach(p => {
-      if (!allocation[p.symbol]) allocation[p.symbol] = { volume: 0, pnl: 0 };
-      allocation[p.symbol].volume += p.volume;
-      allocation[p.symbol].pnl += p.profit;
-    });
-    return Object.entries(allocation).map(([symbol, data]) => ({
-      symbol,
-      volume: data.volume,
-      pnl: data.pnl
-    }));
-  }, [positions]);
+
 
   if (!mounted) {
     return <div style={{ padding: '2rem' }}>Loading Account Workspace...</div>;
@@ -253,6 +238,7 @@ function AccountContent() {
             {/* PORTFOLIO TAB */}
             {currentTab === 'portfolio' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                {/* Balance Metrics */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.2rem' }}>
                   <Tile style={{ padding: '1.25rem' }}>
                     <span style={{ fontSize: '0.75rem', color: '#a8a8a8', display: 'block', marginBottom: '0.5rem' }}>Total Balance</span>
@@ -284,37 +270,48 @@ function AccountContent() {
                   </Tile>
                 </div>
 
-                <Tile style={{ padding: '1.5rem', marginTop: 0 }}>
-                  <h4 style={{ margin: '0 0 1rem 0', fontWeight: 500 }}>Asset Allocation</h4>
-                  {assetAllocation.length > 0 ? (
-                    <div style={{ overflowX: 'auto', border: '1px solid #393939', borderRadius: '4px' }}>
-                      <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
-                        <thead>
-                          <tr style={{ borderBottom: '1px solid #393939', backgroundColor: '#262626' }}>
-                            <th style={{ padding: '1rem' }}>Symbol</th>
-                            <th style={{ padding: '1rem' }}>Total Volume (Lots)</th>
-                            <th style={{ padding: '1rem' }}>Unrealized PnL</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {assetAllocation.map((asset, idx) => (
-                            <tr key={idx} style={{ borderBottom: '1px solid #393939' }}>
-                              <td style={{ padding: '1rem', fontWeight: 500 }}>{asset.symbol}</td>
-                              <td style={{ padding: '1rem' }}>{asset.volume.toFixed(2)}</td>
-                              <td style={{ padding: '1rem', color: asset.pnl >= 0 ? '#24a148' : '#fa4d56' }}>
-                                {asset.pnl >= 0 ? '+' : ''}${asset.pnl.toFixed(2)}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : (
-                    <div style={{ padding: '3rem', textAlign: 'center', backgroundColor: '#262626', color: '#8d8d8d', borderRadius: '4px' }}>
-                      No active exposure. Your portfolio is 100% Cash.
-                    </div>
-                  )}
-                </Tile>
+                {/* Performance Metrics */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.2rem' }}>
+                  <Tile style={{ textAlign: 'center' }}>
+                    <span style={{ fontSize: '0.75rem', color: '#a8a8a8' }}>Win Rate</span>
+                    <strong style={{ display: 'block', fontSize: '1.5rem', marginTop: '0.5rem' }}>
+                      {analytics ? `${analytics.win_rate}%` : '...'}
+                    </strong>
+                  </Tile>
+                  <Tile style={{ textAlign: 'center' }}>
+                    <span style={{ fontSize: '0.75rem', color: '#a8a8a8' }}>Profit Factor</span>
+                    <strong style={{ display: 'block', fontSize: '1.5rem', marginTop: '0.5rem' }}>
+                      {analytics ? analytics.profit_factor : '...'}
+                    </strong>
+                  </Tile>
+                  <Tile style={{ textAlign: 'center' }}>
+                    <span style={{ fontSize: '0.75rem', color: '#a8a8a8' }}>Total Trades</span>
+                    <strong style={{ display: 'block', fontSize: '1.5rem', marginTop: '0.5rem' }}>
+                      {analytics ? analytics.total_trades : '...'}
+                    </strong>
+                  </Tile>
+                  <Tile style={{ textAlign: 'center' }}>
+                    <span style={{ fontSize: '0.75rem', color: '#a8a8a8' }}>Total PnL (Closed)</span>
+                    <strong style={{ display: 'block', fontSize: '1.5rem', marginTop: '0.5rem', color: analytics?.total_pnl >= 0 ? '#24a148' : '#fa4d56' }}>
+                      {analytics ? `$${analytics.total_pnl}` : '...'}
+                    </strong>
+                  </Tile>
+                  <Tile style={{ textAlign: 'center' }}>
+                    <span style={{ fontSize: '0.75rem', color: '#a8a8a8' }}>Max Drawdown</span>
+                    <strong style={{ display: 'block', fontSize: '1.5rem', marginTop: '0.5rem', color: '#fa4d56' }}>
+                      {analytics ? `-${analytics.max_drawdown}%` : '...'}
+                    </strong>
+                  </Tile>
+                </div>
+
+                {/* Equity Curve Chart */}
+                <div>
+                  <Tile style={{ padding: '0.5rem', backgroundColor: '#262626' }}>
+                    <PnLChart trades={trades} />
+                  </Tile>
+                </div>
+
+
               </div>
             )}
 
@@ -412,43 +409,7 @@ function AccountContent() {
               </div>
             )}
 
-            {/* PERFORMANCE TAB */}
-            {currentTab === 'performance' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.2rem' }}>
-                  <Tile style={{ textAlign: 'center' }}>
-                    <span style={{ fontSize: '0.75rem', color: '#a8a8a8' }}>Win Rate</span>
-                    <strong style={{ display: 'block', fontSize: '1.5rem', marginTop: '0.5rem' }}>
-                      {analytics ? `${analytics.win_rate}%` : '...'}
-                    </strong>
-                  </Tile>
-                  <Tile style={{ textAlign: 'center' }}>
-                    <span style={{ fontSize: '0.75rem', color: '#a8a8a8' }}>Profit Factor</span>
-                    <strong style={{ display: 'block', fontSize: '1.5rem', marginTop: '0.5rem' }}>
-                      {analytics ? analytics.profit_factor : '...'}
-                    </strong>
-                  </Tile>
-                  <Tile style={{ textAlign: 'center' }}>
-                    <span style={{ fontSize: '0.75rem', color: '#a8a8a8' }}>Total PnL (Closed)</span>
-                    <strong style={{ display: 'block', fontSize: '1.5rem', marginTop: '0.5rem', color: analytics?.total_pnl >= 0 ? '#24a148' : '#fa4d56' }}>
-                      {analytics ? `$${analytics.total_pnl}` : '...'}
-                    </strong>
-                  </Tile>
-                  <Tile style={{ textAlign: 'center' }}>
-                    <span style={{ fontSize: '0.75rem', color: '#a8a8a8' }}>Max Drawdown</span>
-                    <strong style={{ display: 'block', fontSize: '1.5rem', marginTop: '0.5rem', color: '#fa4d56' }}>
-                      {analytics ? `-${analytics.max_drawdown}%` : '...'}
-                    </strong>
-                  </Tile>
-                </div>
 
-                <div>
-                  <Tile style={{ padding: '0.5rem', backgroundColor: '#262626' }}>
-                    <PnLChart trades={trades} />
-                  </Tile>
-                </div>
-              </div>
-            )}
 
             {/* SETTINGS TAB */}
             {currentTab === 'settings' && (

@@ -282,7 +282,7 @@ export default function TradeHistoryTable({
       const rowId = cellId.split(':')[0];
       const trade = trades.find((t, idx) => (t.trade_id || `trade-${idx}`) === rowId);
       if (!trade) return "-";
-      const modelName = trade.model_version;
+      const modelName = trade.model_version === "Manual Override" ? "Manual" : trade.model_version;
       const conf = trade.confidence;
       const confColor = conf >= 0.7 ? '#24a148' : conf >= 0.5 ? '#f1c21b' : '#fa4d56';
       

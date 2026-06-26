@@ -279,6 +279,8 @@ export default function GlobalTable({
                           kind="ghost" 
                           size="sm" 
                           hasIconOnly 
+                          tooltipPosition="left"
+                          tooltipAlignment="center"
                           renderIcon={() => <View size={compact ? 12 : 16} fill="#4589ff" />} 
                           iconDescription="View Details" 
                           onClick={() => onViewDetails(row.id)} 

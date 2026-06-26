@@ -103,7 +103,7 @@ export function GlobalStateProvider({ children }: { children: React.ReactNode })
       {toastMsg && (
         <div style={{ position: "fixed", top: "4rem", right: "2rem", zIndex: 9999 }}>
           <ToastNotification
-            key={Date.now()}
+            key={toastMsg.caption || toastMsg.title}
             kind={toastMsg.kind}
             title={toastMsg.title}
             subtitle={toastMsg.subtitle as any}

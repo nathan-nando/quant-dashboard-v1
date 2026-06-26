@@ -35,7 +35,10 @@ export default function ThresholdsPage() {
     tp_mult_mean_reverting: 1.5,
     sl_mult_volatile: 2.0,
     tp_mult_volatile: 2.0,
-    cron_interval_minutes: 3
+    cron_interval_minutes: 3,
+    max_sl_pips: 500,
+    max_tp_pips: 1500,
+    max_holding_hours: 120
   });
 
   const [originalConfig, setOriginalConfig] = useState<any>(null);
@@ -219,11 +222,33 @@ export default function ThresholdsPage() {
                   min={0.1} max={100} step={0.1} onChange={(e: any, { value }: any) => updateConfig("risk_per_trade_pct", value)}
                 />
               </div>
-              <div style={{marginTop: "1rem"}}>
-                <NumberInput 
-                  id="max_positions" label="Max Open Positions" value={config.max_open_positions} 
-                  min={1} max={20} onChange={(e: any, { value }: any) => updateConfig("max_open_positions", value)}
-                />
+              <div style={{marginTop: "1rem", display: "flex", gap: "2rem"}}>
+                <div style={{ flex: 1 }}>
+                  <NumberInput 
+                    id="max_positions" label="Max Open Positions" value={config.max_open_positions} 
+                    min={1} max={20} onChange={(e: any, { value }: any) => updateConfig("max_open_positions", value)}
+                  />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <NumberInput 
+                    id="max_holding_hours" label="Max Holding Time (Hours)" value={config.max_holding_hours ?? 120} 
+                    min={1} max={1000} onChange={(e: any, { value }: any) => updateConfig("max_holding_hours", value)}
+                  />
+                </div>
+              </div>
+              <div style={{marginTop: "1rem", display: "flex", gap: "2rem"}}>
+                <div style={{ flex: 1 }}>
+                  <NumberInput 
+                    id="max_sl_pips" label="Max SL (Pips)" value={config.max_sl_pips ?? 500} 
+                    min={10} max={5000} onChange={(e: any, { value }: any) => updateConfig("max_sl_pips", value)}
+                  />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <NumberInput 
+                    id="max_tp_pips" label="Max TP (Pips)" value={config.max_tp_pips ?? 1500} 
+                    min={10} max={10000} onChange={(e: any, { value }: any) => updateConfig("max_tp_pips", value)}
+                  />
+                </div>
               </div>
             </FormGroup>
           </Tile>

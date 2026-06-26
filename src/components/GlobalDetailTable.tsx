@@ -58,6 +58,7 @@ const CollapsibleJSON = ({
 
 const getRegimeFormat = (regime: string) => {
   if (!regime) return { text: 'UNKNOWN', color: '#f4f4f4' };
+  if (regime === 'TEST_MANUAL') return { text: 'Manual', color: '#8a3ffc' }; // Purple
   if (regime === 'TREND_BULL') return { text: 'Bull Trend', color: '#24a148' }; // Green
   if (regime === 'TREND_BEAR') return { text: 'Bear Trend', color: '#fa4d56' }; // Red
   if (regime === 'VOLATILE_CHOP') return { text: 'Volatile Chop', color: '#f1c21b' }; // Yellow
@@ -380,7 +381,7 @@ export default function GlobalDetailTable({ id, type = 'signal', dataObj, onClos
             <div>
               <p style={{ color: '#a8a8a8', fontSize: '0.75rem', marginBottom: '4px' }}>Regime / Model</p>
               <p style={{ fontSize: '0.875rem' }}>
-                {data.regime || '-'} <span style={{ color: '#8a3ffc' }}>({data.model_version || 'Unknown'})</span>
+                {data.regime || '-'} <span style={{ color: '#8a3ffc' }}>({data.model_version === 'Manual Override' ? 'Manual' : (data.model_version || 'Unknown')})</span>
               </p>
             </div>
             <div>

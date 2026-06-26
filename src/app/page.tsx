@@ -21,6 +21,7 @@ import { API_BASE_URL } from '@/config/env';
 
 const getRegimeFormat = (regime: string) => {
   if (!regime) return { text: 'UNKNOWN', color: '#f4f4f4' };
+  if (regime === 'TEST_MANUAL') return { text: 'Manual', color: '#8a3ffc' }; // Purple
   if (regime === 'TREND_BULL') return { text: 'Bull Trend', color: '#24a148' }; // Green
   if (regime === 'TREND_BEAR') return { text: 'Bear Trend', color: '#fa4d56' }; // Red
   if (regime === 'VOLATILE_CHOP') return { text: 'Volatile Chop', color: '#f1c21b' }; // Yellow
@@ -66,6 +67,30 @@ export default function Home() {
       return t;
     });
   }, [trades, positions]);
+
+  const liveTrades = useMemo(() => {
+    return positions.map(pos => {
+      const dbTrade = trades.find(t => String(t.mt5_ticket) === String(pos.ticket));
+      return {
+        trade_id: dbTrade ? dbTrade.trade_id : String(pos.ticket),
+        mt5_ticket: String(pos.ticket),
+        symbol: pos.symbol,
+        direction: pos.type === 0 ? "BUY" : "SELL",
+        entry_time: new Date(pos.time * 1000).toISOString(),
+        exit_time: "",
+        entry_price: pos.price_open,
+        exit_price: pos.price_current,
+        volume: pos.volume,
+        pnl_money: pos.profit,
+        pnl_pips: dbTrade ? dbTrade.pnl_pips : 0,
+        close_reason: dbTrade ? dbTrade.close_reason : "",
+        status: "OPEN",
+        confidence: dbTrade ? dbTrade.confidence : 0,
+        model_version: dbTrade ? dbTrade.model_version : "MANUAL",
+        regime: dbTrade ? dbTrade.regime : "UNKNOWN"
+      };
+    });
+  }, [positions, trades]);
 
   const signalHeaders = [
     { key: "timestamp", header: "Time" },
@@ -126,9 +151,10 @@ export default function Home() {
       keysToRemove.forEach(k => localStorage.removeItem(k));
     } catch (e) {}
  
-    const saved = localStorage.getItem("quantDashboardLayout_v26");
+    const saved = localStorage.getItem('dashboard-layouts');
     if (saved) {
       try {
+        // eslint-disable-next-line react-hooks/exhaustive-deps
         setLayouts(JSON.parse(saved));
       } catch (e) {}
     }
@@ -377,8 +403,12 @@ export default function Home() {
                     
                     let readableModelText = '-';
                     if (modelName) {
-                      const words = modelName.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
-                      readableModelText = words.join(' ');
+                      if (modelName === "Manual Override") {
+                        readableModelText = "Manual";
+                      } else {
+                        const words = modelName.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
+                        readableModelText = words.join(' ');
+                      }
                     }
                     
                     return (
@@ -412,18 +442,16 @@ export default function Home() {
         </div>
         <div key="trades">
           <DashboardPanel 
-            title="Recent Trades" 
-            tooltipInfo="Recent executed trades and their PnL details."
+            title="Live Trades" 
+            tooltipInfo="Currently open trades/positions."
             onExportCsv={() => {
-              const headers = ["Direction", "Entry Time", "Exit Time", "Entry", "Exit", "Lots", "Reason", "Regime", "Model", "Conf", "PnL"];
-              const rows = mergedTrades.map(t => [
+              const headers = ["Direction", "Entry Time", "Entry", "Current Price", "Lots", "Regime", "Model", "Conf", "PnL"];
+              const rows = liveTrades.map(t => [
                 t.direction,
                 t.entry_time ? new Date(t.entry_time).toLocaleString() : '',
-                t.exit_time ? new Date(t.exit_time).toLocaleString() : '',
                 t.entry_price || '',
                 t.exit_price || '',
                 t.volume || '',
-                t.close_reason || '',
                 t.regime || '',
                 t.model_version || '',
                 t.confidence ? (t.confidence * 100).toFixed(2) + '%' : '',
@@ -434,14 +462,14 @@ export default function Home() {
               const encodedUri = encodeURI(csvContent);
               const link = document.createElement("a");
               link.setAttribute("href", encodedUri);
-              link.setAttribute("download", `recent_trades_${new Date().toISOString().split('T')[0]}.csv`);
+              link.setAttribute("download", `live_trades_${new Date().toISOString().split('T')[0]}.csv`);
               document.body.appendChild(link);
               link.click();
               document.body.removeChild(link);
             }}
           >
             <div style={{ height: "100%" }}>
-              <TradeHistoryTable trades={mergedTrades.slice(0, 5)} title="" hidePagination hideSearch compact />
+              <TradeHistoryTable trades={liveTrades} title="" hidePagination hideSearch compact />
             </div>
           </DashboardPanel>
         </div>
