@@ -136,7 +136,7 @@ function SimulationPageContent() {
     { key: "name", header: "Simulation Name" },
     { key: "created_at", header: "Date" },
     { key: "capital_summary", header: "Capital / Equity / PnL" },
-    { key: "stats_summary", header: "Trades / Win Rate / Max DD" },
+    { key: "stats_summary", header: "Summary" },
     { key: "status", header: "Status" },
     { key: "actions", header: "Actions" }
   ];
@@ -242,6 +242,7 @@ function SimulationPageContent() {
       const totalTrades = run.total_trades;
       const winRate = run.win_rate;
       const maxDrawdown = run.max_drawdown;
+      const avgDuration = run.metrics_report?.avg_duration_str || '-';
 
       return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', lineHeight: '1.2' }}>
@@ -258,6 +259,10 @@ function SimulationPageContent() {
             <span style={{ color: maxDrawdown ? '#fa4d56' : 'inherit' }}>
               {maxDrawdown !== undefined && maxDrawdown !== null ? `${(maxDrawdown * 100).toFixed(1)}%` : '-'}
             </span>
+          </div>
+          <div>
+            <span style={{ color: '#a8a8a8' }}>Avg Dur: </span>
+            <span>{avgDuration}</span>
           </div>
         </div>
       );
@@ -1071,33 +1076,9 @@ function SimulationPageContent() {
                           <strong style={{ color: '#fa4d56', fontSize: '0.875rem' }}>{((activeRunData.max_drawdown || 0) * 100).toFixed(1)}%</strong>
                         </div>
                       {(() => {
-                        let avgDurationStr = '-';
-                        let minDurationStr = '-';
-                        let maxDurationStr = '-';
-                        if (activeRunData?.tradeList && activeRunData.tradeList.length > 0) {
-                          const durations = activeRunData.tradeList.map((t: any) => {
-                            if (t.entry_time && t.exit_time) {
-                              return new Date(t.exit_time).getTime() - new Date(t.entry_time).getTime();
-                            }
-                            return null;
-                          }).filter((d: any) => d !== null);
-                        
-                          if (durations.length > 0) {
-                            const avg = durations.reduce((a: number, b: number) => a + b, 0) / durations.length;
-                            const min = Math.min(...durations);
-                            const max = Math.max(...durations);
-                        
-                            const formatDur = (ms: number) => {
-                              const hours = ms / (1000 * 60 * 60);
-                              if (hours < 24) return hours.toFixed(1) + 'h';
-                              return (hours / 24).toFixed(1) + 'd';
-                            };
-                        
-                            avgDurationStr = formatDur(avg);
-                            minDurationStr = formatDur(min);
-                            maxDurationStr = formatDur(max);
-                          }
-                        }
+                        let avgDurationStr = activeRunData?.metrics_report?.avg_duration_str || '-';
+                        let minDurationStr = activeRunData?.metrics_report?.shortest_duration_str || '-';
+                        let maxDurationStr = activeRunData?.metrics_report?.longest_duration_str || '-';
                         return (
                           <>
                             <div>

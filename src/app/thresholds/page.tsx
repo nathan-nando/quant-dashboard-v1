@@ -127,7 +127,7 @@ export default function ThresholdsPage() {
     return keys.some(key => config[key] !== originalConfig[key]);
   };
 
-  const riskKeys = ["auto_execution_enabled", "use_equity_kill_switch", "max_drawdown_equity_pct", "use_daily_kill_switch", "max_daily_drawdown_pct", "risk_per_trade_pct", "max_open_positions"];
+  const riskKeys = ["auto_execution_enabled", "use_equity_kill_switch", "max_drawdown_equity_pct", "use_daily_kill_switch", "max_daily_drawdown_pct", "risk_per_trade_pct", "max_open_positions", "max_sl_pips", "max_tp_pips", "max_holding_hours"];
   const alphaKeys = [
     "ml_conf_bull", "ml_margin_bull", "meta_conf_bull",
     "ml_conf_bear", "ml_margin_bear", "meta_conf_bear",

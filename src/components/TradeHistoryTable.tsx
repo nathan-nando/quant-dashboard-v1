@@ -96,7 +96,7 @@ export default function TradeHistoryTable({
 
   const headers = [
     { key: "formatted_dir_status", header: "Status", width: "60px" },
-    { key: "formatted_entry_time", header: "Time (Entry / Exit)" },
+    { key: "formatted_entry_time", header: "Time" },
     { key: "formatted_entry_price", header: "Price (Entry/Exit) / Lots" },
     { key: "formatted_pnl_money", header: "PnL", width: "65px" },
     { key: "model_version", header: "Model / Conf" },
@@ -179,6 +179,14 @@ export default function TradeHistoryTable({
               <path d="M14 22l1.43-1.39L9.53 15H28v-2H9.53l5.9-5.61L14 6l-8 8z" />
             </svg>
             <span style={{ color: '#e0e0e0' }}>{formatTime(trade.exit_time)}</span>
+          </div>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: compact ? '4px' : '6px' }}>
+            <svg width={compact ? 8 : 10} height={compact ? 8 : 10} viewBox="0 0 32 32" style={{ fill: '#4589ff', flexShrink: 0 }}>
+              <title>Duration</title>
+              <path d="M16 2A14 14 0 1030 16 14 14 0 0016 2zm0 26a12 12 0 1112-12A12 12 0 0116 28z" />
+              <path d="M15 8h2v8.59l6 6-1.41 1.41-6.59-6.59z" />
+            </svg>
+            <span style={{ color: '#a8a8a8' }}>{(trade as any).duration_str || '-'}</span>
           </div>
         </div>
       );
