@@ -184,21 +184,12 @@ export default function SignalsPage() {
         <h3 style={{ marginBottom: "1rem", fontWeight: 400 }}>Signals</h3>
       </Column>
 
-      {/* Chart + Table — one row, 0.2rem gap, full height */}
+      {/* Chart + Table — stack on mobile, row on desktop */}
       <Column lg={16} md={8} sm={4}>
-        <div style={{
-          display: 'flex',
-          gap: '0.2rem',
-          alignItems: 'stretch',
-          height: 'calc(100vh - 10rem)',
-          width: '100%',
-        }}>
+        <div className="signals-layout">
 
           {/* Chart */}
-          <div style={{
-            flex: '0 0 50%',
-            position: 'relative',
-          }}>
+          <div className="signals-chart-wrapper">
             <DashboardPanel 
               title="XAUUSD" 
               tooltipInfo="Interactive candlestick chart with technical indicators."
@@ -228,7 +219,7 @@ export default function SignalsPage() {
           </div>
 
           {/* Table */}
-          <div style={{ flex: '1 1 0', position: 'relative' }}>
+          <div className="signals-table-wrapper">
             <DashboardPanel 
               title="Signal History"
               tooltipInfo="List of generated strategy signals and their details."

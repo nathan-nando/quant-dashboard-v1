@@ -44,6 +44,7 @@ import TradeHistoryTable from '../../components/TradeHistoryTable';
 import GlobalTable from '../../components/GlobalTable';
 import GlobalJobsTable from '../../components/GlobalJobsTable';
 import ComparisonChart from '../../components/ComparisonChart';
+import SubPageSidebar from '@/components/SubPageSidebar';
 import { API_BASE_URL } from '@/config/env';
 
 function SimulationPageContent() {
@@ -596,28 +597,16 @@ function SimulationPageContent() {
         <div style={{ position: 'relative' }}>
 
 
-          <div style={{ display: 'flex', gap: '2rem', marginTop: '0.5rem' }}>
+          <div className="page-with-sidebar">
             {/* Sidebar Navigation */}
-            <div style={{ width: '220px', display: 'flex', flexDirection: 'column', gap: '0.25rem', flexShrink: 0 }}>
-              {navItems.map(item => {
-                const isActive = currentTab === item.id;
-                const Icon = item.icon;
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => handleTabChange(item.id)}
-                    className={isActive ? "settings-sidebar-item active" : "settings-sidebar-item"}
-                  >
-                    <Icon size={16} style={{ marginRight: '0.5rem' }} />
-                    {item.label}
-                  </button>
-                );
-              })}
-            </div>
+            <SubPageSidebar
+              navItems={navItems}
+              currentTab={currentTab}
+              onTabChange={handleTabChange}
+            />
 
             {/* Tab Content Panels */}
-            <div style={{ flex: 1 }}>
+            <div className="page-content">
             {/* Tab 1: Launch */}
             {currentTab === 'launch' && (
               <Tile style={{ padding: '2rem' }}>
@@ -927,10 +916,10 @@ function SimulationPageContent() {
             {/* Tab 2: Results */}
             {currentTab === 'results' && (
               <>
-                <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'flex-start', marginBottom: '0.25rem' }}>
+                <div className="sim-header-container">
                   {/* Select Dropdown & Reload Button */}
-                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.5rem', flexShrink: 0 }}>
-                    <div style={{ width: '320px' }}>
+                  <div className="sim-dropdown-wrapper">
+                    <div className="sim-select-container">
                       <Select 
                         id="run-selector" 
                         labelText="Choose Simulation" 
@@ -983,8 +972,8 @@ function SimulationPageContent() {
 
                   {/* Configuration Summary Card */}
                   {activeRunData && activeRunData.status === 'COMPLETED' && (
-                    <Tile style={{ padding: '0.6rem 1rem', backgroundColor: '#353535', border: 'none', marginBottom: 0, marginLeft: 'auto' }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, max-content)', gap: '0.5rem 1rem', fontSize: '0.75rem' }}>
+                    <Tile className="sim-config-tile">
+                      <div className="sim-config-grid">
                         <div>
                           <div style={{ color: '#a8a8a8', fontSize: '10px', marginBottom: '2px' }}>SL/TP Control</div>
                           <strong style={{ color: '#ffffff' }}>{activeRunData.config?.use_ai_sl_tp ? 'Fully AI Driven' : 'Manual Thresholds'}</strong>
@@ -1037,7 +1026,7 @@ function SimulationPageContent() {
 
                 {activeRunData && activeRunData.status === 'COMPLETED' ? (
                   <>
-                    <div style={{ display: 'flex', gap: '0.25rem', marginBottom: '0.25rem' }}>
+                    <div className="sim-metrics-container">
                       <Tile style={{ flex: 1 }}>
                       <h6 style={{ color: '#c6c6c6', marginBottom: '0.5rem' }}>Invested</h6>
                       <h2>${activeRunData.config?.initial_capital?.toLocaleString() || '0'}</h2>
@@ -1057,7 +1046,7 @@ function SimulationPageContent() {
                         </span>
                       </h2>
                     </Tile>
-                    <Tile style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                    <Tile className="sim-summary-tile" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem 1rem' }}>
                         <div>
                           <div style={{ color: '#c6c6c6', fontSize: '0.75rem', marginBottom: '2px' }}>Total Trades</div>
@@ -1096,23 +1085,26 @@ function SimulationPageContent() {
                     </Tile>
                   </div>
 
-                  <div style={{ display: 'flex', gap: '0.25rem', marginBottom: '0.25rem' }}>
-                    <Tile style={isChartFullscreen ? {
-                      position: 'fixed',
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      zIndex: 9999,
-                      width: '100vw',
-                      height: '100vh',
-                      margin: 0,
-                      borderRadius: 0,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      backgroundColor: '#262626',
-                      padding: '2rem'
-                    } : { flex: 2, display: 'flex', flexDirection: 'column' }}>
+                  <div className="sim-charts-container">
+                    <Tile 
+                      className="sim-chart-tile-equity"
+                      style={isChartFullscreen ? {
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        zIndex: 9999,
+                        width: '100vw',
+                        height: '100vh',
+                        margin: 0,
+                        borderRadius: 0,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        backgroundColor: '#262626',
+                        padding: '2rem'
+                      } : undefined}
+                    >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                         <h4 style={{ margin: 0 }}>Equity Curve</h4>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -1142,7 +1134,7 @@ function SimulationPageContent() {
                       </div>
                     </Tile>
 
-                    <Tile style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                    <Tile className="sim-chart-tile-regime">
                       <h4 style={{ marginBottom: '1rem' }}>Regime Performance</h4>
                       <div style={{ flex: 1 }}>
                         <RegimeBreakdown 

@@ -13,7 +13,11 @@ import {
   SkipToContent,
   Theme,
   Modal,
-  CodeSnippet
+  CodeSnippet,
+  HeaderMenuButton,
+  SideNav,
+  SideNavItems,
+  SideNavLink
 } from '@carbon/react';
 import { Settings, Notification, Dashboard, SettingsAdjust, Activity, MachineLearningModel, Analytics, User, Terminal, Meter } from '@carbon/icons-react';
 import MarketClock from './MarketClock';
@@ -152,11 +156,27 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       href={href}
       onClick={(e: React.MouseEvent) => { e.preventDefault(); router.push(href); }}
       aria-current={pathname === href ? 'page' : undefined}
+      className="desktop-nav-item"
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
         <Icon size={16} /> {label}
       </div>
     </HeaderMenuItem>
+  );
+
+  const sideNavItem = (href: string, label: string, Icon: any, onClickExpand: () => void) => (
+    <SideNavLink
+      href={href}
+      onClick={(e: React.MouseEvent) => { 
+        e.preventDefault(); 
+        router.push(href);
+        if (onClickExpand) onClickExpand();
+      }}
+      aria-current={pathname === href ? 'page' : undefined}
+      renderIcon={() => <Icon size={20} />}
+    >
+      {label}
+    </SideNavLink>
   );
 
 
@@ -165,53 +185,81 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     <>
       <Theme theme="g100">
         <HeaderContainer
-          render={() => (
-            <HeaderAny aria-label="QuantV1" style={{ display: 'flex', alignItems: 'stretch' }}>
-              <SkipToContent />
+          render={({ isSideNavExpanded, onClickSideNavExpand }: any) => (
+            <>
+              <HeaderAny aria-label="QuantV1" style={{ display: 'flex', alignItems: 'stretch' }}>
+                <SkipToContent />
 
-              {/* Brand — in normal flow */}
-              <HeaderName
-                href="/"
-                onClick={(e: React.MouseEvent) => { e.preventDefault(); router.push('/'); }}
-                prefix=""
-                style={{ fontSize: '1.25rem', fontWeight: 600, letterSpacing: '0.5px', flexShrink: 0 }}
+                <HeaderMenuButton
+                  aria-label="Open menu"
+                  onClick={onClickSideNavExpand}
+                  isActive={isSideNavExpanded}
+                />
+
+                {/* Brand — in normal flow */}
+                <HeaderName
+                  href="/"
+                  onClick={(e: React.MouseEvent) => { e.preventDefault(); router.push('/'); }}
+                  prefix=""
+                  style={{ fontSize: '1.25rem', fontWeight: 600, letterSpacing: '0.5px', flexShrink: 0 }}
+                >
+                  QuantV1
+                </HeaderName>
+                {/* Group 1 — starts flush after brand, aligns with page content */}
+                <HeaderNavigation aria-label="Main" style={{ border: 'none' }} className="desktop-nav">
+                  {navItem('/', 'Dashboard', Dashboard)}
+                  {navItem('/account', 'Account', User)}
+                  {navItem('/signals', 'Signals', Activity)}
+                  {navItem('/thresholds', 'Thresholds', SettingsAdjust)}
+                  {navItem('/monitoring', 'Monitoring', Meter)}
+                </HeaderNavigation>
+
+                {/* Spacer — pushes Group 2 toward the right */}
+                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1.5rem', height: '100%', overflow: 'hidden' }} className="header-spacer">
+                  <div className="hide-on-mobile">
+                    <MarketClock />
+                  </div>
+                  <HeaderAccountBadge />
+                </div>
+
+                {/* Group 2 — sits just before the global action icons */}
+                <HeaderNavigation aria-label="Tools" style={{ border: 'none' }} className="desktop-nav">
+                  {navItem('/models', 'Models', MachineLearningModel)}
+                  {navItem('/simulation', 'Simulation', Analytics)}
+                </HeaderNavigation>
+
+                {/* Global actions */}
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <div className="hide-on-mobile">
+                    <HeaderMetrics />
+                  </div>
+                  <HeaderGlobalBar>
+                    <HeaderGlobalAction aria-label="Notifications" tooltipAlignment="end">
+                      <Notification size={20} />
+                    </HeaderGlobalAction>
+                    <HeaderGlobalAction aria-label="Settings" tooltipAlignment="end" onClick={() => router.push('/settings')}>
+                      <Settings size={20} />
+                    </HeaderGlobalAction>
+                  </HeaderGlobalBar>
+                </div>
+              </HeaderAny>
+              <SideNav
+                aria-label="Side navigation"
+                expanded={isSideNavExpanded}
+                isPersistent={false}
+                onOverlayClick={onClickSideNavExpand}
               >
-                QuantV1
-              </HeaderName>
-              {/* Group 1 — starts flush after brand, aligns with page content */}
-              <HeaderNavigation aria-label="Main" style={{ border: 'none' }}>
-                {navItem('/', 'Dashboard', Dashboard)}
-                {navItem('/account', 'Account', User)}
-                {navItem('/signals', 'Signals', Activity)}
-                {navItem('/thresholds', 'Thresholds', SettingsAdjust)}
-                {navItem('/monitoring', 'Monitoring', Meter)}
-              </HeaderNavigation>
-
-              {/* Spacer — pushes Group 2 toward the right */}
-              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1.5rem', height: '100%' }}>
-                <MarketClock />
-                <HeaderAccountBadge />
-              </div>
-
-              {/* Group 2 — sits just before the global action icons */}
-              <HeaderNavigation aria-label="Tools" style={{ border: 'none' }}>
-                {navItem('/models', 'Models', MachineLearningModel)}
-                {navItem('/simulation', 'Simulation', Analytics)}
-              </HeaderNavigation>
-
-              {/* Global actions */}
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                <HeaderMetrics />
-                <HeaderGlobalBar>
-                  <HeaderGlobalAction aria-label="Notifications" tooltipAlignment="end">
-                    <Notification size={20} />
-                  </HeaderGlobalAction>
-                  <HeaderGlobalAction aria-label="Settings" tooltipAlignment="end" onClick={() => router.push('/settings')}>
-                    <Settings size={20} />
-                  </HeaderGlobalAction>
-                </HeaderGlobalBar>
-              </div>
-            </HeaderAny>
+                <SideNavItems>
+                  {sideNavItem('/', 'Dashboard', Dashboard, onClickSideNavExpand)}
+                  {sideNavItem('/account', 'Account', User, onClickSideNavExpand)}
+                  {sideNavItem('/signals', 'Signals', Activity, onClickSideNavExpand)}
+                  {sideNavItem('/thresholds', 'Thresholds', SettingsAdjust, onClickSideNavExpand)}
+                  {sideNavItem('/monitoring', 'Monitoring', Meter, onClickSideNavExpand)}
+                  {sideNavItem('/models', 'Models', MachineLearningModel, onClickSideNavExpand)}
+                  {sideNavItem('/simulation', 'Simulation', Analytics, onClickSideNavExpand)}
+                </SideNavItems>
+              </SideNav>
+            </>
           )}
         />
       </Theme>

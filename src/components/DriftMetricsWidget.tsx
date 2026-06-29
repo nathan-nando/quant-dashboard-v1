@@ -51,18 +51,18 @@ export default function DriftMetricsWidget({ models }: { models: any[] }) {
 
   return (
     <div style={{ marginTop: '0' }}>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', width: '100%' }}>
+      <div className="drift-widget-grid">
         {Object.entries(metricsByModel).map(([modelId, modelMetrics]) => {
           const modelName = models?.find((m) => m.id === modelId)?.name || modelId;
           const latestMetric = modelMetrics[modelMetrics.length - 1];
 
           return (
-            <div key={modelId} style={{ flex: '0 1 360px', maxWidth: '360px' }}>
+            <div key={modelId} className="drift-card-wrapper">
               <DashboardPanel title={`Drift: ${modelName}`} tooltipInfo="Current live measurement of feature degradation for this model">
-                <div style={{ padding: '0.75rem 0.25rem', display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: '0.5rem', justifyContent: 'center', alignItems: 'center' }}>
+                <div className="drift-card-content">
                   
                   {/* PSI Gauge */}
-                  <div style={{ width: '100%', maxWidth: '168px', textAlign: 'center' }}>
+                  <div className="drift-gauge-wrapper">
                     <h6 style={{ marginBottom: '0.25rem', color: '#c6c6c6', fontSize: '0.75rem', fontWeight: 600 }}>PSI Score</h6>
                     <GaugeComponent
                       type="semicircle"
@@ -107,7 +107,7 @@ export default function DriftMetricsWidget({ models }: { models: any[] }) {
                   </div>
 
                   {/* KS P-Value Gauge */}
-                  <div style={{ width: '100%', maxWidth: '168px', textAlign: 'center' }}>
+                  <div className="drift-gauge-wrapper">
                     <h6 style={{ marginBottom: '0.25rem', color: '#c6c6c6', fontSize: '0.75rem', fontWeight: 600 }}>KS P-Value</h6>
                     <GaugeComponent
                       type="semicircle"

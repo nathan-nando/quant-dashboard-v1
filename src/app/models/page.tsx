@@ -8,6 +8,7 @@ import GlobalTable from "../../components/GlobalTable";
 import GlobalDetailTable from "../../components/GlobalDetailTable";
 import GlobalJobsWidget from "../../components/GlobalJobsWidget";
 import GlobalJobsTable from "../../components/GlobalJobsTable";
+import SubPageSidebar from "@/components/SubPageSidebar";
 import { API_BASE_URL } from '@/config/env';
 
 const getRegimeFormat = (regime: string) => {
@@ -531,48 +532,36 @@ function ModelsContent() {
       </Column>
 
       <Column lg={16} md={8} sm={4}>
-        <div style={{ display: 'flex', gap: '2rem', marginTop: '0.5rem' }}>
+        <div className="page-with-sidebar">
           {/* Sidebar Navigation */}
-          <div style={{ width: '220px', display: 'flex', flexDirection: 'column', gap: '0.25rem', flexShrink: 0 }}>
-            {navItems.map(item => {
-              const isActive = currentTab === item.id;
-              const Icon = item.icon;
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => handleTabChange(item.id)}
-                  className={isActive ? "settings-sidebar-item active" : "settings-sidebar-item"}
-                >
-                  <Icon size={16} style={{ marginRight: '0.5rem' }} />
-                  {item.label}
-                </button>
-              );
-            })}
-          </div>
+          <SubPageSidebar
+            navItems={navItems}
+            currentTab={currentTab}
+            onTabChange={handleTabChange}
+          />
 
           {/* Tab Content Panels */}
-          <div style={{ flex: 1 }}>
+          <div className="page-content">
             {/* TAB 1: ROUTES */}
             {currentTab === 'routes' && (
               <Form style={{ padding: 0 }}>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 320px)', gap: '2px', marginBottom: '2rem' }}>
+                <div className="models-routing-grid">
                   {['TREND_BULL', 'TREND_BEAR', 'MEAN_REVERTING', 'VOLATILE_CHOP'].map(regime => (
-                    <Tile key={regime} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '320px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                    <Tile key={regime} className="models-routing-tile">
+                        <div className="models-routing-title-container">
                            {regime === 'TREND_BULL' && <ArrowUpRight size={20} style={{ color: '#24a148' }} />}
                            {regime === 'TREND_BEAR' && <ArrowDownRight size={20} style={{ color: '#da1e28' }} />}
                            {regime === 'MEAN_REVERTING' && <Activity size={20} style={{ color: '#4589ff' }} />}
                            {regime === 'VOLATILE_CHOP' && <Lightning size={20} style={{ color: '#f1c21b' }} />}
                            <h4 style={{fontWeight: 400, margin: 0}}>{regime.split('_').map(w => w.charAt(0) + w.slice(1).toLowerCase()).join(' ')}</h4>
                         </div>
-                        <div style={{ width: '280px' }}>
+                        <div className="models-routing-select">
                           <Select id={`route_${regime}_champ`} labelText="👑 Champion" value={modelRouting[regime]?.champion || "NONE"} onChange={e => handleRouteChange(regime, 'champion', e.target.value)}>
                             <SelectItem value="NONE" text="-- None (Disable) --" />
                             {models.filter(m => !m.regime || m.regime === regime).map(m => <SelectItem key={`${m.id}-champ`} value={m.name} text={m.name} />)}
                           </Select>
                         </div>
-                        <div style={{ width: '280px' }}>
+                        <div className="models-routing-select">
                           <Select id={`route_${regime}_chall`} labelText="🔬 Challenger" value={modelRouting[regime]?.challenger || "NONE"} onChange={e => handleRouteChange(regime, 'challenger', e.target.value)}>
                             <SelectItem value="NONE" text="-- None --" />
                             {models.filter(m => !m.regime || m.regime === regime).map(m => <SelectItem key={`${m.id}-chall`} value={m.name} text={m.name} />)}
@@ -588,7 +577,7 @@ function ModelsContent() {
             {/* TAB 2: TRAIN */}
             {currentTab === 'train' && (
               <>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '2px' }}>
+                <div className="models-train-grid">
                     {['TREND_BULL', 'TREND_BEAR', 'MEAN_REVERTING', 'VOLATILE_CHOP'].map(regime => (
                       <Tile key={regime}>
                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

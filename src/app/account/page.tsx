@@ -7,6 +7,7 @@ import { Wallet, Settings, ArrowUpRight, ArrowDownRight, Information, Activity, 
 import TradeHistoryTable from '@/components/TradeHistoryTable';
 import PnLChart from '@/components/PnLChart';
 import GlobalDetailTable from '@/components/GlobalDetailTable';
+import SubPageSidebar from '@/components/SubPageSidebar';
 import { API_BASE_URL } from '@/config/env';
 
 function AccountContent() {
@@ -177,10 +178,10 @@ function AccountContent() {
         </div>
       )}
       <Column lg={16} md={8} sm={4} className="landing-page__banner">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h3 style={{ margin: 0, fontWeight: 400 }}>Account</h3>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <div style={{ width: '250px' }}>
+        <div className="account-header">
+          <h3 className="account-header-title">Account</h3>
+          <div className="account-header-actions">
+            <div className="account-dropdown-wrapper">
               <Dropdown
                 id="account-page-switcher"
                 titleText="Switch Account"
@@ -207,39 +208,25 @@ function AccountContent() {
       </Column>
 
       <Column lg={16} md={8} sm={4}>
-        <div style={{ display: 'flex', gap: '2rem', marginTop: '0.5rem' }}>
+        <div className="page-with-sidebar">
           {/* Sidebar Navigation */}
-          <div style={{ width: '220px', display: 'flex', flexDirection: 'column', gap: '0.25rem', flexShrink: 0 }}>
-            {navItems.map(item => {
-              const isActive = currentTab === item.id;
-              const Icon = item.icon;
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => handleTabChange(item.id)}
-                  className={isActive ? "settings-sidebar-item active" : "settings-sidebar-item"}
-                >
-                  <Icon size={16} style={{ marginRight: '0.5rem' }} />
-                  {item.label}
-                  {item.id === 'trades' && positions.length > 0 && (
-                    <span style={{ marginLeft: 'auto', backgroundColor: '#24a148', color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: '8px' }}>
-                      {positions.length}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
+          <SubPageSidebar
+            navItems={navItems.map(item => ({
+              ...item,
+              badge: item.id === 'trades' ? positions.length : undefined
+            }))}
+            currentTab={currentTab}
+            onTabChange={handleTabChange}
+          />
 
           {/* Content Panel */}
-          <div style={{ flex: 1 }}>
+          <div className="page-content">
 
             {/* PORTFOLIO TAB */}
             {currentTab === 'portfolio' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
                 {/* Balance Metrics */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.2rem' }}>
+                <div className="account-metrics-grid">
                   <Tile style={{ padding: '1.25rem' }}>
                     <span style={{ fontSize: '0.75rem', color: '#a8a8a8', display: 'block', marginBottom: '0.5rem' }}>Total Balance</span>
                     <strong style={{ fontSize: '1.75rem', fontWeight: 600, color: '#ffffff' }}>
@@ -271,7 +258,7 @@ function AccountContent() {
                 </div>
 
                 {/* Performance Metrics */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.2rem' }}>
+                <div className="account-perf-grid">
                   <Tile style={{ textAlign: 'center' }}>
                     <span style={{ fontSize: '0.75rem', color: '#a8a8a8' }}>Win Rate</span>
                     <strong style={{ display: 'block', fontSize: '1.5rem', marginTop: '0.5rem' }}>

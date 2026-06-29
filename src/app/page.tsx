@@ -35,6 +35,16 @@ export default function Home() {
   const latestSignalIdRef = useRef<number | null>(null);
   const chartHistoryRef = useRef<any[]>([]);
   const [trades, setTrades] = useState<any[]>([]);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const fetchTrades = () => {
     fetch(`${API_BASE_URL}/dashboard/trades`)
@@ -120,20 +130,20 @@ export default function Home() {
       { i: 'signals', x: 0, y: 9, w: 8, h: 5 }
     ],
     sm: [
-      { i: 'chart', x: 0, y: 0, w: 4, h: 3 },
-      { i: 'attribution', x: 0, y: 3, w: 4, h: 3 },
-      { i: 'shap', x: 0, y: 9, w: 4, h: 3 },
-      { i: 'regime', x: 0, y: 6, w: 4, h: 3 },
-      { i: 'trades', x: 0, y: 12, w: 4, h: 3 },
-      { i: 'signals', x: 0, y: 15, w: 4, h: 5 }
+      { i: 'trades', x: 0, y: 0, w: 4, h: 3 },
+      { i: 'chart', x: 0, y: 3, w: 4, h: 3 },
+      { i: 'signals', x: 0, y: 6, w: 4, h: 5 },
+      { i: 'regime', x: 0, y: 11, w: 4, h: 3 },
+      { i: 'attribution', x: 0, y: 14, w: 4, h: 3 },
+      { i: 'shap', x: 0, y: 17, w: 4, h: 3 }
     ],
     xs: [
-      { i: 'chart', x: 0, y: 0, w: 2, h: 3 },
-      { i: 'attribution', x: 0, y: 3, w: 2, h: 3 },
-      { i: 'shap', x: 0, y: 9, w: 2, h: 3 },
-      { i: 'regime', x: 0, y: 6, w: 2, h: 3 },
-      { i: 'trades', x: 0, y: 12, w: 2, h: 3 },
-      { i: 'signals', x: 0, y: 15, w: 2, h: 5 }
+      { i: 'trades', x: 0, y: 0, w: 2, h: 3 },
+      { i: 'chart', x: 0, y: 3, w: 2, h: 3 },
+      { i: 'signals', x: 0, y: 6, w: 2, h: 5 },
+      { i: 'regime', x: 0, y: 11, w: 2, h: 3 },
+      { i: 'attribution', x: 0, y: 14, w: 2, h: 3 },
+      { i: 'shap', x: 0, y: 17, w: 2, h: 3 }
     ]
   };
   const [layouts, setLayouts] = useState<any>(defaultLayouts);
@@ -144,14 +154,14 @@ export default function Home() {
       const keysToRemove: string[] = [];
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        if (key && key.startsWith("quantDashboardLayout_") && key !== "quantDashboardLayout_v26") {
+        if (key && (key.startsWith("quantDashboardLayout_") || key === "dashboard-layouts") && key !== "quantDashboardLayout_v29") {
           keysToRemove.push(key);
         }
       }
       keysToRemove.forEach(k => localStorage.removeItem(k));
     } catch (e) {}
  
-    const saved = localStorage.getItem('dashboard-layouts');
+    const saved = localStorage.getItem('quantDashboardLayout_v29');
     if (saved) {
       try {
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -162,7 +172,7 @@ export default function Home() {
  
   const handleLayoutChange = (layout: any, allLayouts: any) => {
     setLayouts(allLayouts);
-    localStorage.setItem("quantDashboardLayout_v26", JSON.stringify(allLayouts));
+    localStorage.setItem("quantDashboardLayout_v29", JSON.stringify(allLayouts));
   };
   return (
     <div style={{ maxWidth: '100%', padding: '0 2rem', position: 'relative' }}>
@@ -187,6 +197,8 @@ export default function Home() {
         margin={[3, 3]} // 0.2rem gap
         containerPadding={[0, 0]}
         onLayoutChange={handleLayoutChange}
+        isDraggable={!isMobile}
+        isResizable={!isMobile}
       >
         <div key="chart">
           <DashboardPanel 
@@ -502,6 +514,9 @@ export default function Home() {
         id={selectedSignal} 
         onClose={() => setSelectedSignal(null)} 
       />
+
+      {/* --- BACKEND DEBUG PANEL (bottom-right overlay) --- */}
+      
     </div>
   );
 }

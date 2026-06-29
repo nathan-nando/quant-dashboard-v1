@@ -1,10 +1,11 @@
 "use client";
 
 import { Grid, Column, Tabs, TabList, Tab, TabPanels, TabPanel, Tile, Form, FormGroup, TextInput, Select, SelectItem, Button, Toggle, Modal, ToastNotification, Loading } from "@carbon/react";
-import { Add, Edit, TrashCan } from "@carbon/icons-react";
+import { Add, Edit, TrashCan, Settings, Tools } from "@carbon/icons-react";
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import GlobalTable from "../../components/GlobalTable";
+import SubPageSidebar from "@/components/SubPageSidebar";
 import { API_BASE_URL } from '@/config/env';
 
 function SettingsContent() {
@@ -14,8 +15,8 @@ function SettingsContent() {
 
   const currentTab = searchParams.get("tab") || "general";
   const navItems = [
-    { id: 'general', label: 'General' },
-    { id: 'configuration', label: 'Configuration' }
+    { id: 'general', label: 'General', icon: Settings },
+    { id: 'configuration', label: 'Configuration', icon: Tools }
   ];
 
   const handleTabChange = (tabId: string) => {
@@ -163,26 +164,16 @@ function SettingsContent() {
         </Column>
 
         <Column lg={16} md={8} sm={4}>
-          <div style={{ display: 'flex', gap: '2rem', marginTop: '0.5rem' }}>
+          <div className="page-with-sidebar">
             {/* Sidebar Navigation */}
-            <div style={{ width: '220px', display: 'flex', flexDirection: 'column', gap: '0.25rem', flexShrink: 0 }}>
-              {navItems.map(item => {
-                const isActive = currentTab === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => handleTabChange(item.id)}
-                    className={isActive ? "settings-sidebar-item active" : "settings-sidebar-item"}
-                  >
-                    {item.label}
-                  </button>
-                );
-              })}
-            </div>
+            <SubPageSidebar
+              navItems={navItems}
+              currentTab={currentTab}
+              onTabChange={handleTabChange}
+            />
 
             {/* Tab Content Panel */}
-            <div style={{ flex: 1 }}>
+            <div className="page-content">
               {currentTab === 'general' && (
                 <Tile style={{ backgroundColor: '#353535', border: 'none' }}>
                   <h4 style={{ marginBottom: '0.5rem', fontWeight: 600 }}>General Settings</h4>

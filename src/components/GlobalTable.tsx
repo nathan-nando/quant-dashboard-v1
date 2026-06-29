@@ -79,7 +79,8 @@ export default function GlobalTable({
     setLoading(true);
     try {
       const skip = (page - 1) * pageSize;
-      const url = new URL(fetchUrl);
+      const base = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
+      const url = new URL(fetchUrl, base);
       url.searchParams.set("skip", skip.toString());
       url.searchParams.set("limit", pageSize.toString());
       if (search) url.searchParams.set("search", search);

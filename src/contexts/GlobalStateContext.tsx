@@ -42,76 +42,105 @@ export function GlobalStateProvider({ children }: { children: React.ReactNode })
   const latestSignalIdRef = useRef<number | null>(null);
 
   useEffect(() => {
-    // 1. Subscribe to lightning-fast SSE for ALL live state
-    const eventSource = new EventSource(`${API_BASE_URL}/dashboard/stream`);
-    eventSource.onmessage = (event) => {
-      try {
-        const payload = JSON.parse(event.data);
-        setState(payload);
-        
-        if (payload.total_trades !== undefined) setTotalTrades(payload.total_trades);
-        if (payload.positions) setPositions(payload.positions);
-        
-        if (payload.flash_message) {
-          const fm = payload.flash_message;
-          setToastMsg((prev) => {
-             // Only set toast if it's a new ID
-             if (!prev || (prev as any)._id !== fm.id) {
-                let msgKind = fm.type === "success" ? "success" : fm.type === "error" ? "error" : "info";
-                return {
-                  _id: fm.id,
-                  kind: msgKind,
-                  title: "⚡ System Action",
-                  subtitle: fm.message,
-                  caption: fm.command
-                } as any;
-             }
-             return prev;
-          });
-        }
-        
-        if (payload.recent_signals && payload.recent_signals.length > 0) {
-          const topSignal = payload.recent_signals[0];
-          
-          if (latestSignalIdRef.current !== null && latestSignalIdRef.current !== topSignal.id) {
-            let msgKind = "info";
-            if (topSignal.direction === "BUY") msgKind = "success";
-            if (topSignal.direction === "SELL") msgKind = "error";
-            
-            const readableDirection = topSignal.direction ? topSignal.direction.charAt(0).toUpperCase() + topSignal.direction.slice(1).toLowerCase() : '';
-            const format = getRegimeFormat(topSignal.regime);
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    let es: EventSource | null = null;
 
-            setToastMsg({ 
-              kind: msgKind, 
-              title: "🔔 New Live Signal", 
-              subtitle: (
-                <div style={{ marginTop: '0.25rem', lineHeight: '1.4' }}>
-                  <strong>{topSignal.symbol}</strong> &mdash; <strong style={{ color: format.color }}>{readableDirection}</strong> @ <strong>{topSignal.entry_price?.toFixed(2) || '-'}</strong><br/>
-                  Confidence: {(topSignal.confidence * 100).toFixed(2)}%<br/>
-                  SL: <strong>{topSignal.sl_price?.toFixed(2) || '-'}</strong> ({topSignal.sl_pips}p) | TP: <strong>{topSignal.tp_price?.toFixed(2) || '-'}</strong> ({topSignal.tp_pips}p) (R:R {topSignal.rr_ratio})<br/>
-                  Regime: <strong>{format.text}</strong>
-                </div>
-              ),
-              caption: new Date().toLocaleTimeString()
+    const connectSSE = () => {
+      const url = `${API_BASE_URL}/dashboard/stream`;
+      console.log(`[GlobalState] Connecting SSE to: ${url}`);
+      es = new EventSource(url);
+
+      es.onopen = () => {
+        console.log("[GlobalState] SSE connection opened successfully");
+      };
+
+      es.onmessage = (event) => {
+        try {
+          const payload = JSON.parse(event.data);
+          setState(payload);
+          
+          if (payload.total_trades !== undefined) setTotalTrades(payload.total_trades);
+          if (payload.positions) setPositions(payload.positions);
+          
+          if (payload.flash_message) {
+            const fm = payload.flash_message;
+            setToastMsg((prev) => {
+               // Only set toast if it's a new ID
+               if (!prev || (prev as any)._id !== fm.id) {
+                  let msgKind = fm.type === "success" ? "success" : fm.type === "error" ? "error" : "info";
+                  return {
+                    _id: fm.id,
+                    kind: msgKind,
+                    title: "⚡ System Action",
+                    subtitle: fm.message,
+                    caption: fm.command
+                  } as any;
+               }
+               return prev;
             });
           }
           
-          latestSignalIdRef.current = topSignal.id;
-          setSignals(payload.recent_signals);
+          if (payload.recent_signals && payload.recent_signals.length > 0) {
+            const topSignal = payload.recent_signals[0];
+            
+            if (latestSignalIdRef.current !== null && latestSignalIdRef.current !== topSignal.id) {
+              let msgKind = "info";
+              if (topSignal.direction === "BUY") msgKind = "success";
+              if (topSignal.direction === "SELL") msgKind = "error";
+              
+              const readableDirection = topSignal.direction ? topSignal.direction.charAt(0).toUpperCase() + topSignal.direction.slice(1).toLowerCase() : '';
+              const format = getRegimeFormat(topSignal.regime);
+
+              setToastMsg({ 
+                kind: msgKind, 
+                title: "🔔 New Live Signal", 
+                subtitle: (
+                  <div style={{ marginTop: '0.25rem', lineHeight: '1.4' }}>
+                    <strong>{topSignal.symbol}</strong> &mdash; <strong style={{ color: format.color }}>{readableDirection}</strong> @ <strong>{topSignal.entry_price?.toFixed(2) || '-'}</strong><br/>
+                    Confidence: {(topSignal.confidence * 100).toFixed(2)}%<br/>
+                    SL: <strong>{topSignal.sl_price?.toFixed(2) || '-'}</strong> ({topSignal.sl_pips}p) | TP: <strong>{topSignal.tp_price?.toFixed(2) || '-'}</strong> ({topSignal.tp_pips}p) (R:R {topSignal.rr_ratio})<br/>
+                    Regime: <strong>{format.text}</strong>
+                  </div>
+                ),
+                caption: new Date().toLocaleTimeString()
+              });
+            }
+            
+            latestSignalIdRef.current = topSignal.id;
+            setSignals(payload.recent_signals);
+          }
+        } catch (err) {
+          console.error("Failed to parse SSE state data", err);
         }
-      } catch (err) {
-        console.error("Failed to parse SSE state data", err);
-      }
+      };
+
+      es.onerror = (err) => {
+        console.error("[GlobalState] SSE connection error, readyState:", es?.readyState, err);
+        es?.close();
+        // Reconnect after 3 seconds
+        reconnectTimer = setTimeout(() => {
+          console.log("[GlobalState] Attempting SSE reconnect...");
+          connectSSE();
+        }, 3000);
+      };
     };
 
+    connectSSE();
+
     // 2. Fetch Analytics snapshot
-    fetch(`${API_BASE_URL}/dashboard/analytics`)
-      .then(res => res.json())
+    const analyticsUrl = `${API_BASE_URL}/dashboard/analytics`;
+    console.log(`[GlobalState] Fetching analytics from: ${analyticsUrl}`);
+    fetch(analyticsUrl)
+      .then(res => {
+        console.log(`[GlobalState] Analytics response status: ${res.status}`);
+        return res.json();
+      })
       .then(data => setAnalytics(data))
-      .catch(err => console.error("Failed to load analytics", err));
+      .catch(err => console.error("[GlobalState] Failed to load analytics", err));
 
     return () => {
-      eventSource.close();
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      es?.close();
     };
   }, []);
 

@@ -9,6 +9,7 @@ import GlobalTable from '@/components/GlobalTable';
 import GlobalHealthWidget from '@/components/GlobalHealthWidget';
 import GlobalJobsTable from '@/components/GlobalJobsTable';
 import DriftMetricsWidget from '@/components/DriftMetricsWidget';
+import SubPageSidebar from '@/components/SubPageSidebar';
 import { API_BASE_URL } from '@/config/env';
 
 function MonitoringPageContent() {
@@ -113,28 +114,16 @@ function MonitoringPageContent() {
     <>
       <Grid fullWidth>
         <Column lg={16} md={8} sm={4}>
-          <div style={{ display: 'flex', gap: '2rem', marginTop: '0.5rem' }}>
+          <div className="page-with-sidebar">
             {/* Sidebar Navigation */}
-            <div style={{ width: '220px', display: 'flex', flexDirection: 'column', gap: '0.25rem', flexShrink: 0 }}>
-              {navItems.map(item => {
-                const isActive = currentTab === item.id;
-                const Icon = item.icon;
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => handleTabChange(item.id)}
-                    className={isActive ? "settings-sidebar-item active" : "settings-sidebar-item"}
-                  >
-                    <Icon size={16} style={{ marginRight: '0.5rem' }} />
-                    {item.label}
-                  </button>
-                );
-              })}
-            </div>
+            <SubPageSidebar
+              navItems={navItems}
+              currentTab={currentTab}
+              onTabChange={handleTabChange}
+            />
 
             {/* Tab Content Panels */}
-            <div style={{ flex: 1 }}>
+            <div className="page-content">
               {/* Tab 1: Audit Logs */}
               {currentTab === 'logs' && (
                 <DashboardPanel title="Audit Logs History" tooltipInfo="List of all system audit logs.">
