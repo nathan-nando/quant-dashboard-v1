@@ -1,9 +1,11 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Modal,
-  Loading
+  Loading,
+  Theme
 } from '@carbon/react';
 import { ChevronDown, ChevronUp, Copy } from '@carbon/icons-react';
 import { API_BASE_URL } from '@/config/env';
@@ -80,6 +82,11 @@ export default function GlobalDetailTable({ id, type = 'signal', dataObj, onClos
   const [expandedKeys, setExpandedKeys] = useState<Record<string, boolean>>({});
   const [associatedSignal, setAssociatedSignal] = useState<any>(null);
   const [loadingSignal, setLoadingSignal] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -148,16 +155,18 @@ export default function GlobalDetailTable({ id, type = 'signal', dataObj, onClos
   }, [id, type, dataObj]);
 
   if (id === null && !dataObj) return null;
+  if (!mounted) return null;
 
-  return (
-    <Modal
-      open={(id !== null && id !== undefined) || !!dataObj}
-      onRequestClose={onClose}
-      modalHeading={type === 'signal' ? `Signal Details #${id}` : type === 'dataset' ? `Dataset Details` : type === 'feature_snapshot' ? `Feature Snapshot #${id}` : type === 'trade' ? `Trade Details #${id || ''}` : `Model Details`}
-      primaryButtonText="Close"
-      onRequestSubmit={onClose}
-      size="lg"
-    >
+  return createPortal(
+    <Theme theme="g100">
+      <Modal
+        open={(id !== null && id !== undefined) || !!dataObj}
+        onRequestClose={onClose}
+        modalHeading={type === 'signal' ? `Signal Details #${id}` : type === 'dataset' ? `Dataset Details` : type === 'feature_snapshot' ? `Feature Snapshot #${id}` : type === 'trade' ? `Trade Details #${id || ''}` : `Model Details`}
+        primaryButtonText="Close"
+        onRequestSubmit={onClose}
+        size="lg"
+      >
       {loading && <Loading withOverlay={false} />}
       {error && <p style={{ color: "red" }}>{error}</p>}
       
@@ -223,18 +232,17 @@ export default function GlobalDetailTable({ id, type = 'signal', dataObj, onClos
               <p style={{ fontSize: '0.875rem' }}>{data.timestamp ? new Date(data.timestamp).toLocaleString() : '-'}</p>
             </div>
           </div>
-
           <h4 style={{ marginBottom: "1rem", fontSize: "1rem", borderTop: "1px solid #393939", paddingTop: "1rem" }}>Associated Trades</h4>
           {data.trades && data.trades.length > 0 ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', marginBottom: '1rem' }}>
               {data.trades.map((t: any) => (
-                <div key={t.trade_id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#262626', padding: '0.75rem', borderRadius: '4px' }}>
+                <div key={t.trade_id} style={{ display: 'grid', gridTemplateColumns: '100px 120px 100px 150px 120px', alignItems: 'center', padding: '0.4rem 0', borderBottom: '1px solid #393939' }}>
                   <div>
-                    <p style={{ color: '#a8a8a8', fontSize: '0.75rem', marginBottom: '4px' }}>Trade ID</p>
+                    <p style={{ color: '#a8a8a8', fontSize: '0.75rem', marginBottom: '2px' }}>Trade ID</p>
                     <p style={{ fontSize: '0.875rem' }}>{t.trade_id}</p>
                   </div>
                   <div>
-                    <p style={{ color: '#a8a8a8', fontSize: '0.75rem', marginBottom: '4px' }}>Status</p>
+                    <p style={{ color: '#a8a8a8', fontSize: '0.75rem', marginBottom: '2px' }}>Status</p>
                     <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 'bold', fontSize: '11px' }}>
                       <svg width="10" height="10" viewBox="0 0 32 32" style={{ fill: t.status === 'CLOSED' ? '#6f6f6f' : '#4589ff', flexShrink: 0 }}>
                         <circle cx="16" cy="16" r="8" />
@@ -245,11 +253,11 @@ export default function GlobalDetailTable({ id, type = 'signal', dataObj, onClos
                     </div>
                   </div>
                   <div>
-                    <p style={{ color: '#a8a8a8', fontSize: '0.75rem', marginBottom: '4px' }}>Volume</p>
+                    <p style={{ color: '#a8a8a8', fontSize: '0.75rem', marginBottom: '2px' }}>Volume</p>
                     <p style={{ fontSize: '0.875rem' }}>{t.volume}</p>
                   </div>
                   <div>
-                    <p style={{ color: '#a8a8a8', fontSize: '0.75rem', marginBottom: '4px' }}>Entry</p>
+                    <p style={{ color: '#a8a8a8', fontSize: '0.75rem', marginBottom: '2px' }}>Entry</p>
                     <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                       <svg width="10" height="10" viewBox="0 0 32 32" style={{ fill: '#24a148', flexShrink: 0 }}>
                         <path d="M18 6l-1.43 1.39L22.47 13H4v2h18.47l-5.9 5.61L18 22l8-8z" />
@@ -258,7 +266,7 @@ export default function GlobalDetailTable({ id, type = 'signal', dataObj, onClos
                     </div>
                   </div>
                   <div>
-                    <p style={{ color: '#a8a8a8', fontSize: '0.75rem', marginBottom: '4px' }}>PnL</p>
+                    <p style={{ color: '#a8a8a8', fontSize: '0.75rem', marginBottom: '2px' }}>PnL</p>
                     <p style={{ fontSize: '0.875rem', color: t.pnl_money !== null ? (t.pnl_money >= 0 ? '#42be65' : '#ff8389') : '#ffffff', fontWeight: 'bold' }}>
                       {t.pnl_money !== null ? `$${Number(t.pnl_money).toFixed(2)}` : '-'}
                     </p>
@@ -307,15 +315,15 @@ export default function GlobalDetailTable({ id, type = 'signal', dataObj, onClos
             <h4 style={{ fontSize: "1rem", margin: 0 }}>Technical Indicators (XGBoost Features)</h4>
             <button 
               type="button" 
-              onClick={() => setExpandedKeys(prev => ({ ...prev, features_collapsed: !prev['features_collapsed'] }))}
+              onClick={() => setExpandedKeys(prev => ({ ...prev, features_expanded: !prev['features_expanded'] }))}
               style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#a8a8a8', display: 'flex', alignItems: 'center', gap: '0.25rem', padding: '0.2rem' }}
             >
-              <span style={{ fontSize: '0.75rem' }}>{!!expandedKeys['features_collapsed'] ? 'Expand' : 'Collapse'}</span>
-              {!!expandedKeys['features_collapsed'] ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+              <span style={{ fontSize: '0.75rem' }}>{expandedKeys['features_expanded'] ? 'Collapse' : 'Expand'}</span>
+              {expandedKeys['features_expanded'] ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
             </button>
           </div>
           {data.features && Object.keys(data.features).length > 0 ? (
-            !expandedKeys['features_collapsed'] && (
+            expandedKeys['features_expanded'] && (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem 0.75rem', marginBottom: '1rem' }}>
                 {Object.entries(data.features).map(([key, value]: [string, any]) => (
                   <div key={key} style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #262626', paddingBottom: '0.25rem' }}>
@@ -409,10 +417,13 @@ export default function GlobalDetailTable({ id, type = 'signal', dataObj, onClos
               </div>
             </div>
             <div>
-              <p style={{ color: '#a8a8a8', fontSize: '0.75rem', marginBottom: '4px' }}>Prices (Entry &amp; Exit)</p>
+              <p style={{ color: '#a8a8a8', fontSize: '0.75rem', marginBottom: '4px' }}>
+                {data.status === "OPEN" ? "Prices (Entry & Current)" : "Prices (Entry & Exit)"}
+              </p>
               <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                   <svg width="11" height="11" viewBox="0 0 32 32" style={{ fill: '#24a148', flexShrink: 0 }}>
+                    <title>Entry Price</title>
                     <path d="M18 6l-1.43 1.39L22.47 13H4v2h18.47l-5.9 5.61L18 22l8-8z" />
                   </svg>
                   <span style={{ fontSize: '0.875rem', fontWeight: 'bold' }}>
@@ -420,7 +431,8 @@ export default function GlobalDetailTable({ id, type = 'signal', dataObj, onClos
                   </span>
                 </div>
                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                  <svg width="11" height="11" viewBox="0 0 32 32" style={{ fill: '#fa4d56', flexShrink: 0 }}>
+                  <svg width="11" height="11" viewBox="0 0 32 32" style={{ fill: data.status === "OPEN" ? '#4589ff' : '#fa4d56', flexShrink: 0 }}>
+                    <title>{data.status === "OPEN" ? "Current Price" : "Exit Price"}</title>
                     <path d="M14 22l1.43-1.39L9.53 15H28v-2H9.53l5.9-5.61L14 6l-8 8z" />
                   </svg>
                   <span style={{ fontSize: '0.875rem', fontWeight: 'bold', color: '#e0e0e0' }}>
@@ -431,8 +443,10 @@ export default function GlobalDetailTable({ id, type = 'signal', dataObj, onClos
             </div>
             <div>
               <p style={{ color: '#a8a8a8', fontSize: '0.75rem', marginBottom: '4px' }}>SL / TP Levels</p>
-              <p style={{ fontSize: '0.875rem' }}>
-                SL: {data.sl_price || '-'} | TP: {data.tp_price || '-'}
+              <p style={{ fontSize: '0.875rem', fontWeight: '500' }}>
+                <span style={{ color: '#ff8389' }}>SL: {data.sl_price || associatedSignal?.sl_price || '-'}</span>
+                <span style={{ color: '#c6c6c6', margin: '0 6px' }}>|</span>
+                <span style={{ color: '#42be65' }}>TP: {data.tp_price || associatedSignal?.tp_price || '-'}</span>
               </p>
             </div>
             <div>
@@ -494,9 +508,9 @@ export default function GlobalDetailTable({ id, type = 'signal', dataObj, onClos
           {associatedSignal && (
             <div style={{ marginTop: '1.5rem', borderTop: '1px solid #393939', paddingTop: '1.25rem' }}>
               <h4 style={{ marginBottom: '1rem', fontSize: '1rem', fontWeight: 'bold' }}>Associated Signal Details</h4>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem 0.75rem', marginBottom: '1.5rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '220px 150px 100px 150px', gap: '1rem 0.75rem', marginBottom: '1.5rem' }}>
                 <div>
-                  <p style={{ color: '#a8a8a8', fontSize: '0.75rem', marginBottom: '4px' }}>Signal ID / Time</p>
+                  <p style={{ color: '#a8a8a8', fontSize: '0.75rem', marginBottom: '2px' }}>Signal ID / Time</p>
                   <p style={{ fontSize: '0.875rem' }}>
                     <strong style={{ color: '#8a3ffc' }}>#{associatedSignal.id}</strong>
                     <span style={{ color: '#c6c6c6', margin: '0 6px' }}>|</span>
@@ -504,15 +518,15 @@ export default function GlobalDetailTable({ id, type = 'signal', dataObj, onClos
                   </p>
                 </div>
                 <div>
-                  <p style={{ color: '#a8a8a8', fontSize: '0.75rem', marginBottom: '4px' }}>Signal Confidence</p>
+                  <p style={{ color: '#a8a8a8', fontSize: '0.75rem', marginBottom: '2px' }}>Signal Confidence</p>
                   <p style={{ fontSize: '0.875rem', fontWeight: 'bold' }}>{associatedSignal.confidence ? `${(associatedSignal.confidence * 100).toFixed(2)}%` : '-'}</p>
                 </div>
                 <div>
-                  <p style={{ color: '#a8a8a8', fontSize: '0.75rem', marginBottom: '4px' }}>R:R Ratio</p>
+                  <p style={{ color: '#a8a8a8', fontSize: '0.75rem', marginBottom: '2px' }}>R:R Ratio</p>
                   <p style={{ fontSize: '0.875rem' }}>{associatedSignal.rr_ratio || '-'}</p>
                 </div>
                 <div>
-                  <p style={{ color: '#a8a8a8', fontSize: '0.75rem', marginBottom: '4px' }}>Signal Status</p>
+                  <p style={{ color: '#a8a8a8', fontSize: '0.75rem', marginBottom: '2px' }}>Signal Status</p>
                   <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 'bold', fontSize: '11px' }}>
                     <svg width="10" height="10" viewBox="0 0 32 32" style={{ fill: associatedSignal.status === 'EXECUTED' ? '#24a148' : associatedSignal.status === 'PENDING_EXECUTION' ? '#11a3c6' : '#fa4d56', flexShrink: 0 }}>
                       <circle cx="16" cy="16" r="8" />
@@ -529,22 +543,6 @@ export default function GlobalDetailTable({ id, type = 'signal', dataObj, onClos
                   <p style={{ color: '#a8a8a8', fontSize: '0.75rem', marginBottom: '4px' }}>Remarks (Error Details)</p>
                   <p style={{ fontSize: '0.875rem', color: '#fa4d56' }}>{associatedSignal.remarks}</p>
                 </div>
-              )}
-
-              {associatedSignal.features && Object.keys(associatedSignal.features).length > 0 && (
-                <>
-                  <h5 style={{ marginBottom: "0.75rem", fontSize: "0.875rem", color: '#e0e0e0', fontWeight: '500' }}>Technical Indicators (XGBoost Features)</h5>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem 0.75rem' }}>
-                    {Object.entries(associatedSignal.features).map(([key, value]: [string, any]) => (
-                      <div key={key} style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #262626', paddingBottom: '0.25rem' }}>
-                        <span style={{ fontSize: '0.85rem', color: '#a8a8a8', fontWeight: '500' }}>{key}</span>
-                        <strong style={{ fontSize: '0.85rem', color: '#ffffff' }}>
-                          {value !== null && value !== undefined ? Number(value).toFixed(4) : "N/A"}
-                        </strong>
-                      </div>
-                    ))}
-                  </div>
-                </>
               )}
             </div>
           )}
@@ -638,6 +636,8 @@ export default function GlobalDetailTable({ id, type = 'signal', dataObj, onClos
            </div>
          );
       })()}
-    </Modal>
+      </Modal>
+    </Theme>,
+    document.body
   );
 }

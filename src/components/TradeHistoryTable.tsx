@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { createPortal } from "react-dom";
 import {
   DataTable,
   Table,
@@ -13,14 +12,14 @@ import {
   TableContainer,
   TableToolbar,
   TableToolbarContent,
-  TableToolbarSearch,
-  Modal
+  TableToolbarSearch
 } from "@carbon/react";
 import GlobalTable from "./GlobalTable";
 import GlobalDetailTable from "./GlobalDetailTable";
 
 interface Trade {
   trade_id: string;
+  signal_id?: number | string | null;
   symbol: string;
   direction: string;
   entry_time: string;
@@ -36,6 +35,8 @@ interface Trade {
   status?: string;
   model_version?: string;
   features_at_entry?: Record<string, any>;
+  sl_price?: number | null;
+  tp_price?: number | null;
 }
 
 const getRegimeFormat = (regime: string) => {
@@ -198,6 +199,7 @@ export default function TradeHistoryTable({
       const entry = trade.entry_price != null ? Number(trade.entry_price).toFixed(2) : '-';
       const exit = trade.exit_price != null ? Number(trade.exit_price).toFixed(2) : '-';
       const lots = trade.volume != null ? Number(trade.volume).toFixed(2) : '-';
+      const isOpen = trade.status === "OPEN";
       
       if (compact) {
         return (
@@ -211,8 +213,8 @@ export default function TradeHistoryTable({
               <span style={{ fontSize: '8px', color: '#a8a8a8', marginLeft: '4px' }}>({lots} L)</span>
             </div>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-              <svg width="8" height="8" viewBox="0 0 32 32" style={{ fill: '#fa4d56', flexShrink: 0 }}>
-                <title>Exit Price</title>
+              <svg width="8" height="8" viewBox="0 0 32 32" style={{ fill: isOpen ? '#4589ff' : '#fa4d56', flexShrink: 0 }}>
+                <title>{isOpen ? 'Current Price' : 'Exit Price'}</title>
                 <path d="M14 22l1.43-1.39L9.53 15H28v-2H9.53l5.9-5.61L14 6l-8 8z" />
               </svg>
               <span style={{ fontWeight: 'bold', color: '#e0e0e0' }}>{exit}</span>
@@ -232,8 +234,8 @@ export default function TradeHistoryTable({
               <span style={{ fontWeight: 'bold' }}>{entry}</span>
             </div>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-              <svg width="10" height="10" viewBox="0 0 32 32" style={{ fill: '#fa4d56', flexShrink: 0 }}>
-                <title>Exit Price</title>
+              <svg width="10" height="10" viewBox="0 0 32 32" style={{ fill: isOpen ? '#4589ff' : '#fa4d56', flexShrink: 0 }}>
+                <title>{isOpen ? 'Current Price' : 'Exit Price'}</title>
                 <path d="M14 22l1.43-1.39L9.53 15H28v-2H9.53l5.9-5.61L14 6l-8 8z" />
               </svg>
               <span style={{ fontWeight: 'bold', color: '#e0e0e0' }}>{exit}</span>

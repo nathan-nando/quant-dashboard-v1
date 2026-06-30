@@ -83,6 +83,7 @@ export default function Home() {
       const dbTrade = trades.find(t => String(t.mt5_ticket) === String(pos.ticket));
       return {
         trade_id: dbTrade ? dbTrade.trade_id : String(pos.ticket),
+        signal_id: dbTrade ? dbTrade.signal_id : null,
         mt5_ticket: String(pos.ticket),
         symbol: pos.symbol,
         direction: pos.type === 0 ? "BUY" : "SELL",
@@ -97,7 +98,9 @@ export default function Home() {
         status: "OPEN",
         confidence: dbTrade ? dbTrade.confidence : 0,
         model_version: dbTrade ? dbTrade.model_version : "MANUAL",
-        regime: dbTrade ? dbTrade.regime : "UNKNOWN"
+        regime: dbTrade ? dbTrade.regime : "UNKNOWN",
+        sl_price: pos.sl > 0 ? pos.sl : (dbTrade ? dbTrade.sl_price : null),
+        tp_price: pos.tp > 0 ? pos.tp : (dbTrade ? dbTrade.tp_price : null)
       };
     });
   }, [positions, trades]);
