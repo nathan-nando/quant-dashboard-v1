@@ -260,7 +260,26 @@ export default function GlobalTable({
               </TableHead>
               <TableBody>
                 {rows.map((row: any) => (
-                  <TableRow key={row.id}>
+                  <TableRow 
+                    key={row.id}
+                    className="clickable-row-mobile"
+                    onClick={(e: React.MouseEvent) => {
+                      if (onViewDetails && typeof window !== 'undefined' && window.innerWidth <= 768) {
+                        const target = e.target as HTMLElement;
+                        if (
+                          target.closest('button') || 
+                          target.closest('a') || 
+                          target.closest('input') ||
+                          target.closest('.cds--toggle') ||
+                          target.closest('.cds--checkbox') ||
+                          target.closest('.cds--btn')
+                        ) {
+                          return;
+                        }
+                        onViewDetails(row.id);
+                      }
+                    }}
+                  >
                     {row.cells.map((cell: any) => {
                       const colKey = cell.id.split(':').pop();
                       const headerConf = headers.find(h => h.key === colKey);

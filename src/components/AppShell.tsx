@@ -57,6 +57,39 @@ const HeaderAccountBadge = () => {
   );
 };
 
+const MobileAccountBadge = () => {
+  const { state } = useGlobalState();
+  if (!state || !state.account_info) return null;
+  const acc = state.account_info;
+  const isLive = acc.mode === 'LIVE';
+  const currentPrice = state?.price?.last > 0 ? state?.price?.last : state?.price?.ask;
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', height: '100%', padding: '0 0.5rem' }}>
+      {/* Column 1: Account Mode & Equity Value */}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center' }}>
+        <div style={{ height: '14px', display: 'flex', alignItems: 'center', marginBottom: '2px' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '1px 4px', backgroundColor: isLive ? '#24a148' : '#0f62fe', color: 'white', fontSize: '7px', fontWeight: 700, borderRadius: '2px', lineHeight: 1, height: '12px' }}>
+            {acc.mode}
+          </div>
+        </div>
+        <strong style={{ fontSize: '0.85rem', color: '#fff', lineHeight: 1 }}>
+          ${(acc.equity || acc.balance || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}
+        </strong>
+      </div>
+
+      {/* Column 2: XAUUSD Symbol & Price */}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center' }}>
+        <div style={{ height: '14px', display: 'flex', alignItems: 'center', marginBottom: '2px' }}>
+          <span style={{ fontSize: '0.65rem', color: '#a8a8a8', textTransform: 'uppercase', fontWeight: 500, letterSpacing: '0.2px', lineHeight: 1 }}>XAUUSD</span>
+        </div>
+        <strong style={{ fontSize: '0.85rem', color: '#f1c21b', fontFamily: 'monospace', lineHeight: 1 }}>
+          {currentPrice ? currentPrice.toFixed(2) : '---'}
+        </strong>
+      </div>
+    </div>
+  );
+};
+
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -201,10 +234,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   href="/"
                   onClick={(e: React.MouseEvent) => { e.preventDefault(); router.push('/'); }}
                   prefix=""
+                  className="hide-on-mobile"
                   style={{ fontSize: '1.25rem', fontWeight: 600, letterSpacing: '0.5px', flexShrink: 0 }}
                 >
                   QuantV1
                 </HeaderName>
+                <div className="show-on-mobile-flex">
+                  <MobileAccountBadge />
+                </div>
                 {/* Group 1 — starts flush after brand, aligns with page content */}
                 <HeaderNavigation aria-label="Main" style={{ border: 'none' }} className="desktop-nav">
                   {navItem('/', 'Dashboard', Dashboard)}
@@ -215,7 +252,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 </HeaderNavigation>
 
                 {/* Spacer — pushes Group 2 toward the right */}
-                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1.5rem', height: '100%', overflow: 'hidden' }} className="header-spacer">
+                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1.5rem', height: '100%', overflow: 'hidden' }} className="header-spacer hide-on-mobile">
                   <div className="hide-on-mobile">
                     <MarketClock />
                   </div>
@@ -229,18 +266,20 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 </HeaderNavigation>
 
                 {/* Global actions */}
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <div className="hide-on-mobile">
+                <div style={{ display: 'flex', alignItems: 'center', marginLeft: 'auto' }}>
+                  <div>
                     <HeaderMetrics />
                   </div>
-                  <HeaderGlobalBar>
-                    <HeaderGlobalAction aria-label="Notifications" tooltipAlignment="end">
-                      <Notification size={20} />
-                    </HeaderGlobalAction>
-                    <HeaderGlobalAction aria-label="Settings" tooltipAlignment="end" onClick={() => router.push('/settings')}>
-                      <Settings size={20} />
-                    </HeaderGlobalAction>
-                  </HeaderGlobalBar>
+                  <div className="hide-on-mobile">
+                    <HeaderGlobalBar>
+                      <HeaderGlobalAction aria-label="Notifications" tooltipAlignment="end">
+                        <Notification size={20} />
+                      </HeaderGlobalAction>
+                      <HeaderGlobalAction aria-label="Settings" tooltipAlignment="end" onClick={() => router.push('/settings')}>
+                        <Settings size={20} />
+                      </HeaderGlobalAction>
+                    </HeaderGlobalBar>
+                  </div>
                 </div>
               </HeaderAny>
               <SideNav
@@ -248,7 +287,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 expanded={isSideNavExpanded}
                 isPersistent={false}
                 onOverlayClick={onClickSideNavExpand}
+                style={{ display: 'flex', flexDirection: 'column' }}
               >
+                {/* Brand title inside sidebar - visible on mobile only */}
+                <div className="show-on-mobile" style={{ padding: '1rem 1.5rem', marginBottom: '0.5rem', flexShrink: 0 }}>
+                  <h2 style={{ fontSize: '1.25rem', fontWeight: 600, color: '#fff' }}>QuantV1</h2>
+                </div>
+
                 <SideNavItems>
                   {sideNavItem('/', 'Dashboard', Dashboard, onClickSideNavExpand)}
                   {sideNavItem('/account', 'Account', User, onClickSideNavExpand)}
@@ -257,6 +302,38 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   {sideNavItem('/monitoring', 'Monitoring', Meter, onClickSideNavExpand)}
                   {sideNavItem('/models', 'Models', MachineLearningModel, onClickSideNavExpand)}
                   {sideNavItem('/simulation', 'Simulation', Analytics, onClickSideNavExpand)}
+
+                  {/* Notifications and Settings inside sidebar - visible on mobile only - pushed to the very bottom as icons only */}
+                  <div className="show-on-mobile" style={{ position: 'absolute', bottom: 0, left: 0, right: 0, borderTop: '1px solid #393939', padding: '0.75rem 1.5rem calc(0.75rem + env(safe-area-inset-bottom, 16px)) 1.5rem', backgroundColor: '#161616', zIndex: 10 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                      {/* Settings Icon (Gear) on the left */}
+                      <button
+                        type="button"
+                        title="Settings"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          router.push('/settings');
+                          onClickSideNavExpand();
+                        }}
+                        style={{ background: 'none', border: 'none', padding: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                      >
+                        <Settings size={22} color="#f4f4f4" />
+                      </button>
+
+                      {/* Notifications Icon (Bell) on the far right */}
+                      <button
+                        type="button"
+                        title="Notifications"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          onClickSideNavExpand();
+                        }}
+                        style={{ background: 'none', border: 'none', padding: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                      >
+                        <Notification size={22} color="#f4f4f4" />
+                      </button>
+                    </div>
+                  </div>
                 </SideNavItems>
               </SideNav>
             </>

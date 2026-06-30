@@ -55,6 +55,7 @@ interface TradeHistoryTableProps {
   hidePagination?: boolean;
   onReload?: () => void | Promise<void>;
   compact?: boolean;
+  isLiveTrades?: boolean;
 }
 
 export default function TradeHistoryTable({ 
@@ -63,7 +64,8 @@ export default function TradeHistoryTable({
   hideSearch = false, 
   hidePagination = false,
   onReload,
-  compact = false
+  compact = false,
+  isLiveTrades = false
 }: TradeHistoryTableProps) {
   const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
   const [selectedSignalId, setSelectedSignalId] = useState<number | null>(null);
@@ -91,6 +93,7 @@ export default function TradeHistoryTable({
     formatted_exit_price: trade.exit_price != null ? Number(trade.exit_price).toFixed(2) : '-',
     formatted_volume: trade.volume != null ? Number(trade.volume).toFixed(2) : '-',
     formatted_confidence: trade.confidence != null ? `${(Number(trade.confidence) * 100).toFixed(1)}%` : '-',
+    formatted_close_reason: trade.close_reason || '-',
     model_version: trade.model_version || '-',
     formatted_dir_status: '',
   }));
@@ -98,8 +101,9 @@ export default function TradeHistoryTable({
   const headers = [
     { key: "formatted_dir_status", header: "Status", width: "60px" },
     { key: "formatted_entry_time", header: "Time" },
-    { key: "formatted_entry_price", header: "Price (Entry/Exit) / Lots" },
+    { key: "formatted_entry_price", header: isLiveTrades ? "Price (Entry/Current) / Lots" : "Price (Entry/Exit) / Lots" },
     { key: "formatted_pnl_money", header: "PnL", width: "65px" },
+    ...(isLiveTrades ? [] : [{ key: "formatted_close_reason", header: "Reason", width: "90px" }]),
     { key: "model_version", header: "Model / Conf" },
   ];
 
@@ -165,6 +169,20 @@ export default function TradeHistoryTable({
         return `${day} ${month} ${year} ${timeParts.join(':')}`;
       };
       
+      if (isLiveTrades) {
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: compact ? '2px' : '4px', lineHeight: '1.2', fontSize: compact ? '9.5px' : 'inherit' }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: compact ? '4px' : '6px' }}>
+              <svg width={compact ? 8 : 10} height={compact ? 8 : 10} viewBox="0 0 32 32" style={{ fill: '#24a148', flexShrink: 0 }}>
+                <title>Entry Time</title>
+                <path d="M18 6l-1.43 1.39L22.47 13H4v2h18.47l-5.9 5.61L18 22l8-8z" />
+              </svg>
+              <span>{formatTime(trade.entry_time)}</span>
+            </div>
+          </div>
+        );
+      }
+      
       return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: compact ? '2px' : '4px', lineHeight: '1.2', fontSize: compact ? '9.5px' : 'inherit' }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: compact ? '4px' : '6px' }}>
@@ -200,6 +218,27 @@ export default function TradeHistoryTable({
       const exit = trade.exit_price != null ? Number(trade.exit_price).toFixed(2) : '-';
       const lots = trade.volume != null ? Number(trade.volume).toFixed(2) : '-';
       const isOpen = trade.status === "OPEN";
+      
+      if (isLiveTrades) {
+        const sl = trade.sl_price != null ? Number(trade.sl_price).toFixed(2) : '-';
+        const tp = trade.tp_price != null ? Number(trade.tp_price).toFixed(2) : '-';
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', lineHeight: '1.1', fontSize: compact ? '9.5px' : '11px' }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+              <svg width="8" height="8" viewBox="0 0 32 32" style={{ fill: '#24a148', flexShrink: 0 }}>
+                <title>Entry Price</title>
+                <path d="M18 6l-1.43 1.39L22.47 13H4v2h18.47l-5.9 5.61L18 22l8-8z" />
+              </svg>
+              <span style={{ fontWeight: 'bold' }}>{entry}</span>
+              <span style={{ fontSize: '8px', color: '#a8a8a8', marginLeft: '4px' }}>({lots} L)</span>
+            </div>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '8px' }}>
+              <span style={{ color: '#fa4d56', fontWeight: 500 }}>SL: {sl}</span>
+              <span style={{ color: '#24a148', fontWeight: 500 }}>TP: {tp}</span>
+            </div>
+          </div>
+        );
+      }
       
       if (compact) {
         return (
@@ -249,43 +288,79 @@ export default function TradeHistoryTable({
       const rowId = cellId.split(':')[0];
       const trade = trades.find((t, idx) => (t.trade_id || `trade-${idx}`) === rowId);
       if (!trade) return "-";
-      
+
       const pnlMoney = trade.pnl_money;
-      const closeReason = trade.close_reason;
-      
       let pnlDisplay = "-";
       let pnlColor = "#c6c6c6";
-      
+
       if (pnlMoney != null) {
         pnlDisplay = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(pnlMoney);
-        const isProfit = pnlMoney > 0;
-        pnlColor = isProfit ? "#24a148" : (pnlMoney < 0 ? "#da1e28" : "#c6c6c6");
+        pnlColor = pnlMoney > 0 ? "#24a148" : pnlMoney < 0 ? "#da1e28" : "#c6c6c6";
       }
-      
-      const formatReason = (reason: string) => {
-        if (!reason || reason === '-') return null;
-        const fSize = compact ? '8.5px' : '10px';
-        if (reason === "SL_HIT") return <span style={{ color: '#fa4d56', fontWeight: 'bold', fontSize: fSize, whiteSpace: 'nowrap' }}>SL Hit</span>;
-        if (reason === "TP_HIT") return <span style={{ color: '#24a148', fontWeight: 'bold', fontSize: fSize, whiteSpace: 'nowrap' }}>TP Hit</span>;
-        if (reason === "SIGNAL_REVERSE") return <span style={{ fontWeight: 'bold', fontSize: fSize, color: '#a8a8a8', whiteSpace: 'nowrap' }}>Signal Reverse</span>;
-        if (reason === "END_OF_DATA") return <span style={{ fontWeight: 'bold', fontSize: fSize, color: '#a8a8a8', whiteSpace: 'nowrap' }}>End of Data</span>;
-        if (reason === "MANUAL") return <span style={{ fontWeight: 'bold', fontSize: fSize, color: '#a8a8a8', whiteSpace: 'nowrap' }}>Manual</span>;
-        
-        const readable = reason.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
-        return <span style={{ fontWeight: 'bold', fontSize: fSize, color: '#a8a8a8', whiteSpace: 'nowrap' }}>{readable}</span>;
-      };
-      
-      const reasonBadge = formatReason(closeReason);
 
       return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', lineHeight: '1.2' }}>
-          <span style={{ color: pnlColor, fontWeight: 'bold', fontSize: compact ? '9.5px' : 'inherit' }}>{pnlDisplay}</span>
-          {reasonBadge && (
-            <div style={{ marginTop: '2px' }}>
-              {reasonBadge}
-            </div>
-          )}
-        </div>
+        <span style={{ color: pnlColor, fontWeight: 'bold', fontSize: compact ? '9.5px' : 'inherit' }}>
+          {pnlDisplay}
+        </span>
+      );
+    }
+    if (cellId.endsWith(":formatted_close_reason")) {
+      const rowId = cellId.split(':')[0];
+      const trade = trades.find((t, idx) => (t.trade_id || `trade-${idx}`) === rowId);
+      if (!trade) return "-";
+
+      const reason = trade.close_reason;
+      if (!reason || reason === '-') return <span style={{ color: '#525252', fontSize: '10px' }}>-</span>;
+
+      const fSize = compact ? '8.5px' : '10px';
+
+      type BadgeStyle = { bg: string; color: string; border: string };
+      const badgeMap: Record<string, { label: string; style: BadgeStyle }> = {
+        MARGIN_CALL: {
+          label: '🚨 Margin Call',
+          style: { bg: 'rgba(218,30,40,0.18)', color: '#ff8389', border: '1px solid rgba(218,30,40,0.5)' },
+        },
+        SL_HIT: {
+          label: 'SL Hit',
+          style: { bg: 'rgba(250,77,86,0.12)', color: '#fa4d56', border: '1px solid rgba(250,77,86,0.35)' },
+        },
+        TP_HIT: {
+          label: 'TP Hit',
+          style: { bg: 'rgba(36,161,72,0.12)', color: '#42be65', border: '1px solid rgba(36,161,72,0.35)' },
+        },
+        TIME_EXIT: {
+          label: 'Time Exit',
+          style: { bg: 'rgba(69,137,255,0.12)', color: '#4589ff', border: '1px solid rgba(69,137,255,0.35)' },
+        },
+        SIGNAL_REVERSE: {
+          label: 'Sig. Reverse',
+          style: { bg: 'rgba(168,168,168,0.1)', color: '#a8a8a8', border: '1px solid rgba(168,168,168,0.25)' },
+        },
+        MANUAL: {
+          label: 'Manual',
+          style: { bg: 'rgba(168,168,168,0.1)', color: '#a8a8a8', border: '1px solid rgba(168,168,168,0.25)' },
+        },
+      };
+
+      const entry = badgeMap[reason];
+      const label = entry?.label ?? reason.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+      const style = entry?.style ?? { bg: 'rgba(168,168,168,0.1)', color: '#a8a8a8', border: '1px solid rgba(168,168,168,0.25)' };
+
+      return (
+        <span style={{
+          display: 'inline-block',
+          padding: compact ? '1px 5px' : '2px 7px',
+          borderRadius: '4px',
+          background: style.bg,
+          color: style.color,
+          border: style.border,
+          fontWeight: 'bold',
+          fontSize: fSize,
+          whiteSpace: 'nowrap',
+          letterSpacing: '0.01em',
+        }}>
+          {label}
+        </span>
       );
     }
     if (cellId.endsWith(":model_version")) {

@@ -84,6 +84,14 @@ main {
   color: #f4f4f4 !important;
 }
 
+/* Reset Carbon form item margins inside header to keep metrics compact */
+.cds--header .cds--form-item,
+.cds--header .cds--toggle-wrapper {
+  margin: 0 !important;
+  padding: 0 !important;
+  height: auto !important;
+}
+
 /* Hover state for all menu items */
 .cds--header__menu-item:hover {
   background-color: #262626 !important; /* Dark mode hover */
@@ -253,7 +261,65 @@ main {
   font-weight: 600;
 }
 
+.show-on-mobile {
+  display: none !important;
+}
+.show-on-mobile-flex {
+  display: none !important;
+}
+
 @media (max-width: 768px) {
+  .hide-on-mobile {
+    display: none !important;
+  }
+  .show-on-mobile {
+    display: block !important;
+  }
+  .show-on-mobile-flex {
+    display: flex !important;
+  }
+
+  .clickable-row-mobile {
+    cursor: pointer !important;
+    transition: background-color 0.15s ease;
+  }
+  .clickable-row-mobile:hover td {
+    background-color: #454545 !important;
+  }
+
+  /* Sidebar mobile tap styling */
+  .cds--side-nav {
+    top: 3rem !important;
+    bottom: 0 !important;
+    height: auto !important; /* Let bottom: 0 determine the height dynamically */
+    position: fixed !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  .cds--side-nav__footer {
+    display: none !important; /* Hide Carbon default collapse button on mobile */
+  }
+  .cds--side-nav__items {
+    flex: 1 !important;
+    overflow-y: auto !important;
+    position: static !important; /* Ensure absolute children align with .cds--side-nav instead of the ul */
+    padding-bottom: 5.5rem !important; /* Make sure menu scroll clears the absolute footer */
+  }
+  .cds--side-nav__link {
+    font-size: 1.15rem !important;
+    height: 3.5rem !important; /* ~56px tap target */
+    padding: 0 1.5rem !important;
+    display: flex !important;
+    align-items: center !important;
+  }
+  .cds--side-nav__link-text {
+    font-size: 1.15rem !important;
+  }
+  .cds--side-nav__link svg {
+    width: 1.35rem !important;
+    height: 1.35rem !important;
+  }
+
   .page-with-sidebar {
     flex-direction: column !important;
     gap: 1rem !important;

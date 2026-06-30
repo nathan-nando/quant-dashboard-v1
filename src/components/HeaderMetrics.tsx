@@ -99,7 +99,7 @@ export default function HeaderMetrics() {
   };
 
   const MetricBox = ({ label, value, color, icon: Icon }: any) => (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.15rem 0.5rem', minWidth: '70px' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0px 0.5rem', minWidth: '70px' }}>
       <Icon size={12} color="#a8a8a8" />
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', lineHeight: 1 }}>
         <span style={{ fontSize: '0.55rem', color: '#a8a8a8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</span>
@@ -109,7 +109,7 @@ export default function HeaderMetrics() {
   );
 
   const MetricToggle = ({ label, toggled, onToggle, icon: Icon, id }: any) => (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.15rem 0.5rem', minWidth: '70px' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0px 0.5rem', minWidth: '70px' }}>
       <Icon size={12} color={toggled ? "#24a148" : "#fa4d56"} />
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', lineHeight: 1 }}>
         <span style={{ fontSize: '0.55rem', color: '#a8a8a8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</span>
@@ -132,7 +132,7 @@ export default function HeaderMetrics() {
 
   return (
     <>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', rowGap: '0.15rem', columnGap: '0rem', alignItems: 'center', marginRight: '1rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', rowGap: '0px', columnGap: '0rem', alignItems: 'center', marginRight: '1rem' }}>
         <MetricToggle 
           id="engine-nav-toggle"
           label="Engine" 
