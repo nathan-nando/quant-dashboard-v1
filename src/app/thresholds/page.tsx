@@ -1,6 +1,6 @@
 "use client";
 
-import { Grid, Column, Tile, FormGroup, NumberInput, Button, Toggle, ToastNotification } from "@carbon/react";
+import { Grid, Column, Tile, FormGroup, NumberInput, Button, Toggle, ToastNotification, RadioButtonGroup, RadioButton } from "@carbon/react";
 import { View, ViewOff, Save } from "@carbon/icons-react";
 import { useEffect, useState } from "react";
 import { API_BASE_URL } from '@/config/env';
@@ -14,6 +14,7 @@ export default function ThresholdsPage() {
     use_daily_kill_switch: true,
     max_daily_drawdown_pct: 5.0,
     use_ai_sl_tp: true,
+    risk_control_mode: "manual",
     risk_per_trade_pct: 1.0,
     max_open_positions: 1,
     ml_conf_bull: 0.50,
@@ -127,7 +128,7 @@ export default function ThresholdsPage() {
     return keys.some(key => config[key] !== originalConfig[key]);
   };
 
-  const riskKeys = ["auto_execution_enabled", "use_equity_kill_switch", "max_drawdown_equity_pct", "use_daily_kill_switch", "max_daily_drawdown_pct", "risk_per_trade_pct", "max_open_positions", "max_sl_pips", "max_tp_pips", "max_holding_hours"];
+  const riskKeys = ["auto_execution_enabled", "use_equity_kill_switch", "max_drawdown_equity_pct", "use_daily_kill_switch", "max_daily_drawdown_pct", "risk_control_mode", "risk_per_trade_pct", "max_open_positions", "max_sl_pips", "max_tp_pips", "max_holding_hours"];
   const alphaKeys = [
     "ml_conf_bull", "ml_margin_bull", "meta_conf_bull",
     "ml_conf_bear", "ml_margin_bear", "meta_conf_bear",
@@ -216,12 +217,28 @@ export default function ThresholdsPage() {
                   )}
                 </div>
               </div>
-              <div style={{marginTop: "1rem"}}>
-                <NumberInput 
-                  id="risk_per_trade" label="Risk Per Trade (%)" value={config.risk_per_trade_pct} 
-                  min={0.1} max={100} step={0.1} onChange={(e: any, { value }: any) => updateConfig("risk_per_trade_pct", value)}
-                />
+              <div style={{marginTop: "1.5rem"}}>
+                <FormGroup legendText="Risk Control Mode">
+                  <RadioButtonGroup
+                    name="risk_control_mode"
+                    defaultSelected="manual"
+                    valueSelected={config.risk_control_mode}
+                    onChange={(selection: any) => updateConfig("risk_control_mode", selection)}
+                    orientation="horizontal"
+                  >
+                    <RadioButton value="auto_lowest" id="radio-auto-lowest" labelText="Auto Lowest (0.01 Lot)" />
+                    <RadioButton value="manual" id="radio-manual" labelText="Manual (Fixed %)" />
+                  </RadioButtonGroup>
+                </FormGroup>
               </div>
+              {config.risk_control_mode !== "auto_lowest" && (
+                <div style={{marginTop: "1rem"}}>
+                  <NumberInput 
+                    id="risk_per_trade" label="Risk Per Trade (%)" value={config.risk_per_trade_pct} 
+                    min={0.1} max={100} step={0.1} onChange={(e: any, { value }: any) => updateConfig("risk_per_trade_pct", value)}
+                  />
+                </div>
+              )}
               <div style={{marginTop: "1rem", display: "flex", gap: "2rem"}}>
                 <div style={{ flex: 1 }}>
                   <NumberInput 
