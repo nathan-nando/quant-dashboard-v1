@@ -14,23 +14,29 @@ const ResponsiveGridLayout = WidthProvider(Responsive);
 const CandlestickChart = dynamic(() => import('../components/CandlestickChart'), { ssr: false });
 import MarketSummaryWidget from '../components/MarketSummaryWidget';
 import ShapPanel from '../components/ShapPanel';
-import RegimeTimeline from '../components/RegimeTimeline';
 import AttributionPanel from '../components/AttributionPanel';
+import MacroSnapshot from '../components/MacroSnapshot';
+import MacroCalendar from '../components/MacroCalendar';
+import HMMRegimeGauges from '../components/HMMRegimeGauges';
+import MoEEnsembleGauges from '../components/MoEEnsembleGauges';
 import { useGlobalState } from '../contexts/GlobalStateContext';
 import { API_BASE_URL } from '@/config/env';
 
 const getRegimeFormat = (regime: string) => {
   if (!regime) return { text: 'UNKNOWN', color: '#f4f4f4' };
-  if (regime === 'TEST_MANUAL') return { text: 'Manual', color: '#8a3ffc' }; // Purple
-  if (regime === 'TREND_BULL') return { text: 'Bull Trend', color: '#24a148' }; // Green
-  if (regime === 'TREND_BEAR') return { text: 'Bear Trend', color: '#fa4d56' }; // Red
-  if (regime === 'VOLATILE_CHOP') return { text: 'Volatile Chop', color: '#f1c21b' }; // Yellow
-  if (regime === 'MEAN_REVERTING') return { text: 'Mean Reverting', color: '#4589ff' }; // Blue
-  return { text: regime, color: '#f4f4f4' };
+  if (regime === 'MoE' || regime === 'MOE_ENSEMBLE') return { text: 'MoE Ensemble', color: '#8a3ffc' };
+  if (regime === 'TREND_EXPERT' || regime === 'trend') return { text: 'Trend Expert', color: '#24a148' };
+  if (regime === 'MEANREV_EXPERT' || regime === 'meanrev') return { text: 'MeanRev Expert', color: '#4589ff' };
+  if (regime === 'MACRO_EXPERT' || regime === 'macro') return { text: 'Macro Expert', color: '#d12771' };
+  if (regime === 'TREND_BULL') return { text: 'Bull Trend', color: '#24a148' }; 
+  if (regime === 'TREND_BEAR') return { text: 'Bear Trend', color: '#fa4d56' }; 
+  if (regime === 'VOLATILE_CHOP') return { text: 'Volatile Chop', color: '#f1c21b' }; 
+  if (regime === 'MEAN_REVERTING') return { text: 'Mean Reverting', color: '#4589ff' }; 
+  return { text: regime.replace('_EXPERT', ' Expert'), color: '#f4f4f4' };
 };
 
 export default function Home() {
-  const { signals, totalTrades, positions } = useGlobalState();
+  const { state, signals, totalTrades, positions } = useGlobalState();
 
   const nonShadowSignals = useMemo(() => {
     return (signals || []).filter((s: any) => s.status !== 'SHADOW');
@@ -114,7 +120,6 @@ export default function Home() {
     { key: "direction", header: "Signal", width: "70px" },
     { key: "entry_price", header: "Price / SL / TP / R:R" },
     { key: "model", header: "Model / Conf" },
-    { key: "regime", header: "Regime", width: "90px" },
     { key: "status", header: "Status", width: "80px" },
   ];
   const [selectedSignal, setSelectedSignal] = useState<number | null>(null);
@@ -122,35 +127,43 @@ export default function Home() {
   const defaultLayouts = {
     lg: [
       { i: 'chart', x: 0, y: 0, w: 4, h: 4, minW: 3, minH: 2 },
-      { i: 'attribution', x: 4, y: 0, w: 2, h: 3, minW: 2, minH: 2 },
-      { i: 'shap', x: 4, y: 3, w: 2, h: 3, minW: 2, minH: 2 },
-      { i: 'regime', x: 0, y: 4, w: 4, h: 2, minW: 3, minH: 2 },
-      { i: 'trades', x: 6, y: 0, w: 4, h: 3, minW: 3, minH: 2 },
-      { i: 'signals', x: 6, y: 3, w: 4, h: 5, minW: 3, minH: 2 }
+      { i: 'hmm_gauges', x: 4, y: 0, w: 3, h: 2, minW: 2, minH: 2 },
+      { i: 'moe_gauges', x: 7, y: 0, w: 3, h: 2, minW: 2, minH: 2 },
+      { i: 'attribution', x: 4, y: 2, w: 3, h: 2, minW: 2, minH: 2 },
+      { i: 'shap', x: 7, y: 2, w: 3, h: 2, minW: 2, minH: 2 },
+      { i: 'trades', x: 0, y: 4, w: 4, h: 5, minW: 2, minH: 2 },
+      { i: 'signals', x: 4, y: 4, w: 4, h: 5, minW: 3, minH: 2 },
+      { i: 'macro_calendar', x: 8, y: 4, w: 2, h: 5, minW: 2, minH: 2 }
     ],
     md: [
-      { i: 'chart', x: 0, y: 0, w: 4, h: 3 },
-      { i: 'attribution', x: 4, y: 0, w: 4, h: 3 },
-      { i: 'shap', x: 4, y: 3, w: 4, h: 3 },
-      { i: 'regime', x: 0, y: 3, w: 4, h: 3 },
-      { i: 'trades', x: 0, y: 6, w: 8, h: 3 },
-      { i: 'signals', x: 0, y: 9, w: 8, h: 5 }
+      { i: 'chart', x: 0, y: 0, w: 4, h: 4 },
+      { i: 'hmm_gauges', x: 4, y: 0, w: 2, h: 2 },
+      { i: 'moe_gauges', x: 6, y: 0, w: 2, h: 2 },
+      { i: 'attribution', x: 4, y: 2, w: 2, h: 2 },
+      { i: 'shap', x: 6, y: 2, w: 2, h: 2 },
+      { i: 'trades', x: 0, y: 4, w: 3, h: 5 },
+      { i: 'signals', x: 3, y: 4, w: 3, h: 5 },
+      { i: 'macro_calendar', x: 6, y: 4, w: 2, h: 5 }
     ],
     sm: [
-      { i: 'trades', x: 0, y: 0, w: 4, h: 3 },
-      { i: 'chart', x: 0, y: 3, w: 4, h: 3 },
-      { i: 'signals', x: 0, y: 6, w: 4, h: 5 },
-      { i: 'regime', x: 0, y: 11, w: 4, h: 3 },
-      { i: 'attribution', x: 0, y: 14, w: 4, h: 3 },
-      { i: 'shap', x: 0, y: 17, w: 4, h: 3 }
+      { i: 'chart', x: 0, y: 0, w: 4, h: 4 },
+      { i: 'hmm_gauges', x: 0, y: 4, w: 4, h: 3 },
+      { i: 'moe_gauges', x: 0, y: 7, w: 4, h: 3 },
+      { i: 'attribution', x: 0, y: 10, w: 4, h: 3 },
+      { i: 'shap', x: 0, y: 13, w: 4, h: 3 },
+      { i: 'trades', x: 0, y: 16, w: 4, h: 4 },
+      { i: 'signals', x: 0, y: 20, w: 4, h: 5 },
+      { i: 'macro_calendar', x: 0, y: 25, w: 4, h: 4 }
     ],
     xs: [
-      { i: 'trades', x: 0, y: 0, w: 2, h: 3 },
-      { i: 'chart', x: 0, y: 3, w: 2, h: 3 },
-      { i: 'signals', x: 0, y: 6, w: 2, h: 5 },
-      { i: 'regime', x: 0, y: 11, w: 2, h: 3 },
-      { i: 'attribution', x: 0, y: 14, w: 2, h: 3 },
-      { i: 'shap', x: 0, y: 17, w: 2, h: 3 }
+      { i: 'chart', x: 0, y: 0, w: 2, h: 3 },
+      { i: 'hmm_gauges', x: 0, y: 3, w: 2, h: 3 },
+      { i: 'moe_gauges', x: 0, y: 6, w: 2, h: 3 },
+      { i: 'attribution', x: 0, y: 9, w: 2, h: 3 },
+      { i: 'shap', x: 0, y: 12, w: 2, h: 3 },
+      { i: 'trades', x: 0, y: 15, w: 2, h: 3 },
+      { i: 'signals', x: 0, y: 18, w: 2, h: 5 },
+      { i: 'macro_calendar', x: 0, y: 23, w: 2, h: 3 }
     ]
   };
   const [layouts, setLayouts] = useState<any>(defaultLayouts);
@@ -161,14 +174,14 @@ export default function Home() {
       const keysToRemove: string[] = [];
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        if (key && (key.startsWith("quantDashboardLayout_") || key === "dashboard-layouts") && key !== "quantDashboardLayout_v29") {
+        if (key && (key.startsWith("quantDashboardLayout_") || key === "dashboard-layouts") && key !== "quantDashboardLayout_v42") {
           keysToRemove.push(key);
         }
       }
       keysToRemove.forEach(k => localStorage.removeItem(k));
     } catch (e) {}
  
-    const saved = localStorage.getItem('quantDashboardLayout_v29');
+    const saved = localStorage.getItem('quantDashboardLayout_v42');
     if (saved) {
       try {
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -179,7 +192,7 @@ export default function Home() {
  
   const handleLayoutChange = (layout: any, allLayouts: any) => {
     setLayouts(allLayouts);
-    localStorage.setItem("quantDashboardLayout_v29", JSON.stringify(allLayouts));
+    localStorage.setItem("quantDashboardLayout_v42", JSON.stringify(allLayouts));
   };
   return (
     <div style={{ maxWidth: '100%', padding: '0 2rem', position: 'relative' }}>
@@ -189,8 +202,13 @@ export default function Home() {
       </Column>
 
       {/* --- ROW 1: STATIC LIVE STATE METRICS & MARKET SUMMARY --- */}
-      <div style={{ display: "flex", gap: "0.2rem", marginBottom: "0.2rem", width: '100%', alignItems: 'stretch' }}>
-        <DashboardMetrics />
+      <div className="top-metrics-container">
+        <div className="dashboard-metrics-wrapper">
+          <DashboardMetrics />
+        </div>
+        <div className="macro-snapshot-wrapper">
+          <MacroSnapshot />
+        </div>
       </div>
 
       {/* --- ROW 2: DYNAMIC CHARTS AND SIGNALS --- */}
@@ -390,14 +408,14 @@ export default function Home() {
                         <div>
                           <span style={{ fontWeight: 'bold' }}>{entry}</span>
                           {signal.rr_ratio !== undefined && (
-                            <span style={{ fontSize: '8.5px', color: rrColor, marginLeft: '4px' }}>
-                              (R:R {rr.toFixed(2)})
+                            <span style={{ fontSize: '8.5px', color: rrColor, marginLeft: '3px' }}>
+                              ({rr.toFixed(1)})
                             </span>
                           )}
                         </div>
                         <div style={{ fontSize: '8.5px', color: '#a8a8a8' }}>
                           <span style={{ color: '#fa4d56' }}>{sl}</span>
-                          <span style={{ margin: '0 4px' }}>|</span>
+                          <span style={{ margin: '0 3px' }}>|</span>
                           <span style={{ color: '#24a148' }}>{tp}</span>
                         </div>
                       </div>
@@ -431,14 +449,14 @@ export default function Home() {
                     }
                     
                     return (
-                      <div style={{ display: 'flex', flexDirection: 'row', gap: '4px', alignItems: 'center', flexWrap: 'nowrap', fontSize: '9.5px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', lineHeight: '1.2', fontSize: '9.5px' }}>
                         {modelName ? (
                           <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                             <svg width="10" height="10" viewBox="0 0 32 32" style={{ fill: '#4589ff', flexShrink: 0 }}>
                               <path d="M26,8V6a2,2,0,0,0-2-2H22V2H20V4H18V2H16V4H14V2H12V4H10V2H8V4H6A2,2,0,0,0,4,6V8H2v2H4v2H2v2H4v2H2v2H4v2H2v2H4v2H2v2H4v2A2,2,0,0,0,6,28H8v2h2V28h2v2h2V28h2v2h2V28h2v2h2V28h2A2,2,0,0,0,28,26V24h2V22H28V20h2V18H28V16h2V14H28V12h2V10H28V8ZM26,26H6V6H26Z" />
                               <rect x="10" y="10" width="12" height="12" />
                             </svg>
-                            <span style={{ color: '#ffffff', fontWeight: 'bold', fontSize: '9.5px', whiteSpace: 'nowrap' }}>
+                            <span style={{ color: '#ffffff', fontWeight: 'bold', fontSize: '9px', whiteSpace: 'nowrap' }}>
                               {readableModelText}
                             </span>
                           </div>
@@ -446,8 +464,8 @@ export default function Home() {
                           <span>-</span>
                         )}
                         {conf !== undefined && conf !== null && (
-                          <span style={{ color: confColor, fontWeight: 'bold', fontSize: '8.5px', whiteSpace: 'nowrap' }}>
-                            {(conf * 100).toFixed(2)}%
+                          <span style={{ color: confColor, fontWeight: 'bold', fontSize: '8.5px', paddingLeft: '14px' }}>
+                            {(conf * 100).toFixed(1)}%
                           </span>
                         )}
                       </div>
@@ -497,6 +515,7 @@ export default function Home() {
           <DashboardPanel title="Latest Signal Explainability" tooltipInfo="Top 5 features contributing to the latest signal (Pseudo-SHAP)">
             <ShapPanel 
               shapValues={nonShadowSignals[0]?.signal_metadata?.model_output?.shap_values || nonShadowSignals[0]?.shap_values || []} 
+              explainability={nonShadowSignals[0]?.signal_metadata?.model_output?.explainability || nonShadowSignals[0]?.explainability || null}
               direction={nonShadowSignals[0]?.direction || "NEUTRAL"} 
               probabilities={nonShadowSignals[0]?.signal_metadata?.model_output?.probabilities || {}}
             />
@@ -509,11 +528,48 @@ export default function Home() {
           </DashboardPanel>
         </div>
 
-        <div key="regime">
-          <DashboardPanel title="Regime Timeline" tooltipInfo="Historical changes in market regime.">
-            <RegimeTimeline />
+
+        <div key="moe_gauges">
+          <DashboardPanel title="Mixture of Experts" tooltipInfo="Live AI ensemble weights.">
+            <MoEEnsembleGauges />
           </DashboardPanel>
         </div>
+
+        <div key="hmm_gauges">
+          <DashboardPanel title="Regime Detection" tooltipInfo="Hidden Markov Model regime probabilities.">
+            <HMMRegimeGauges />
+          </DashboardPanel>
+        </div>
+
+        <div key="macro_calendar">
+          <DashboardPanel 
+            title="Economic Calendar" 
+            tooltipInfo="Upcoming high-impact macroeconomic events."
+            onExportCsv={() => {
+              const headers = ["Date", "Event", "Impact", "Currency"];
+              const rows = (state?.calendar || []).map((e: any) => [
+                e.date ? new Date(e.date).toLocaleString() : '',
+                e.event || '',
+                e.impact || '',
+                e.currency || ''
+              ].join(","));
+              
+              const csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n" + rows.join("\n");
+              const encodedUri = encodeURI(csvContent);
+              const link = document.createElement("a");
+              link.setAttribute("href", encodedUri);
+              link.setAttribute("download", `economic_calendar_${new Date().toISOString().split('T')[0]}.csv`);
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+            }}
+          >
+            <div style={{ height: "100%" }}>
+              <MacroCalendar />
+            </div>
+          </DashboardPanel>
+        </div>
+
       </ResponsiveGridLayout>
       
       {/* --- SIGNAL DETAIL MODAL --- */}

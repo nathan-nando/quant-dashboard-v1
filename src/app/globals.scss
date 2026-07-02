@@ -432,7 +432,7 @@ main {
 /* Dashboard Metrics Grid */
 .dashboard-metrics-grid {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 0.2rem;
   flex: 1 1 auto;
   width: 100%;
@@ -445,6 +445,40 @@ main {
 
 .dashboard-metrics-grid h4 {
   font-size: 1.25rem !important;
+}
+
+/* Macro Metrics Grid */
+.macro-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.2rem;
+  flex: 1 1 auto;
+  width: 100%;
+}
+
+.macro-metrics-grid .cds--tile {
+  padding: 0.3rem 0.5rem !important;
+  height: 100%;
+}
+
+.macro-metrics-grid h4 {
+  font-size: 1.25rem !important;
+}
+
+.top-metrics-container {
+  display: flex;
+  gap: 0.2rem;
+  margin-bottom: 0.2rem;
+  width: 100%;
+  align-items: stretch;
+}
+
+.dashboard-metrics-wrapper {
+  flex: 1;
+}
+
+.macro-snapshot-wrapper {
+  flex: 1;
 }
 
 /* Account Page Layout & Responsive Grid */
@@ -482,9 +516,19 @@ main {
   gap: 0.2rem;
 }
 
+@media (max-width: 1024px) {
+  .top-metrics-container {
+    flex-direction: column;
+  }
+  .dashboard-metrics-wrapper, .macro-snapshot-wrapper {
+    flex: 1 1 auto;
+    width: 100%;
+  }
+}
+
 @media (max-width: 768px) {
   .dashboard-metrics-grid {
-    grid-template-columns: repeat(3, 1fr) !important;
+    grid-template-columns: repeat(2, 1fr) !important;
   }
 
   .dashboard-metrics-grid h4 {
@@ -492,6 +536,18 @@ main {
   }
 
   .dashboard-metrics-grid .cds--tile {
+    padding: 0.25rem 0.35rem !important;
+  }
+
+  .macro-metrics-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  .macro-metrics-grid h4 {
+    font-size: 0.95rem !important;
+  }
+
+  .macro-metrics-grid .cds--tile {
     padding: 0.25rem 0.35rem !important;
   }
 

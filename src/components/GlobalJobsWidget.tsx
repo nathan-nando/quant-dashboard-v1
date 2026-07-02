@@ -20,7 +20,7 @@ export default function GlobalJobsWidget({ target, onJobComplete, openJobDetails
   // Filter jobs by target if provided
   const activeJobs = target ? rawJobs.filter((job: any) => job.target === target) : rawJobs;
 
-  const [isWidgetCollapsed, setIsWidgetCollapsed] = useState(true);
+  const [isWidgetCollapsed, setIsWidgetCollapsed] = useState(false);
   const [notification, setNotification] = useState<{kind: "success" | "error" | "info", title: string, subtitle: string} | null>(null);
   const [confirmModalConfig, setConfirmModalConfig] = useState<{
     isOpen: boolean;
@@ -33,6 +33,12 @@ export default function GlobalJobsWidget({ target, onJobComplete, openJobDetails
     body: '',
     onConfirm: () => {}
   });
+
+  useEffect(() => {
+    const handleJobStart = () => setIsWidgetCollapsed(false);
+    window.addEventListener('job-start', handleJobStart);
+    return () => window.removeEventListener('job-start', handleJobStart);
+  }, []);
 
   const prevActiveJobsRef = useRef<any[]>([]);
 

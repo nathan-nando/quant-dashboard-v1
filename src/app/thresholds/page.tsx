@@ -17,25 +17,21 @@ export default function ThresholdsPage() {
     risk_control_mode: "manual",
     risk_per_trade_pct: 1.0,
     max_open_positions: 1,
-    ml_conf_bull: 0.50,
-    ml_margin_bull: 0.10,
-    meta_conf_bull: 0.50,
-    ml_conf_bear: 0.50,
-    ml_margin_bear: 0.10,
-    meta_conf_bear: 0.50,
-    ml_conf_mean: 0.50,
-    ml_margin_mean: 0.05,
-    meta_conf_mean: 0.50,
+    ml_conf_trend: 0.50,
+    ml_margin_trend: 0.10,
+    ml_conf_meanrev: 0.50,
+    ml_margin_meanrev: 0.05,
+    ml_conf_macro: 0.50,
+    ml_margin_macro: 0.05,
+    ml_conf_moe: 0.50,
     adx_trend_threshold: 25,
     bb_width_volatility_threshold: 5.0,
-    sl_mult_bull: 1.5,
-    tp_mult_bull: 3.0,
-    sl_mult_bear: 1.5,
-    tp_mult_bear: 1.5,
-    sl_mult_mean_reverting: 1.5,
-    tp_mult_mean_reverting: 1.5,
-    sl_mult_volatile: 2.0,
-    tp_mult_volatile: 2.0,
+    sl_mult_trend: 1.5,
+    tp_mult_trend: 3.0,
+    sl_mult_meanrev: 1.5,
+    tp_mult_meanrev: 1.5,
+    sl_mult_macro: 2.0,
+    tp_mult_macro: 2.0,
     cron_interval_minutes: 3,
     max_sl_pips: 500,
     max_tp_pips: 1500,
@@ -130,12 +126,13 @@ export default function ThresholdsPage() {
 
   const riskKeys = ["auto_execution_enabled", "use_equity_kill_switch", "max_drawdown_equity_pct", "use_daily_kill_switch", "max_daily_drawdown_pct", "risk_control_mode", "risk_per_trade_pct", "max_open_positions", "max_sl_pips", "max_tp_pips", "max_holding_hours"];
   const alphaKeys = [
-    "ml_conf_bull", "ml_margin_bull", "meta_conf_bull",
-    "ml_conf_bear", "ml_margin_bear", "meta_conf_bear",
-    "ml_conf_mean", "ml_margin_mean", "meta_conf_mean"
+    "ml_conf_trend", "ml_margin_trend",
+    "ml_conf_meanrev", "ml_margin_meanrev",
+    "ml_conf_macro", "ml_margin_macro",
+    "ml_conf_moe"
   ];
   const regimeKeys = ["adx_trend_threshold", "bb_width_volatility_threshold"];
-  const sltpKeys = ["use_ai_sl_tp", "sl_mult_bull", "tp_mult_bull", "sl_mult_bear", "tp_mult_bear", "sl_mult_mean_reverting", "tp_mult_mean_reverting", "sl_mult_volatile", "tp_mult_volatile"];
+  const sltpKeys = ["use_ai_sl_tp", "sl_mult_trend", "tp_mult_trend", "sl_mult_meanrev", "tp_mult_meanrev", "sl_mult_macro", "tp_mult_macro"];
   const systemKeys = ["engine_active", "cron_interval_minutes"];
 
   if (loading) return <div>Loading configuration...</div>;
@@ -280,40 +277,37 @@ export default function ThresholdsPage() {
               </Button>
             </div>
             <Grid style={{ padding: 0, margin: '1rem -1rem 0 -1rem' }}>
-              {/* Bull Trend */}
-              <Column lg={5} md={2} sm={4} style={{ marginBottom: '1rem' }}>
-                <h5 style={{ marginBottom: '0.5rem', color: '#24a148' }}>Bull Trend</h5>
-                <NumberInput id="ml_margin_bull" label="ML Margin (Selisih)" value={config.ml_margin_bull ?? 0.10} min={0.01} max={1.0} step={0.01} onChange={(e: any, { value }: any) => updateConfig("ml_margin_bull", value)} />
+              {/* Trend Expert */}
+              <Column lg={4} md={2} sm={4} style={{ marginBottom: '1rem' }}>
+                <h5 style={{ marginBottom: '0.5rem', color: '#24a148' }}>Trend Expert</h5>
+                <NumberInput id="ml_margin_trend" label="ML Margin (Selisih)" value={config.ml_margin_trend ?? 0.10} min={0.01} max={1.0} step={0.01} onChange={(e: any, { value }: any) => updateConfig("ml_margin_trend", value)} />
                 <div style={{marginTop: "0.5rem"}}>
-                  <NumberInput id="ml_conf_bull" label="ML Confidence (Mutlak)" value={config.ml_conf_bull ?? 0.50} min={0.1} max={1.0} step={0.05} onChange={(e: any, { value }: any) => updateConfig("ml_conf_bull", value)} />
-                </div>
-                <div style={{marginTop: "0.5rem"}}>
-                  <NumberInput id="meta_conf_bull" label="Meta Confidence" value={config.meta_conf_bull ?? 0.50} min={0.1} max={1.0} step={0.05} onChange={(e: any, { value }: any) => updateConfig("meta_conf_bull", value)} />
+                  <NumberInput id="ml_conf_trend" label="ML Confidence (Mutlak)" value={config.ml_conf_trend ?? 0.50} min={0.1} max={1.0} step={0.05} onChange={(e: any, { value }: any) => updateConfig("ml_conf_trend", value)} />
                 </div>
               </Column>
               
-              {/* Bear Trend */}
-              <Column lg={5} md={2} sm={4} style={{ marginBottom: '1rem' }}>
-                <h5 style={{ marginBottom: '0.5rem', color: '#fa4d56' }}>Bear Trend</h5>
-                <NumberInput id="ml_margin_bear" label="ML Margin (Selisih)" value={config.ml_margin_bear ?? 0.10} min={0.01} max={1.0} step={0.01} onChange={(e: any, { value }: any) => updateConfig("ml_margin_bear", value)} />
+              {/* MeanRev Expert */}
+              <Column lg={4} md={2} sm={4} style={{ marginBottom: '1rem' }}>
+                <h5 style={{ marginBottom: '0.5rem', color: '#0f62fe' }}>MeanRev Expert</h5>
+                <NumberInput id="ml_margin_meanrev" label="ML Margin (Selisih)" value={config.ml_margin_meanrev ?? 0.05} min={0.01} max={1.0} step={0.01} onChange={(e: any, { value }: any) => updateConfig("ml_margin_meanrev", value)} />
                 <div style={{marginTop: "0.5rem"}}>
-                  <NumberInput id="ml_conf_bear" label="ML Confidence (Mutlak)" value={config.ml_conf_bear ?? 0.50} min={0.1} max={1.0} step={0.05} onChange={(e: any, { value }: any) => updateConfig("ml_conf_bear", value)} />
-                </div>
-                <div style={{marginTop: "0.5rem"}}>
-                  <NumberInput id="meta_conf_bear" label="Meta Confidence" value={config.meta_conf_bear ?? 0.50} min={0.1} max={1.0} step={0.05} onChange={(e: any, { value }: any) => updateConfig("meta_conf_bear", value)} />
+                  <NumberInput id="ml_conf_meanrev" label="ML Confidence (Mutlak)" value={config.ml_conf_meanrev ?? 0.50} min={0.1} max={1.0} step={0.05} onChange={(e: any, { value }: any) => updateConfig("ml_conf_meanrev", value)} />
                 </div>
               </Column>
 
-              {/* Mean Reverting */}
-              <Column lg={6} md={4} sm={4}>
-                <h5 style={{ marginBottom: '0.5rem', color: '#0f62fe' }}>Mean Reverting</h5>
-                <NumberInput id="ml_margin_mean" label="ML Margin (Selisih)" value={config.ml_margin_mean ?? 0.05} min={0.01} max={1.0} step={0.01} onChange={(e: any, { value }: any) => updateConfig("ml_margin_mean", value)} />
+              {/* Macro Expert */}
+              <Column lg={4} md={2} sm={4} style={{ marginBottom: '1rem' }}>
+                <h5 style={{ marginBottom: '0.5rem', color: '#f1c21b' }}>Macro Expert</h5>
+                <NumberInput id="ml_margin_macro" label="ML Margin (Selisih)" value={config.ml_margin_macro ?? 0.05} min={0.01} max={1.0} step={0.01} onChange={(e: any, { value }: any) => updateConfig("ml_margin_macro", value)} />
                 <div style={{marginTop: "0.5rem"}}>
-                  <NumberInput id="ml_conf_mean" label="ML Confidence (Mutlak)" value={config.ml_conf_mean ?? 0.50} min={0.1} max={1.0} step={0.05} onChange={(e: any, { value }: any) => updateConfig("ml_conf_mean", value)} />
+                  <NumberInput id="ml_conf_macro" label="ML Confidence (Mutlak)" value={config.ml_conf_macro ?? 0.50} min={0.1} max={1.0} step={0.05} onChange={(e: any, { value }: any) => updateConfig("ml_conf_macro", value)} />
                 </div>
-                <div style={{marginTop: "0.5rem"}}>
-                  <NumberInput id="meta_conf_mean" label="Meta Confidence" value={config.meta_conf_mean ?? 0.50} min={0.1} max={1.0} step={0.05} onChange={(e: any, { value }: any) => updateConfig("meta_conf_mean", value)} />
-                </div>
+              </Column>
+
+              {/* Global MoE */}
+              <Column lg={4} md={2} sm={4}>
+                <h5 style={{ marginBottom: '0.5rem', color: '#8a3ffc' }}>Global MoE</h5>
+                <NumberInput id="ml_conf_moe" label="ML Confidence (Mutlak)" value={config.ml_conf_moe ?? 0.50} min={0.1} max={1.0} step={0.05} onChange={(e: any, { value }: any) => updateConfig("ml_conf_moe", value)} />
               </Column>
             </Grid>
           </Tile>
@@ -363,52 +357,39 @@ export default function ThresholdsPage() {
               />
             </div>
             
-            
-                <FormGroup legendText="Bull Trend Regime" style={{ marginTop: "1rem" }}>
+                <FormGroup legendText="Trend Expert" style={{ marginTop: "1rem" }}>
                   <div style={{ display: 'flex', gap: '1rem' }}>
                     <NumberInput 
-                      id="sl_bull" label="SL Multiplier" value={config.sl_mult_bull} 
-                      min={0.1} max={10.0} step={0.1} onChange={(e: any, { value }: any) => updateConfig("sl_mult_bull", value)}
+                      id="sl_trend" label="SL Multiplier" value={config.sl_mult_trend} 
+                      min={0.1} max={10.0} step={0.1} onChange={(e: any, { value }: any) => updateConfig("sl_mult_trend", value)}
                     />
                     <NumberInput 
-                      id="tp_bull" label="TP Multiplier" value={config.tp_mult_bull} 
-                      min={0.1} max={10.0} step={0.1} onChange={(e: any, { value }: any) => updateConfig("tp_mult_bull", value)}
+                      id="tp_trend" label="TP Multiplier" value={config.tp_mult_trend} 
+                      min={0.1} max={10.0} step={0.1} onChange={(e: any, { value }: any) => updateConfig("tp_mult_trend", value)}
                     />
                   </div>
                 </FormGroup>
-                <FormGroup legendText="Bear Trend Regime" style={{ marginTop: "1rem" }}>
+                <FormGroup legendText="MeanRev Expert" style={{ marginTop: "1rem" }}>
                   <div style={{ display: 'flex', gap: '1rem' }}>
                     <NumberInput 
-                      id="sl_bear" label="SL Multiplier" value={config.sl_mult_bear} 
-                      min={0.1} max={10.0} step={0.1} onChange={(e: any, { value }: any) => updateConfig("sl_mult_bear", value)}
+                      id="sl_mr" label="SL Multiplier" value={config.sl_mult_meanrev} 
+                      min={0.1} max={10.0} step={0.1} onChange={(e: any, { value }: any) => updateConfig("sl_mult_meanrev", value)}
                     />
                     <NumberInput 
-                      id="tp_bear" label="TP Multiplier" value={config.tp_mult_bear} 
-                      min={0.1} max={10.0} step={0.1} onChange={(e: any, { value }: any) => updateConfig("tp_mult_bear", value)}
+                      id="tp_mr" label="TP Multiplier" value={config.tp_mult_meanrev} 
+                      min={0.1} max={10.0} step={0.1} onChange={(e: any, { value }: any) => updateConfig("tp_mult_meanrev", value)}
                     />
                   </div>
                 </FormGroup>
-                <FormGroup legendText="Mean Reverting Regime" style={{ marginTop: "1rem" }}>
+                <FormGroup legendText="Macro Expert" style={{ marginTop: "1rem" }}>
                   <div style={{ display: 'flex', gap: '1rem' }}>
                     <NumberInput 
-                      id="sl_mr" label="SL Multiplier" value={config.sl_mult_mean_reverting} 
-                      min={0.1} max={10.0} step={0.1} onChange={(e: any, { value }: any) => updateConfig("sl_mult_mean_reverting", value)}
+                      id="sl_macro" label="SL Multiplier" value={config.sl_mult_macro} 
+                      min={0.1} max={10.0} step={0.1} onChange={(e: any, { value }: any) => updateConfig("sl_mult_macro", value)}
                     />
                     <NumberInput 
-                      id="tp_mr" label="TP Multiplier" value={config.tp_mult_mean_reverting} 
-                      min={0.1} max={10.0} step={0.1} onChange={(e: any, { value }: any) => updateConfig("tp_mult_mean_reverting", value)}
-                    />
-                  </div>
-                </FormGroup>
-                <FormGroup legendText="Volatile Chop Regime" style={{ marginTop: "1rem" }}>
-                  <div style={{ display: 'flex', gap: '1rem' }}>
-                    <NumberInput 
-                      id="sl_vol" label="SL Multiplier" value={config.sl_mult_volatile} 
-                      min={0.1} max={10.0} step={0.1} onChange={(e: any, { value }: any) => updateConfig("sl_mult_volatile", value)}
-                    />
-                    <NumberInput 
-                      id="tp_vol" label="TP Multiplier" value={config.tp_mult_volatile} 
-                      min={0.1} max={10.0} step={0.1} onChange={(e: any, { value }: any) => updateConfig("tp_mult_volatile", value)}
+                      id="tp_macro" label="TP Multiplier" value={config.tp_mult_macro} 
+                      min={0.1} max={10.0} step={0.1} onChange={(e: any, { value }: any) => updateConfig("tp_mult_macro", value)}
                     />
                   </div>
                 </FormGroup>

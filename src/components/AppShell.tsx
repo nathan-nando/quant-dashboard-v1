@@ -35,12 +35,9 @@ const HeaderAccountBadge = () => {
   const isLive = acc.mode === 'LIVE';
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', height: '100%' }}>
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '2px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', lineHeight: 1.1 }}>
-          <span style={{ fontSize: '0.65rem', color: '#a8a8a8' }}>{acc.login} | {acc.server}</span>
-          <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '1px 3px', backgroundColor: isLive ? '#24a148' : '#0f62fe', color: 'white', fontSize: '8px', fontWeight: 600, borderRadius: '2px', lineHeight: 1, height: '12px' }}>
-            {acc.mode}
-          </div>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '3px' }}>
+        <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '1px 4px', backgroundColor: isLive ? '#24a148' : '#0f62fe', color: 'white', fontSize: '8px', fontWeight: 600, borderRadius: '2px', lineHeight: 1, height: '12px' }}>
+          {acc.mode}
         </div>
         <div style={{ display: 'flex', alignItems: 'baseline', lineHeight: 1.1 }}>
            <strong style={{ fontSize: '0.875rem', color: '#fff' }}>
@@ -68,7 +65,7 @@ const MobileAccountBadge = () => {
       {/* Column 1: Account Mode & Equity Value */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center' }}>
         <div style={{ height: '14px', display: 'flex', alignItems: 'center', marginBottom: '2px' }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '1px 4px', backgroundColor: isLive ? '#24a148' : '#0f62fe', color: 'white', fontSize: '7px', fontWeight: 700, borderRadius: '2px', lineHeight: 1, height: '12px' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '1px 4px', backgroundColor: isLive ? '#24a148' : '#0f62fe', color: 'white', fontSize: '7px', fontWeight: 700, lineHeight: 1, height: '12px' }}>
             {acc.mode}
           </div>
         </div>
@@ -244,32 +241,31 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 </div>
                 {/* Group 1 — starts flush after brand, aligns with page content */}
                 <HeaderNavigation aria-label="Main" style={{ border: 'none' }} className="desktop-nav">
-                  {navItem('/', 'Dashboard', Dashboard)}
                   {navItem('/account', 'Account', User)}
                   {navItem('/signals', 'Signals', Activity)}
-                  {navItem('/thresholds', 'Thresholds', SettingsAdjust)}
                   {navItem('/monitoring', 'Monitoring', Meter)}
                 </HeaderNavigation>
 
                 {/* Spacer — pushes Group 2 toward the right */}
                 <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1.5rem', height: '100%', overflow: 'hidden' }} className="header-spacer hide-on-mobile">
-                  <div className="hide-on-mobile">
-                    <MarketClock />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+                    <div className="hide-on-mobile">
+                      <MarketClock />
+                    </div>
+                    <HeaderAccountBadge />
                   </div>
-                  <HeaderAccountBadge />
+                  <HeaderMetrics />
                 </div>
 
                 {/* Group 2 — sits just before the global action icons */}
                 <HeaderNavigation aria-label="Tools" style={{ border: 'none' }} className="desktop-nav">
+                  {navItem('/thresholds', 'Thresholds', SettingsAdjust)}
                   {navItem('/models', 'Models', MachineLearningModel)}
                   {navItem('/simulation', 'Simulation', Analytics)}
                 </HeaderNavigation>
 
                 {/* Global actions */}
                 <div style={{ display: 'flex', alignItems: 'center', marginLeft: 'auto' }}>
-                  <div>
-                    <HeaderMetrics />
-                  </div>
                   <div className="hide-on-mobile">
                     <HeaderGlobalBar>
                       <HeaderGlobalAction aria-label="Notifications" tooltipAlignment="end">
@@ -295,7 +291,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 </div>
 
                 <SideNavItems>
-                  {sideNavItem('/', 'Dashboard', Dashboard, onClickSideNavExpand)}
                   {sideNavItem('/account', 'Account', User, onClickSideNavExpand)}
                   {sideNavItem('/signals', 'Signals', Activity, onClickSideNavExpand)}
                   {sideNavItem('/thresholds', 'Thresholds', SettingsAdjust, onClickSideNavExpand)}

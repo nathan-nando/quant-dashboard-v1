@@ -13,10 +13,11 @@ import { API_BASE_URL } from '@/config/env';
 
 const getRegimeFormat = (regime: string) => {
   if (!regime) return { text: 'UNKNOWN', color: '#f4f4f4' };
-  if (regime === 'TREND_BULL') return { text: 'Bull Trend', color: '#24a148' }; // Green
-  if (regime === 'TREND_BEAR') return { text: 'Bear Trend', color: '#fa4d56' }; // Red
-  if (regime === 'VOLATILE_CHOP') return { text: 'Volatile Chop', color: '#f1c21b' }; // Yellow
-  if (regime === 'MEAN_REVERTING') return { text: 'Mean Reverting', color: '#4589ff' }; // Blue
+  if (regime === 'MOE_ENSEMBLE' || regime === 'MoE' || regime === 'Ensemble' || regime === 'MOE') return { text: 'MoE Gating Network & Meta', color: '#0f62fe' };
+  if (regime === 'HMM' || regime === 'HMM_REGIME') return { text: 'HMM Regime Detector', color: '#8a3ffc' };
+  if (regime === 'TREND_EXPERT' || regime === 'trend') return { text: 'MoE Trend Expert', color: '#24a148' };
+  if (regime === 'MEANREV_EXPERT' || regime === 'meanrev') return { text: 'MoE MeanRev Expert', color: '#4589ff' };
+  if (regime === 'MACRO_EXPERT' || regime === 'macro') return { text: 'MoE Macro Expert', color: '#f1c21b' };
   return { text: regime, color: '#f4f4f4' };
 };
 
@@ -25,16 +26,18 @@ function ModelsContent() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   
-  const currentTab = searchParams.get("tab") || "routes";
+  const currentTab = searchParams.get("tab") || "train";
 
   const handleTabChange = (tabId: string) => {
-    router.push(`${pathname}?tab=${tabId}`);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", tabId);
+    router.push(`${pathname}?${params.toString()}`);
   };
 
   const navItems = [
-    { id: 'routes', label: 'Routes', icon: Fork },
     { id: 'train', label: 'Train', icon: Play },
     { id: 'registry', label: 'Registry', icon: MachineLearningModel },
+    { id: 'routing', label: 'Model Routing', icon: Fork },
     { id: 'datasets', label: 'Datasets', icon: DataSet }
   ];
 
@@ -42,10 +45,11 @@ function ModelsContent() {
   const [datasets, setDatasets] = useState<any[]>([]);
   const [initialModelRouting, setInitialModelRouting] = useState<any>(null);
   const [modelRouting, setModelRouting] = useState<any>({
-    TREND_BULL: { champion: "NONE", challenger: "NONE" },
-    TREND_BEAR: { champion: "NONE", challenger: "NONE" },
-    MEAN_REVERTING: { champion: "NONE", challenger: "NONE" },
-    VOLATILE_CHOP: { champion: "NONE", challenger: "NONE" }
+    MOE_ENSEMBLE: { champion: "NONE", challenger: "NONE" },
+    TREND_EXPERT: { champion: "NONE", challenger: "NONE" },
+    MEANREV_EXPERT: { champion: "NONE", challenger: "NONE" },
+    MACRO_EXPERT: { champion: "NONE", challenger: "NONE" },
+    HMM: { champion: "NONE", challenger: "NONE" }
   });
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [savingRouting, setSavingRouting] = useState(false);
@@ -59,8 +63,8 @@ function ModelsContent() {
   const [isDatasetModalOpen, setDatasetModalOpen] = useState(false);
   const [isEditDatasetModalOpen, setEditDatasetModalOpen] = useState(false);
   const [editingDataset, setEditingDataset] = useState<any>(null);
-  const [datasetForm, setDatasetForm] = useState({ id: "", name: "", description: "", timeframe: "H1", count: 10000, start_date: "", end_date: "", file_name: "" });
-  const [datasetMode, setDatasetMode] = useState("count"); // count or date
+  const [datasetForm, setDatasetForm] = useState({ id: "", name: "", description: "", timeframe: "H1", count: 10000, start_date: "", end_date: "", file_name: "", source_type: "technical" });
+  const [datasetMode, setDatasetMode] = useState("date"); // count or date
 
   // Train states
   const initEnd = new Date().toISOString().split('T')[0];
@@ -69,7 +73,7 @@ function ModelsContent() {
 
   const [isTrainModalOpen, setTrainModalOpen] = useState(false);
   const [trainRegime, setTrainRegime] = useState<string>("");
-  const [trainForm, setTrainForm] = useState({ algorithm: "XGBoost", model_name: "", optuna_trials: 50, skip_ingestion: true, dataset_id: "", use_meta_labeling: false, device: "cpu" });
+  const [trainForm, setTrainForm] = useState({ algorithm: "XGBoost", model_name: "", optuna_trials: 50, skip_ingestion: true, dataset_id: "", macro_dataset_id: "", use_meta_labeling: false, device: "cpu" });
   const [showDatasetInfo, setShowDatasetInfo] = useState(false);
   
   const [notification, setNotification] = useState<{kind: "success" | "error" | "info", title: string, subtitle: string} | null>(null);
@@ -114,12 +118,20 @@ function ModelsContent() {
       const routeData = await routeRes.json();
       const dsData = await dsRes.json();
       
-      const formattedRouting = {...modelRouting};
+      const formattedRouting: Record<string, { champion: string; challenger: string }> = {
+        MOE_ENSEMBLE: { champion: "NONE", challenger: "NONE" },
+        TREND_EXPERT: { champion: "NONE", challenger: "NONE" },
+        MEANREV_EXPERT: { champion: "NONE", challenger: "NONE" },
+        MACRO_EXPERT: { champion: "NONE", challenger: "NONE" },
+        HMM: { champion: "NONE", challenger: "NONE" }
+      };
       for(const k in routeData) {
-        if(typeof routeData[k] === 'string') {
-          formattedRouting[k] = { champion: routeData[k], challenger: "NONE" };
-        } else {
-          formattedRouting[k] = { champion: routeData[k]?.champion || "NONE", challenger: routeData[k]?.challenger || "NONE" };
+        if (k in formattedRouting) {
+          if(typeof routeData[k] === 'string') {
+            formattedRouting[k] = { champion: routeData[k], challenger: "NONE" };
+          } else {
+            formattedRouting[k] = { champion: routeData[k]?.champion || "NONE", challenger: routeData[k]?.challenger || "NONE" };
+          }
         }
       }
       
@@ -224,13 +236,14 @@ function ModelsContent() {
   };
 
   const openDatasetModal = () => {
-    setDatasetForm({ id: "", name: "", description: "", timeframe: "H1", count: 10000, start_date: initStart, end_date: initEnd, file_name: "" });
+    setDatasetForm({ id: "", name: "", description: "", timeframe: "H1", count: 10000, start_date: initStart, end_date: initEnd, file_name: "", source_type: "technical" });
+    setDatasetMode("date");
     setDatasetModalOpen(true);
   };
 
   const openEditDatasetModal = (dataset: any) => {
     setEditingDataset(dataset);
-    setDatasetForm({ id: dataset.id, name: dataset.name, description: dataset.description, timeframe: dataset.timeframe, count: 10000, start_date: initStart, end_date: initEnd, file_name: dataset.file_name || "" });
+    setDatasetForm({ id: dataset.id, name: dataset.name, description: dataset.description, timeframe: dataset.timeframe, count: 10000, start_date: initStart, end_date: initEnd, file_name: dataset.file_name || "", source_type: dataset.source_type || "technical" });
     setEditDatasetModalOpen(true);
   };
 
@@ -241,7 +254,8 @@ function ModelsContent() {
         name: datasetForm.name,
         description: datasetForm.description,
         timeframe: datasetForm.timeframe,
-        file_name: datasetForm.file_name
+        file_name: datasetForm.file_name,
+        source_type: datasetForm.source_type
       };
       if (datasetMode === "count") {
         payload.count = datasetForm.count;
@@ -322,13 +336,15 @@ function ModelsContent() {
 
   const openTrainModal = (regime: string) => {
     setTrainRegime(regime);
-    const defaultDs = datasets.find(ds => ds.name?.toLowerCase().includes("default") || ds.file_name?.toLowerCase().includes("default")) || datasets[0];
+    const techDs = datasets.find(ds => ds.source_type === "technical") || datasets[0];
+    const macroDs = datasets.find(ds => ds.source_type === "macro") || datasets.find(ds => ds !== techDs) || datasets[0];
     setTrainForm({ 
-      algorithm: "XGBoost", 
+      algorithm: regime === "HMM" ? "Gaussian HMM" : "XGBoost MoE Ensemble", 
       model_name: "", 
       optuna_trials: 50, 
       skip_ingestion: true, 
-      dataset_id: defaultDs ? defaultDs.id : "", 
+      dataset_id: techDs ? techDs.id : "", 
+      macro_dataset_id: macroDs ? macroDs.id : "",
       use_meta_labeling: false,
       device: "cpu"
     });
@@ -360,7 +376,7 @@ function ModelsContent() {
   const modelHeaders = [
     { key: "name", header: "Model Name" },
     { key: "algorithm_type", header: "Algorithm Type" },
-    { key: "regime", header: "Regime" },
+    { key: "regime", header: "Role / Regime" },
     { key: "accuracy", header: "Accuracy" },
     { key: "dataset", header: "Dataset" },
     { key: "uses_meta", header: "Meta Labeling" },
@@ -371,6 +387,7 @@ function ModelsContent() {
   const datasetHeaders = [
     { key: "name", header: "Dataset Name" },
     { key: "timeframe", header: "Timeframe" },
+    { key: "source_type", header: "Source Type" },
     { key: "date_range", header: "Date Range" },
     { key: "file_name", header: "File Name" },
     { key: "total_rows", header: "Total Rows" },
@@ -445,6 +462,10 @@ function ModelsContent() {
           <Button size="sm" kind="danger--ghost" renderIcon={TrashCan} iconDescription="Delete" hasIconOnly onClick={() => deleteDataset(rowId)} />
         </div>
       );
+    }
+    if (cellId.endsWith(':source_type')) {
+      if (value === "macro") return <span style={{ color: '#8a3ffc', fontWeight: 'bold' }}>🏛️ Macro (FRED)</span>;
+      return <span style={{ color: '#24a148', fontWeight: 'bold' }}>📈 Technical (MT5)</span>;
     }
     if (cellId.endsWith(':date_range')) {
       const rowId = cellId.split(':')[0];
@@ -542,58 +563,45 @@ function ModelsContent() {
 
           {/* Tab Content Panels */}
           <div className="page-content">
-            {/* TAB 1: ROUTES */}
-            {currentTab === 'routes' && (
-              <Form style={{ padding: 0 }}>
-                <div className="models-routing-grid">
-                  {['TREND_BULL', 'TREND_BEAR', 'MEAN_REVERTING', 'VOLATILE_CHOP'].map(regime => (
-                    <Tile key={regime} className="models-routing-tile">
-                        <div className="models-routing-title-container">
-                           {regime === 'TREND_BULL' && <ArrowUpRight size={20} style={{ color: '#24a148' }} />}
-                           {regime === 'TREND_BEAR' && <ArrowDownRight size={20} style={{ color: '#da1e28' }} />}
-                           {regime === 'MEAN_REVERTING' && <Activity size={20} style={{ color: '#4589ff' }} />}
-                           {regime === 'VOLATILE_CHOP' && <Lightning size={20} style={{ color: '#f1c21b' }} />}
-                           <h4 style={{fontWeight: 400, margin: 0}}>{regime.split('_').map(w => w.charAt(0) + w.slice(1).toLowerCase()).join(' ')}</h4>
-                        </div>
-                        <div className="models-routing-select">
-                          <Select id={`route_${regime}_champ`} labelText="👑 Champion" value={modelRouting[regime]?.champion || "NONE"} onChange={e => handleRouteChange(regime, 'champion', e.target.value)}>
-                            <SelectItem value="NONE" text="-- None (Disable) --" />
-                            {models.filter(m => !m.regime || m.regime === regime).map(m => <SelectItem key={`${m.id}-champ`} value={m.name} text={m.name} />)}
-                          </Select>
-                        </div>
-                        <div className="models-routing-select">
-                          <Select id={`route_${regime}_chall`} labelText="🔬 Challenger" value={modelRouting[regime]?.challenger || "NONE"} onChange={e => handleRouteChange(regime, 'challenger', e.target.value)}>
-                            <SelectItem value="NONE" text="-- None --" />
-                            {models.filter(m => !m.regime || m.regime === regime).map(m => <SelectItem key={`${m.id}-chall`} value={m.name} text={m.name} />)}
-                          </Select>
-                        </div>
-                    </Tile>
-                  ))}
-                </div>
-                <Button type="button" size="sm" renderIcon={Save} onClick={saveRouting} disabled={savingRouting || JSON.stringify(modelRouting) === JSON.stringify(initialModelRouting)}>{savingRouting ? "Saving..." : "Save"}</Button>
-              </Form>
-            )}
-
-            {/* TAB 2: TRAIN */}
+            {/* TAB: TRAIN */}
             {currentTab === 'train' && (
               <>
-                <div className="models-train-grid">
-                    {['TREND_BULL', 'TREND_BEAR', 'MEAN_REVERTING', 'VOLATILE_CHOP'].map(regime => (
-                      <Tile key={regime}>
-                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                             {regime === 'TREND_BULL' && <ArrowUpRight size={24} style={{ color: '#24a148' }} />}
-                             {regime === 'TREND_BEAR' && <ArrowDownRight size={24} style={{ color: '#da1e28' }} />}
-                             {regime === 'MEAN_REVERTING' && <Activity size={24} style={{ color: '#4589ff' }} />}
-                             {regime === 'VOLATILE_CHOP' && <Lightning size={24} style={{ color: '#f1c21b' }} />}
-                             <h4 style={{fontWeight: 400, margin: 0}}>{regime.split('_').map(w => w.charAt(0) + w.slice(1).toLowerCase()).join(' ')}</h4>
+                <div className="models-train-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '0.2rem', marginBottom: '0.2rem' }}>
+                    <Tile style={{ padding: '1.5rem', background: 'var(--cds-layer-01, #262626)', borderLeft: '4px solid #0f62fe' }}>
+                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                           <MachineLearningModel size={28} style={{ color: '#0f62fe' }} />
+                           <div>
+                             <h4 style={{ fontWeight: 600, margin: 0, color: '#f4f4f4' }}>MoE Ensemble Pipeline</h4>
+                             <p style={{ fontSize: '0.75rem', color: '#a8a8a8', margin: 0, marginTop: '0.25rem' }}>3 Experts (Trend, MeanRev, Macro) + Gating & Meta</p>
                            </div>
-                           <Button kind="primary" size="sm" renderIcon={Play} onClick={() => openTrainModal(regime)}>
-                              Train
-                           </Button>
                          </div>
-                      </Tile>
-                    ))}
+                       </div>
+                       <p style={{ fontSize: '0.8rem', color: '#c6c6c6', marginBottom: '1.25rem', lineHeight: '1.4' }}>
+                         Latih ulang secara serentak ketiga model pakar (XGBoost ONNX), kalibrasi jaringan Gating, dan metamodel penentu probabilitas akhir berdasarkan histori dataset terbaru.
+                       </p>
+                       <Button kind="primary" size="sm" renderIcon={Play} onClick={() => openTrainModal("MOE_ENSEMBLE")}>
+                          Train MoE Ensemble
+                       </Button>
+                    </Tile>
+
+                    <Tile style={{ padding: '1.5rem', background: 'var(--cds-layer-01, #262626)', borderLeft: '4px solid #8a3ffc' }}>
+                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                           <Activity size={28} style={{ color: '#8a3ffc' }} />
+                           <div>
+                             <h4 style={{ fontWeight: 600, margin: 0, color: '#f4f4f4' }}>HMM Regime Detector</h4>
+                             <p style={{ fontSize: '0.75rem', color: '#a8a8a8', margin: 0, marginTop: '0.25rem' }}>4-State Gaussian Hidden Markov Model</p>
+                           </div>
+                         </div>
+                       </div>
+                       <p style={{ fontSize: '0.8rem', color: '#c6c6c6', marginBottom: '1.25rem', lineHeight: '1.4' }}>
+                         Latih ulang model pendeteksi cuaca pasar probabilistik (Low Vol Trend, High Vol Trend, Mean Reverting, dan Volatile Chop/Crisis) menggunakan imbal hasil & volatilitas.
+                       </p>
+                       <Button kind="primary" size="sm" renderIcon={Play} onClick={() => openTrainModal("HMM")}>
+                          Train HMM Detector
+                       </Button>
+                    </Tile>
                 </div>
                 <div style={{ marginTop: '.2rem' }}>
                   <GlobalJobsTable target="model" refreshTrigger={refreshJobsTrigger} openJobDetails={openJobDetails} onJobChange={fetchData} />
@@ -616,7 +624,70 @@ function ModelsContent() {
                 }
               />
             )}
-            
+
+            {/* TAB: ROUTING */}
+            {currentTab === 'routing' && (
+              <div style={{ padding: '0.2rem 0' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.2rem', background: 'var(--cds-layer-01, #262626)', padding: '1.25rem', borderLeft: '4px solid #0f62fe' }}>
+                  <div>
+                    <h4 style={{ fontWeight: 600, color: '#f4f4f4', margin: 0 }}>Model Routing Configuration</h4>
+                    <p style={{ fontSize: '0.8rem', color: '#a8a8a8', margin: 0, marginTop: '0.25rem' }}>
+                      Assign Champion (Active Live Model) and Challenger (Shadow Test Model) for each regime or pipeline.
+                    </p>
+                  </div>
+                  <Button kind="primary" renderIcon={Save} onClick={saveRouting} disabled={savingRouting} size="sm">
+                    {savingRouting ? "Saving..." : "Save Routing"}
+                  </Button>
+                </div>
+ 
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '0.2rem' }}>
+                  {Object.keys(modelRouting).map((key) => {
+                    const format = getRegimeFormat(key);
+                    const currentConfig = modelRouting[key] || { champion: "NONE", challenger: "NONE" };
+                    return (
+                      <Tile key={key} style={{ padding: '1.25rem', background: 'var(--cds-layer-01, #262626)', borderTop: `3px solid ${format.color}` }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+                          <span style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: format.color, display: 'inline-block' }} />
+                          <h5 style={{ fontWeight: 600, color: '#f4f4f4', margin: 0 }}>{format.text}</h5>
+                          <span style={{ fontSize: '0.7rem', color: '#6f6f6f', marginLeft: 'auto' }}>{key}</span>
+                        </div>
+
+                        <FormGroup legendText="" style={{ marginBottom: '1rem' }}>
+                          <Select
+                            id={`champion-${key}`}
+                            labelText="Champion (Active Live Model)"
+                            value={currentConfig.champion || "NONE"}
+                            onChange={(e) => handleRouteChange(key, 'champion', e.target.value)}
+                            size="md"
+                          >
+                            <SelectItem value="NONE" text="NONE (Disabled)" />
+                            {models.map((m: any) => (
+                              <SelectItem key={m.id || m.name} value={m.name} text={`${m.name} (${m.algorithm_type || m.regime || 'Model'})`} />
+                            ))}
+                          </Select>
+                        </FormGroup>
+
+                        <FormGroup legendText="" style={{ margin: 0 }}>
+                          <Select
+                            id={`challenger-${key}`}
+                            labelText="Challenger (Shadow Test Model)"
+                            value={currentConfig.challenger || "NONE"}
+                            onChange={(e) => handleRouteChange(key, 'challenger', e.target.value)}
+                            size="md"
+                          >
+                            <SelectItem value="NONE" text="NONE (Disabled)" />
+                            {models.map((m: any) => (
+                              <SelectItem key={m.id || m.name} value={m.name} text={`${m.name} (${m.algorithm_type || m.regime || 'Model'})`} />
+                            ))}
+                          </Select>
+                        </FormGroup>
+                      </Tile>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* TAB 4: DATASETS */}
             {currentTab === 'datasets' && (
               <>
@@ -662,6 +733,10 @@ function ModelsContent() {
           <TextInput id="ds-name" labelText="Dataset Name (Mandatory)" placeholder="e.g. XAUUSD_H1_2023" value={datasetForm.name} onChange={e => setDatasetForm({...datasetForm, name: e.target.value})} style={{ marginBottom: "1rem" }} />
           <TextInput id="ds-desc" labelText="Description (Optional)" value={datasetForm.description} onChange={e => setDatasetForm({...datasetForm, description: e.target.value})} style={{ marginBottom: "1rem" }} />
           <TextInput id="ds-file" labelText="File Name (Optional)" placeholder="Auto-generated if left blank" value={datasetForm.file_name} onChange={e => setDatasetForm({...datasetForm, file_name: e.target.value})} style={{ marginBottom: "1rem" }} />
+          <Select id="ds-source-type" labelText="Dataset Source / Type" value={datasetForm.source_type} onChange={e => setDatasetForm({...datasetForm, source_type: e.target.value})} style={{ marginBottom: "1rem" }}>
+            <SelectItem value="technical" text="📈 Technical Only (MT5 OHLCV + Indicators)" />
+            <SelectItem value="macro" text="🏛️ Macro Indicators Only (FRED Series)" />
+          </Select>
           <Select id="ds-tf" labelText="Timeframe" value={datasetForm.timeframe} onChange={e => setDatasetForm({...datasetForm, timeframe: e.target.value})} style={{ marginBottom: "1rem" }}>
             <SelectItem value="M15" text="15 Minutes" />
             <SelectItem value="H1" text="1 Hour" />
@@ -669,7 +744,18 @@ function ModelsContent() {
             <SelectItem value="D1" text="Daily" />
           </Select>
           
-          <Toggle id="ds-mode" labelText="Ingestion Method" labelA="By Date Range" labelB="By Row Count" toggled={datasetMode === "count"} onToggle={(toggled) => setDatasetMode(toggled ? "count" : "date")} style={{ marginBottom: "1rem" }} />
+          <FormGroup legendText="Ingestion Method" style={{ marginBottom: "1rem" }}>
+            <RadioButtonGroup
+              legendText=""
+              name="dataset-mode-radio"
+              defaultSelected="date"
+              valueSelected={datasetMode}
+              onChange={(value) => setDatasetMode(String(value))}
+            >
+              <RadioButton value="date" id="radio-date" labelText="By Date Range" />
+              <RadioButton value="count" id="radio-count" labelText="By Row Count" />
+            </RadioButtonGroup>
+          </FormGroup>
           
           {datasetMode === "count" ? (
              <NumberInput id="ds-count" label="Total Rows to Pull" value={datasetForm.count} onChange={(e, {value}) => setDatasetForm({...datasetForm, count: Number(value)})} min={100} max={1000000} />
@@ -691,18 +777,22 @@ function ModelsContent() {
       </Modal>
 
       {/* TRAIN SETTINGS MODAL */}
-      <Modal open={isTrainModalOpen} onRequestClose={() => setTrainModalOpen(false)} onRequestSubmit={startTraining} modalHeading={`Train settings for ${trainRegime.split('_').map(w => w.charAt(0) + w.slice(1).toLowerCase()).join(' ')}`} primaryButtonText="Start Training" secondaryButtonText="Cancel">
+      <Modal open={isTrainModalOpen} onRequestClose={() => setTrainModalOpen(false)} onRequestSubmit={startTraining} modalHeading={`Train settings for ${trainRegime === 'HMM' ? 'HMM Regime Detector' : 'MoE Ensemble Pipeline'}`} primaryButtonText="Start Training" secondaryButtonText="Cancel">
         <FormGroup legendText="">
           <Select id="train-algo" labelText="Algorithm" value={trainForm.algorithm} onChange={e => setTrainForm({...trainForm, algorithm: e.target.value})} style={{ marginBottom: "1rem" }}>
-             <SelectItem value="XGBoost" text="XGBoost Ensemble" />
+             {trainRegime === "HMM" ? (
+               <SelectItem value="Gaussian HMM" text="Gaussian HMM (4-State)" />
+             ) : (
+               <SelectItem value="XGBoost MoE Ensemble" text="XGBoost MoE Ensemble (3 Experts + Gating + Meta)" />
+             )}
           </Select>
           <TextInput id="model-name-train" labelText="Custom Model Name (Optional)" placeholder="e.g. xgboost_bull_v2" value={trainForm.model_name} onChange={e => setTrainForm({...trainForm, model_name: e.target.value})} style={{ marginBottom: "1rem" }} />
           
           <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: "1rem" }}>
               <div style={{ flex: 1 }}>
-                  <Select id="train-dataset" labelText="Dataset" value={trainForm.dataset_id} onChange={e => setTrainForm({...trainForm, dataset_id: e.target.value})}>
-                     {datasets.length === 0 ? <SelectItem value="" text="No datasets available" disabled /> : null}
-                     {datasets.map(ds => <SelectItem key={ds.id} value={ds.id} text={`${ds.name} (${ds.total_rows} rows)`} />)}
+                  <Select id="train-dataset" labelText="Technical Dataset (MT5 OHLCV + Indicators)" value={trainForm.dataset_id} onChange={e => setTrainForm({...trainForm, dataset_id: e.target.value})}>
+                     {datasets.filter(d => d.source_type === "technical" || !d.source_type).length === 0 ? <SelectItem value="" text="No technical datasets available" disabled /> : null}
+                     {(datasets.filter(d => d.source_type === "technical" || !d.source_type).length > 0 ? datasets.filter(d => d.source_type === "technical" || !d.source_type) : datasets).map(ds => <SelectItem key={ds.id} value={ds.id} text={`${ds.name} (${ds.total_rows} rows)`} />)}
                   </Select>
               </div>
               {trainForm.dataset_id && (
@@ -741,20 +831,35 @@ function ModelsContent() {
               )}
           </div>
           
-          <NumberInput id="optuna-trials" label="Optuna Tuning Trials" value={trainForm.optuna_trials} onChange={(e, {value}) => setTrainForm({...trainForm, optuna_trials: Number(value)})} min={1} max={500} style={{ marginBottom: "1rem" }} />
+          {trainRegime !== "HMM" && (
+            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: "1rem" }}>
+              <div style={{ flex: 1 }}>
+                  <Select id="train-macro-dataset" labelText="Macro Dataset (FRED Series)" value={trainForm.macro_dataset_id} onChange={e => setTrainForm({...trainForm, macro_dataset_id: e.target.value})}>
+                     {datasets.filter(d => d.source_type === "macro").length === 0 ? <SelectItem value="" text="No macro datasets available" disabled /> : null}
+                     {(datasets.filter(d => d.source_type === "macro").length > 0 ? datasets.filter(d => d.source_type === "macro") : datasets).map(ds => <SelectItem key={ds.id} value={ds.id} text={`${ds.name} (${ds.total_rows} rows)`} />)}
+                  </Select>
+              </div>
+            </div>
+          )}
           
-          <RadioButtonGroup
-            legendText="Compute Device"
-            name="device"
-            valueSelected={trainForm.device}
-            onChange={(val) => setTrainForm({ ...trainForm, device: val as string })}
-            style={{ marginBottom: "1.5rem" }}
-          >
-            <RadioButton labelText="GPU (CUDA) - Recommended" value="cuda" id="device-gpu" />
-            <RadioButton labelText="CPU Based" value="cpu" id="device-cpu" />
-          </RadioButtonGroup>
+          {trainRegime !== "HMM" && (
+            <>
+              <NumberInput id="optuna-trials" label="Optuna Tuning Trials" value={trainForm.optuna_trials} onChange={(e, {value}) => setTrainForm({...trainForm, optuna_trials: Number(value)})} min={1} max={500} style={{ marginBottom: "1rem" }} />
+              
+              <RadioButtonGroup
+                legendText="Compute Device"
+                name="device"
+                valueSelected={trainForm.device}
+                onChange={(val) => setTrainForm({ ...trainForm, device: val as string })}
+                style={{ marginBottom: "1.5rem" }}
+              >
+                <RadioButton labelText="GPU (CUDA) - Recommended" value="cuda" id="device-gpu" />
+                <RadioButton labelText="CPU Based" value="cpu" id="device-cpu" />
+              </RadioButtonGroup>
 
-          <Toggle id="use-meta-labeling" labelText="Use Meta Labeling (The Hakim)" toggled={trainForm.use_meta_labeling} onToggle={(val) => setTrainForm({...trainForm, use_meta_labeling: val})} />
+              <Toggle id="use-meta-labeling" labelText="Use Meta Labeling (The Hakim)" toggled={trainForm.use_meta_labeling} onToggle={(val) => setTrainForm({...trainForm, use_meta_labeling: val})} />
+            </>
+          )}
         </FormGroup>
       </Modal>
 

@@ -1,19 +1,10 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Activity, Power, MachineLearningModel, DataBase } from '@carbon/icons-react';
+import { Power, MachineLearningModel } from '@carbon/icons-react';
 import { Toggle, Modal, Loading } from '@carbon/react';
 import { useGlobalState } from '@/contexts/GlobalStateContext';
 import { API_BASE_URL } from '@/config/env';
-
-const getRegimeFormat = (regime: string) => {
-  if (!regime) return { text: 'UNKNOWN', color: '#f4f4f4' };
-  if (regime === 'TREND_BULL') return { text: 'Bull', color: '#24a148' };
-  if (regime === 'TREND_BEAR') return { text: 'Bear', color: '#fa4d56' };
-  if (regime === 'VOLATILE_CHOP') return { text: 'Chop', color: '#f1c21b' };
-  if (regime === 'MEAN_REVERTING') return { text: 'Mean', color: '#4589ff' };
-  return { text: regime, color: '#f4f4f4' };
-};
 
 export default function HeaderMetrics() {
   const { state } = useGlobalState();
@@ -42,21 +33,6 @@ export default function HeaderMetrics() {
   };
 
   if (!state) return null;
-
-  const regime = getRegimeFormat(state.regime);
-  
-  // Market Open/Close logic roughly based on UTC time (Gold is closed Friday 21:00 UTC to Sunday 21:00 UTC)
-  const isMarketOpen = () => {
-    const now = new Date();
-    const day = now.getUTCDay();
-    const hour = now.getUTCHours();
-    if (day === 6) return false; // Saturday
-    if (day === 5 && hour >= 21) return false; // Friday after 21:00 UTC
-    if (day === 0 && hour < 21) return false; // Sunday before 21:00 UTC
-    return true;
-  };
-  const marketStatus = isMarketOpen() ? 'OPEN' : 'CLOSED';
-  const marketColor = isMarketOpen() ? '#24a148' : '#fa4d56';
 
   const handleToggleEngine = (checked: boolean) => {
     setModalConfig({
@@ -98,22 +74,12 @@ export default function HeaderMetrics() {
     });
   };
 
-  const MetricBox = ({ label, value, color, icon: Icon }: any) => (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0px 0.5rem', minWidth: '70px' }}>
-      <Icon size={12} color="#a8a8a8" />
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', lineHeight: 1 }}>
-        <span style={{ fontSize: '0.55rem', color: '#a8a8a8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</span>
-        <span style={{ fontSize: '0.65rem', fontWeight: 600, color }}>{value}</span>
-      </div>
-    </div>
-  );
-
   const MetricToggle = ({ label, toggled, onToggle, icon: Icon, id }: any) => (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0px 0.5rem', minWidth: '70px' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0px 0.5rem', width: '120px', height: '14px' }}>
       <Icon size={12} color={toggled ? "#24a148" : "#fa4d56"} />
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', lineHeight: 1 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flex: 1, lineHeight: 1 }}>
         <span style={{ fontSize: '0.55rem', color: '#a8a8a8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</span>
-        <div style={{ display: 'flex', alignItems: 'center', height: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', height: '12px' }}>
           <Toggle
             id={id}
             size="sm"
@@ -123,7 +89,7 @@ export default function HeaderMetrics() {
             toggled={toggled}
             onToggle={onToggle}
             hideLabel
-            style={{ margin: 0 }}
+            style={{ margin: 0, height: '12px' }}
           />
         </div>
       </div>
@@ -132,7 +98,7 @@ export default function HeaderMetrics() {
 
   return (
     <>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', rowGap: '0px', columnGap: '0rem', alignItems: 'center', marginRight: '1rem' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0px', justifyContent: 'center' }}>
         <MetricToggle 
           id="engine-nav-toggle"
           label="Engine" 
@@ -146,18 +112,6 @@ export default function HeaderMetrics() {
           toggled={state.auto_execution} 
           onToggle={handleToggleAuto}
           icon={MachineLearningModel}
-        />
-        <MetricBox 
-          label="Regime:" 
-          value={regime.text} 
-          color={regime.color} 
-          icon={Activity}
-        />
-        <MetricBox 
-          label="Market:" 
-          value={marketStatus} 
-          color={marketColor} 
-          icon={DataBase}
         />
       </div>
 

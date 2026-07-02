@@ -60,12 +60,16 @@ const CollapsibleJSON = ({
 
 const getRegimeFormat = (regime: string) => {
   if (!regime) return { text: 'UNKNOWN', color: '#f4f4f4' };
-  if (regime === 'TEST_MANUAL') return { text: 'Manual', color: '#8a3ffc' }; // Purple
-  if (regime === 'TREND_BULL') return { text: 'Bull Trend', color: '#24a148' }; // Green
-  if (regime === 'TREND_BEAR') return { text: 'Bear Trend', color: '#fa4d56' }; // Red
-  if (regime === 'VOLATILE_CHOP') return { text: 'Volatile Chop', color: '#f1c21b' }; // Yellow
-  if (regime === 'MEAN_REVERTING') return { text: 'Mean Reverting', color: '#4589ff' }; // Blue
-  return { text: regime.split('_').map(w => w.charAt(0) + w.slice(1).toLowerCase()).join(' '), color: '#f4f4f4' };
+  if (regime === 'TEST_MANUAL') return { text: 'Manual', color: '#8a3ffc' };
+  if (regime === 'MoE' || regime === 'MOE_ENSEMBLE') return { text: 'MoE Ensemble', color: '#8a3ffc' };
+  if (regime === 'TREND_EXPERT' || regime === 'trend') return { text: 'Trend Expert', color: '#24a148' };
+  if (regime === 'MEANREV_EXPERT' || regime === 'meanrev') return { text: 'MeanRev Expert', color: '#4589ff' };
+  if (regime === 'MACRO_EXPERT' || regime === 'macro') return { text: 'Macro Expert', color: '#d12771' };
+  if (regime === 'TREND_BULL') return { text: 'Bull Trend', color: '#24a148' };
+  if (regime === 'TREND_BEAR') return { text: 'Bear Trend', color: '#fa4d56' };
+  if (regime === 'VOLATILE_CHOP') return { text: 'Volatile Chop', color: '#f1c21b' };
+  if (regime === 'MEAN_REVERTING') return { text: 'Mean Reverting', color: '#4589ff' };
+  return { text: regime.replace('_EXPERT', ' Expert').split('_').map(w => w.charAt(0) + w.slice(1).toLowerCase()).join(' '), color: '#f4f4f4' };
 };
 
 interface GlobalDetailTableProps {
@@ -311,33 +315,100 @@ export default function GlobalDetailTable({ id, type = 'signal', dataObj, onClos
             <p style={{ color: "#a8a8a8", fontSize: "0.9rem", marginBottom: "1rem" }}>No metadata available for this signal.</p>
           )}
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: "1rem", borderTop: "1px solid #393939", paddingTop: "1rem" }}>
-            <h4 style={{ fontSize: "1rem", margin: 0 }}>Technical Indicators (XGBoost Features)</h4>
-            <button 
-              type="button" 
-              onClick={() => setExpandedKeys(prev => ({ ...prev, features_expanded: !prev['features_expanded'] }))}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#a8a8a8', display: 'flex', alignItems: 'center', gap: '0.25rem', padding: '0.2rem' }}
-            >
-              <span style={{ fontSize: '0.75rem' }}>{expandedKeys['features_expanded'] ? 'Collapse' : 'Expand'}</span>
-              {expandedKeys['features_expanded'] ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-            </button>
-          </div>
-          {data.features && Object.keys(data.features).length > 0 ? (
-            expandedKeys['features_expanded'] && (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem 0.75rem', marginBottom: '1rem' }}>
-                {Object.entries(data.features).map(([key, value]: [string, any]) => (
-                  <div key={key} style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #262626', paddingBottom: '0.25rem' }}>
-                    <span style={{ fontSize: '0.85rem', color: '#a8a8a8', fontWeight: '500' }}>{key}</span>
-                    <strong style={{ fontSize: '0.85rem', color: '#ffffff' }}>
-                      {value !== null && value !== undefined ? Number(value).toFixed(4) : "N/A"}
-                    </strong>
-                  </div>
-                ))}
+          {(() => {
+            const explainability = data.metadata?.model_output?.explainability || 
+                                   data.metadata?.explainability || 
+                                   data.explainability || null;
+
+            let categories = explainability?.categories || [];
+
+            if (!categories || categories.length === 0) {
+              const baseShapList: any[] = 
+                data.metadata?.model_output?.shap_values || 
+                data.metadata?.shap_values || 
+                data.shap_values || [];
+              if (baseShapList && baseShapList.length > 0) {
+                categories = [{
+                  name: "Evaluated Features",
+                  key: "all",
+                  count: baseShapList.length,
+                  features: baseShapList
+                }];
+              }
+            }
+
+            if (!categories || categories.length === 0) return null;
+
+            // Sort categories: macro first, then technical
+            const sortedCategories = [...categories].sort((a: any, b: any) => {
+              const aName = (a.name || '').toLowerCase();
+              const bName = (b.name || '').toLowerCase();
+              const aKey = (a.key || '').toLowerCase();
+              const bKey = (b.key || '').toLowerCase();
+              const aIsMacro = aName.includes('macro') || aKey.includes('macro');
+              const bIsMacro = bName.includes('macro') || bKey.includes('macro');
+              if (aIsMacro && !bIsMacro) return -1;
+              if (!aIsMacro && bIsMacro) return 1;
+              return 0;
+            });
+
+            let allContribs: number[] = [];
+            sortedCategories.forEach((cat: any) => {
+              if (cat.features && Array.isArray(cat.features)) {
+                cat.features.forEach((f: any) => allContribs.push(Math.abs(Number(f.contribution || 0))));
+              }
+            });
+            const maxContrib = Math.max(...allContribs, 0.0001);
+
+            return (
+              <div style={{ marginBottom: "1.5rem", borderTop: "1px solid #393939", paddingTop: "1rem" }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: "1.25rem" }}>
+                  <h4 style={{ fontSize: "1rem", margin: 0 }}>Model Explainibilty</h4>
+                  <span style={{ fontSize: "0.75rem", color: "#a8a8a8", background: "#262626", padding: "2px 8px", borderRadius: "12px" }}>
+                    {explainability?.total_features || allContribs.length} features evaluated
+                  </span>
+                </div>
+
+                {sortedCategories.map((cat: any, cIdx: number) => {
+                  if (!cat.features || cat.features.length === 0) return null;
+                  return (
+                    <div key={cIdx} style={{ marginBottom: cIdx < categories.length - 1 ? "1.5rem" : "0" }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: "0.5rem" }}>
+                        <h5 style={{ fontSize: "0.875rem", fontWeight: 600, color: "#d1d1d1", margin: 0 }}>
+                          {(cat.name || '').toLowerCase().includes('macro') || (cat.key || '').toLowerCase().includes('macro')
+                            ? 'Macro Features'
+                            : (cat.name || '').toLowerCase().includes('technical') || (cat.key || '').toLowerCase().includes('technical')
+                              ? 'Technical Features'
+                              : cat.name}
+                        </h5>
+                        <span style={{ fontSize: "0.75rem", color: "#a8a8a8" }}>{cat.count || cat.features.length} features</span>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem 1.5rem', maxHeight: '280px', overflowY: 'auto', paddingRight: '0.5rem', background: 'transparent', padding: '1rem', borderRadius: '0', border: '1px dashed #393939' }}>
+                        {cat.features.map((item: any, idx: number) => {
+                          const contrib = Number(item.contribution || 0);
+                          const isPos = contrib >= 0;
+                          const pct = Math.min(Math.round((Math.abs(contrib) / maxContrib) * 100), 100);
+                          return (
+                            <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '4px', paddingBottom: '6px' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem' }}>
+                                <span style={{ fontWeight: '600', color: '#f4f4f4', textTransform: 'uppercase' }}>{item.feature}</span>
+                                <span style={{ fontWeight: 'bold', color: isPos ? '#42be65' : '#ff8389' }}>
+                                  {isPos ? '+' : ''}{contrib.toFixed(4)}
+                                </span>
+                              </div>
+                              <div style={{ width: '100%', height: '4px', background: '#262626', borderRadius: '0', overflow: 'hidden', display: 'flex', justifyContent: isPos ? 'flex-start' : 'flex-end' }}>
+                                <div style={{ width: `${pct}%`, height: '100%', background: isPos ? '#42be65' : '#ff8389', transition: 'width 0.3s ease' }} />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            )
-          ) : (
-            <p style={{ color: "#a8a8a8", fontSize: "0.9rem", marginBottom: "1rem" }}>No feature snapshot available for this signal.</p>
-          )}
+            );
+          })()}
         </div>
       )}
 

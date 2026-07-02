@@ -339,11 +339,8 @@ function SimulationPageContent() {
     name: "",
     mode: "BACKTEST",
     dataset_type: "latest",
-    models: {
-      bull_trend: "xbull_5years",
-      bear_trend: "xbear_5years",
-      mean_reverting: "xmean_5years"
-    },
+    moe_model: "BaseMoE",
+    hmm_model: "base_hmm",
     start_date: "2024-01-01",
     end_date: "2024-06-01",
     initial_capital: 1000,
@@ -358,15 +355,16 @@ function SimulationPageContent() {
     use_daily_kill_switch: false,
     max_daily_drawdown_pct: 5.0,
     use_global_thresholds: true,
-    ml_conf_bull: 0.50,
-    ml_margin_bull: 0.10,
-    meta_conf_bull: 0.50,
-    ml_conf_bear: 0.50,
-    ml_margin_bear: 0.10,
-    meta_conf_bear: 0.50,
-    ml_conf_mean: 0.50,
-    ml_margin_mean: 0.05,
-    meta_conf_mean: 0.50
+    ml_conf_trend: 0.50,
+    ml_margin_trend: 0.10,
+    meta_conf_trend: 0.50,
+    ml_conf_meanrev: 0.50,
+    ml_margin_meanrev: 0.10,
+    meta_conf_meanrev: 0.50,
+    ml_conf_macro: 0.50,
+    ml_margin_macro: 0.05,
+    meta_conf_macro: 0.50,
+    ml_conf_moe: 0.50
   });
 
   // Tab state synchronized via URL
@@ -378,18 +376,16 @@ function SimulationPageContent() {
         if (Array.isArray(data)) {
           setModels(data);
           
-          // Find default models by searching name for keywords
-          const bullOption = data.find(m => (!m.regime || m.regime === 'TREND_BULL') && m.name.toLowerCase().includes('bull'));
-          const bearOption = data.find(m => (!m.regime || m.regime === 'TREND_BEAR') && m.name.toLowerCase().includes('bear'));
-          const meanOption = data.find(m => (!m.regime || m.regime === 'MEAN_REVERTING') && m.name.toLowerCase().includes('mean'));
+          const moeOption = data.find(m => m.name.includes('_ensemble'));
+          const hmmOption = data.find(m => m.name.includes('_hmm'));
           
+          const moeBase = moeOption ? moeOption.name.replace('_ensemble', '') : "BaseMoE";
+          const hmmBase = hmmOption ? hmmOption.name : "base_hmm";
+
           setConfig(prev => ({
             ...prev,
-            models: {
-              bull_trend: bullOption ? bullOption.name : (prev.models.bull_trend || "NONE"),
-              bear_trend: bearOption ? bearOption.name : (prev.models.bear_trend || "NONE"),
-              mean_reverting: meanOption ? meanOption.name : (prev.models.mean_reverting || "NONE")
-            }
+            moe_model: moeBase,
+            hmm_model: hmmBase
           }));
         }
       })
@@ -536,9 +532,10 @@ function SimulationPageContent() {
     const payload = { ...config };
     if (payload.use_global_thresholds) {
       const keysToDelete = [
-        "ml_conf_bull", "ml_margin_bull", "meta_conf_bull",
-        "ml_conf_bear", "ml_margin_bear", "meta_conf_bear",
-        "ml_conf_mean", "ml_margin_mean", "meta_conf_mean"
+        "ml_conf_trend", "ml_margin_trend", "meta_conf_trend",
+        "ml_conf_meanrev", "ml_margin_meanrev", "meta_conf_meanrev",
+        "ml_conf_macro", "ml_margin_macro", "meta_conf_macro",
+        "ml_conf_moe"
       ];
       keysToDelete.forEach(k => delete (payload as any)[k]);
     }
@@ -624,43 +621,30 @@ function SimulationPageContent() {
                       <Grid style={{ padding: 0, marginLeft: '-1rem', marginRight: '-1rem', marginBottom: '2rem' }}>
                         {/* Row 1: Left */}
                         <Column lg={8} md={4} sm={4}>
-                          <h4 style={{ margin: '0 0 1rem 0' }}>Dynamic Routing by Regime</h4>
+                          <h4 style={{ margin: '0 0 1rem 0' }}>Mixture of Experts Pipeline</h4>
                           <div style={{ marginBottom: '1rem' }}>
                             <Select 
-                              id="model-bull" 
-                              labelText="Bull Trend" 
-                              value={config.models?.bull_trend || "NONE"}
-                              onChange={(e) => setConfig({...config, models: {...config.models, bull_trend: e.target.value}})}
+                              id="moe-model" 
+                              labelText="MoE Base Model" 
+                              value={config.moe_model || "BaseMoE"}
+                              onChange={(e) => setConfig({...config, moe_model: e.target.value})}
                             >
-                              <SelectItem value="NONE" text="None (Disabled)" />
-                              {models.filter(m => !m.regime || m.regime === 'TREND_BULL').map(m => (
-                                <SelectItem key={`bull-${m.id}`} value={m.name} text={`${m.name}`} />
+                              <SelectItem value="BaseMoE" text="Default (BaseMoE)" />
+                              {Array.from(new Set(models.filter(m => m.name.includes('_ensemble')).map(m => m.name.replace('_ensemble', '')))).map(baseName => (
+                                <SelectItem key={`moe-${baseName}`} value={baseName as string} text={`${baseName}`} />
                               ))}
                             </Select>
                           </div>
                           <div style={{ marginBottom: '1rem' }}>
                             <Select 
-                              id="model-bear" 
-                              labelText="Bear Trend" 
-                              value={config.models?.bear_trend || "NONE"}
-                              onChange={(e) => setConfig({...config, models: {...config.models, bear_trend: e.target.value}})}
+                              id="hmm-model" 
+                              labelText="HMM Regime Detector" 
+                              value={config.hmm_model || "base_hmm"}
+                              onChange={(e) => setConfig({...config, hmm_model: e.target.value})}
                             >
-                              <SelectItem value="NONE" text="None (Disabled)" />
-                              {models.filter(m => !m.regime || m.regime === 'TREND_BEAR').map(m => (
-                                <SelectItem key={`bear-${m.id}`} value={m.name} text={`${m.name}`} />
-                              ))}
-                            </Select>
-                          </div>
-                          <div>
-                            <Select 
-                              id="model-mean" 
-                              labelText="Mean Reverting" 
-                              value={config.models?.mean_reverting || "NONE"}
-                              onChange={(e) => setConfig({...config, models: {...config.models, mean_reverting: e.target.value}})}
-                            >
-                              <SelectItem value="NONE" text="None (Disabled)" />
-                              {models.filter(m => !m.regime || m.regime === 'MEAN_REVERTING').map(m => (
-                                <SelectItem key={`mean-${m.id}`} value={m.name} text={`${m.name}`} />
+                              <SelectItem value="base_hmm" text="Default (base_hmm)" />
+                              {models.filter(m => m.name.includes('_hmm')).map(m => (
+                                <SelectItem key={`hmm-${m.id}`} value={m.name} text={`${m.name}`} />
                               ))}
                             </Select>
                           </div>
@@ -772,36 +756,43 @@ function SimulationPageContent() {
                             {!config.use_global_thresholds && (
                               <div style={{ marginTop: '1.5rem', width: '100%' }}>
                                 <Grid style={{ padding: 0, margin: '0 -1rem' }}>
-                                  <Column lg={5} md={2} sm={4} style={{ marginBottom: '1rem' }}>
-                                    <h5 style={{ marginBottom: '0.5rem', color: '#24a148', fontSize: '0.8rem' }}>Bull Trend</h5>
-                                    <TextInput id="ml-margin-bull" type="number" step="0.01" labelText="Margin" value={config.ml_margin_bull} onChange={(e) => setConfig({...config, ml_margin_bull: parseFloat(e.target.value)})} />
+                                  <Column lg={4} md={2} sm={4} style={{ marginBottom: '1rem' }}>
+                                    <h5 style={{ marginBottom: '0.5rem', color: '#24a148', fontSize: '0.8rem' }}>Trend Expert</h5>
+                                    <TextInput id="ml-margin-trend" type="number" step="0.01" labelText="Margin" value={config.ml_margin_trend} onChange={(e) => setConfig({...config, ml_margin_trend: parseFloat(e.target.value)})} />
                                     <div style={{marginTop: "0.5rem"}}>
-                                      <TextInput id="ml-conf-bull" type="number" step="0.05" labelText="Raw Conf" value={config.ml_conf_bull} onChange={(e) => setConfig({...config, ml_conf_bull: parseFloat(e.target.value)})} />
+                                      <TextInput id="ml-conf-trend" type="number" step="0.05" labelText="Raw Conf" value={config.ml_conf_trend} onChange={(e) => setConfig({...config, ml_conf_trend: parseFloat(e.target.value)})} />
                                     </div>
                                     <div style={{marginTop: "0.5rem"}}>
-                                      <TextInput id="meta-conf-bull" type="number" step="0.05" labelText="Meta Conf" value={config.meta_conf_bull} onChange={(e) => setConfig({...config, meta_conf_bull: parseFloat(e.target.value)})} />
+                                      <TextInput id="meta-conf-trend" type="number" step="0.05" labelText="Meta Conf" value={config.meta_conf_trend} onChange={(e) => setConfig({...config, meta_conf_trend: parseFloat(e.target.value)})} />
                                     </div>
                                   </Column>
                                   
-                                  <Column lg={5} md={2} sm={4} style={{ marginBottom: '1rem' }}>
-                                    <h5 style={{ marginBottom: '0.5rem', color: '#fa4d56', fontSize: '0.8rem' }}>Bear Trend</h5>
-                                    <TextInput id="ml-margin-bear" type="number" step="0.01" labelText="Margin" value={config.ml_margin_bear} onChange={(e) => setConfig({...config, ml_margin_bear: parseFloat(e.target.value)})} />
+                                  <Column lg={4} md={2} sm={4} style={{ marginBottom: '1rem' }}>
+                                    <h5 style={{ marginBottom: '0.5rem', color: '#0f62fe', fontSize: '0.8rem' }}>MeanRev Expert</h5>
+                                    <TextInput id="ml-margin-meanrev" type="number" step="0.01" labelText="Margin" value={config.ml_margin_meanrev} onChange={(e) => setConfig({...config, ml_margin_meanrev: parseFloat(e.target.value)})} />
                                     <div style={{marginTop: "0.5rem"}}>
-                                      <TextInput id="ml-conf-bear" type="number" step="0.05" labelText="Raw Conf" value={config.ml_conf_bear} onChange={(e) => setConfig({...config, ml_conf_bear: parseFloat(e.target.value)})} />
+                                      <TextInput id="ml-conf-meanrev" type="number" step="0.05" labelText="Raw Conf" value={config.ml_conf_meanrev} onChange={(e) => setConfig({...config, ml_conf_meanrev: parseFloat(e.target.value)})} />
                                     </div>
                                     <div style={{marginTop: "0.5rem"}}>
-                                      <TextInput id="meta-conf-bear" type="number" step="0.05" labelText="Meta Conf" value={config.meta_conf_bear} onChange={(e) => setConfig({...config, meta_conf_bear: parseFloat(e.target.value)})} />
+                                      <TextInput id="meta-conf-meanrev" type="number" step="0.05" labelText="Meta Conf" value={config.meta_conf_meanrev} onChange={(e) => setConfig({...config, meta_conf_meanrev: parseFloat(e.target.value)})} />
                                     </div>
                                   </Column>
 
-                                  <Column lg={6} md={4} sm={4}>
-                                    <h5 style={{ marginBottom: '0.5rem', color: '#0f62fe', fontSize: '0.8rem' }}>Mean Reverting</h5>
-                                    <TextInput id="ml-margin-mean" type="number" step="0.01" labelText="Margin" value={config.ml_margin_mean} onChange={(e) => setConfig({...config, ml_margin_mean: parseFloat(e.target.value)})} />
+                                  <Column lg={4} md={2} sm={4} style={{ marginBottom: '1rem' }}>
+                                    <h5 style={{ marginBottom: '0.5rem', color: '#f1c21b', fontSize: '0.8rem' }}>Macro Expert</h5>
+                                    <TextInput id="ml-margin-macro" type="number" step="0.01" labelText="Margin" value={config.ml_margin_macro} onChange={(e) => setConfig({...config, ml_margin_macro: parseFloat(e.target.value)})} />
                                     <div style={{marginTop: "0.5rem"}}>
-                                      <TextInput id="ml-conf-mean" type="number" step="0.05" labelText="Raw Conf" value={config.ml_conf_mean} onChange={(e) => setConfig({...config, ml_conf_mean: parseFloat(e.target.value)})} />
+                                      <TextInput id="ml-conf-macro" type="number" step="0.05" labelText="Raw Conf" value={config.ml_conf_macro} onChange={(e) => setConfig({...config, ml_conf_macro: parseFloat(e.target.value)})} />
                                     </div>
                                     <div style={{marginTop: "0.5rem"}}>
-                                      <TextInput id="meta-conf-mean" type="number" step="0.05" labelText="Meta Conf" value={config.meta_conf_mean} onChange={(e) => setConfig({...config, meta_conf_mean: parseFloat(e.target.value)})} />
+                                      <TextInput id="meta-conf-macro" type="number" step="0.05" labelText="Meta Conf" value={config.meta_conf_macro} onChange={(e) => setConfig({...config, meta_conf_macro: parseFloat(e.target.value)})} />
+                                    </div>
+                                  </Column>
+
+                                  <Column lg={4} md={2} sm={4} style={{ marginBottom: '1rem' }}>
+                                    <h5 style={{ marginBottom: '0.5rem', color: '#8a3ffc', fontSize: '0.8rem' }}>Global MoE</h5>
+                                    <div style={{marginTop: "4.2rem"}}>
+                                      <TextInput id="ml-conf-moe" type="number" step="0.05" labelText="Meta Learner Conf" value={config.ml_conf_moe} onChange={(e) => setConfig({...config, ml_conf_moe: parseFloat(e.target.value)})} />
                                     </div>
                                   </Column>
                                 </Grid>
@@ -991,24 +982,31 @@ function SimulationPageContent() {
                           <strong style={{ color: activeRunData.config?.use_daily_kill_switch ? '#ffffff' : '#a8a8a8' }}>{activeRunData.config?.use_daily_kill_switch ? `${activeRunData.config.max_daily_drawdown_pct}%` : 'OFF'}</strong>
                         </div>
                         <div>
-                          <div style={{ color: '#a8a8a8', fontSize: '10px', marginBottom: '2px' }}>Bull Model / Thresh</div>
-                          <strong style={{ color: activeRunData.config?.models?.bull_trend ? '#42be65' : '#a8a8a8' }}>
-                            {activeRunData.config?.models?.bull_trend || 'NONE'}
-                            {activeRunData.config?.models?.bull_trend && activeRunData.config?.thresholds?.ml_conf_bull !== undefined ? ` (>${(activeRunData.config.thresholds.ml_conf_bull * 100).toFixed(0)}%)` : ''}
+                          <div style={{ color: '#a8a8a8', fontSize: '10px', marginBottom: '2px' }}>Trend Expert / Thresh</div>
+                          <strong style={{ color: activeRunData.config?.thresholds?.ml_conf_trend !== undefined ? '#42be65' : '#a8a8a8' }}>
+                            {activeRunData.config?.moe_model || activeRunData.config?.hmm_model || 'NONE'}
+                            {activeRunData.config?.thresholds?.ml_conf_trend !== undefined ? ` (>${(activeRunData.config.thresholds.ml_conf_trend * 100).toFixed(0)}%)` : ''}
                           </strong>
                         </div>
                         <div>
-                          <div style={{ color: '#a8a8a8', fontSize: '10px', marginBottom: '2px' }}>Bear Model / Thresh</div>
-                          <strong style={{ color: activeRunData.config?.models?.bear_trend ? '#ff8389' : '#a8a8a8' }}>
-                            {activeRunData.config?.models?.bear_trend || 'NONE'}
-                            {activeRunData.config?.models?.bear_trend && activeRunData.config?.thresholds?.ml_conf_bear !== undefined ? ` (>${(activeRunData.config.thresholds.ml_conf_bear * 100).toFixed(0)}%)` : ''}
+                          <div style={{ color: '#a8a8a8', fontSize: '10px', marginBottom: '2px' }}>MeanRev Expert / Thresh</div>
+                          <strong style={{ color: activeRunData.config?.thresholds?.ml_conf_meanrev !== undefined ? '#4589ff' : '#a8a8a8' }}>
+                            {activeRunData.config?.moe_model || activeRunData.config?.hmm_model || 'NONE'}
+                            {activeRunData.config?.thresholds?.ml_conf_meanrev !== undefined ? ` (>${(activeRunData.config.thresholds.ml_conf_meanrev * 100).toFixed(0)}%)` : ''}
                           </strong>
                         </div>
                         <div>
-                          <div style={{ color: '#a8a8a8', fontSize: '10px', marginBottom: '2px' }}>Mean Rev Model / Thresh</div>
-                          <strong style={{ color: activeRunData.config?.models?.mean_reverting ? '#4589ff' : '#a8a8a8' }}>
-                            {activeRunData.config?.models?.mean_reverting || 'NONE'}
-                            {activeRunData.config?.models?.mean_reverting && activeRunData.config?.thresholds?.ml_conf_mean !== undefined ? ` (>${(activeRunData.config.thresholds.ml_conf_mean * 100).toFixed(0)}%)` : ''}
+                          <div style={{ color: '#a8a8a8', fontSize: '10px', marginBottom: '2px' }}>Macro Expert / Thresh</div>
+                          <strong style={{ color: activeRunData.config?.thresholds?.ml_conf_macro !== undefined ? '#f1c21b' : '#a8a8a8' }}>
+                            {activeRunData.config?.moe_model || 'NONE'}
+                            {activeRunData.config?.thresholds?.ml_conf_macro !== undefined ? ` (>${(activeRunData.config.thresholds.ml_conf_macro * 100).toFixed(0)}%)` : ''}
+                          </strong>
+                        </div>
+                        <div>
+                          <div style={{ color: '#a8a8a8', fontSize: '10px', marginBottom: '2px' }}>Global MoE / Thresh</div>
+                          <strong style={{ color: activeRunData.config?.thresholds?.ml_conf_moe !== undefined ? '#8a3ffc' : '#a8a8a8' }}>
+                            {activeRunData.config?.moe_model || 'NONE'}
+                            {activeRunData.config?.thresholds?.ml_conf_moe !== undefined ? ` (>${(activeRunData.config.thresholds.ml_conf_moe * 100).toFixed(0)}%)` : ''}
                           </strong>
                         </div>
                         <div>
@@ -1140,10 +1138,10 @@ function SimulationPageContent() {
                         <RegimeBreakdown 
                           regimeStats={activeRunData.metrics_report?.regime_breakdown || {}} 
                           models={{
-                            TREND_BULL: activeRunData.config?.models?.bull_trend || 'NONE',
-                            TREND_BEAR: activeRunData.config?.models?.bear_trend || 'NONE',
-                            MEAN_REVERTING: activeRunData.config?.models?.mean_reverting || 'NONE',
-                            VOLATILE_CHOP: 'NONE'
+                            TREND_EXPERT: activeRunData.config?.models?.trend || activeRunData.config?.trend_model || 'NONE',
+                            MEANREV_EXPERT: activeRunData.config?.models?.meanrev || activeRunData.config?.meanrev_model || 'NONE',
+                            MACRO_EXPERT: activeRunData.config?.models?.macro || activeRunData.config?.macro_model || 'NONE',
+                            MOE_ENSEMBLE: activeRunData.config?.moe_model || 'NONE'
                           }}
                         />
                       </div>
@@ -1288,21 +1286,27 @@ function SimulationPageContent() {
                             ))}
                           </tr>
                           <tr style={{ borderBottom: '1px solid #393939' }}>
-                            <td style={{ padding: '1rem', fontWeight: 'bold', borderRight: '1px solid #393939' }}>Bull Model</td>
+                            <td style={{ padding: '1rem', fontWeight: 'bold', borderRight: '1px solid #393939' }}>Trend Expert</td>
                             {compareRunsData.map(r => (
-                              <td key={r.id} style={{ padding: '1rem' }}>{r.config?.models?.bull_trend || 'NONE'}</td>
+                              <td key={r.id} style={{ padding: '1rem' }}>{r.config?.models?.trend || r.config?.trend_model || 'NONE'}</td>
                             ))}
                           </tr>
                           <tr style={{ borderBottom: '1px solid #393939' }}>
-                            <td style={{ padding: '1rem', fontWeight: 'bold', borderRight: '1px solid #393939' }}>Bear Model</td>
+                            <td style={{ padding: '1rem', fontWeight: 'bold', borderRight: '1px solid #393939' }}>MeanRev Expert</td>
                             {compareRunsData.map(r => (
-                              <td key={r.id} style={{ padding: '1rem' }}>{r.config?.models?.bear_trend || 'NONE'}</td>
+                              <td key={r.id} style={{ padding: '1rem' }}>{r.config?.models?.meanrev || r.config?.meanrev_model || 'NONE'}</td>
                             ))}
                           </tr>
                           <tr style={{ borderBottom: '1px solid #393939' }}>
-                            <td style={{ padding: '1rem', fontWeight: 'bold', borderRight: '1px solid #393939' }}>Mean Rev Model</td>
+                            <td style={{ padding: '1rem', fontWeight: 'bold', borderRight: '1px solid #393939' }}>Macro Expert</td>
                             {compareRunsData.map(r => (
-                              <td key={r.id} style={{ padding: '1rem' }}>{r.config?.models?.mean_reverting || 'NONE'}</td>
+                              <td key={r.id} style={{ padding: '1rem' }}>{r.config?.models?.macro || r.config?.macro_model || 'NONE'}</td>
+                            ))}
+                          </tr>
+                          <tr style={{ borderBottom: '1px solid #393939' }}>
+                            <td style={{ padding: '1rem', fontWeight: 'bold', borderRight: '1px solid #393939' }}>MoE Ensemble</td>
+                            {compareRunsData.map(r => (
+                              <td key={r.id} style={{ padding: '1rem' }}>{r.config?.moe_model || 'NONE'}</td>
                             ))}
                           </tr>
                           <tr style={{ borderBottom: '1px solid #393939' }}>
