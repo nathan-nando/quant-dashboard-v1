@@ -644,6 +644,36 @@ function ModelsContent() {
                   {Object.keys(modelRouting).map((key) => {
                     const format = getRegimeFormat(key);
                     const currentConfig = modelRouting[key] || { champion: "NONE", challenger: "NONE" };
+                    const champ = currentConfig.champion || "NONE";
+                    const chall = currentConfig.challenger || "NONE";
+                    
+                    // Filter models based on the routing panel key keyword
+                    const filteredModels = models.filter((m: any) => {
+                      // Always include the currently active routing choices to prevent breaking selects
+                      if (m.name === champ || m.name === chall) return true;
+                      
+                      const k = key.toLowerCase();
+                      let keyword = '';
+                      if (k.includes('gating') || k.includes('ensemble')) {
+                        keyword = 'ensemble';
+                      } else if (k.includes('trend')) {
+                        keyword = 'trend';
+                      } else if (k.includes('meanrev')) {
+                        keyword = 'meanrev';
+                      } else if (k.includes('macro')) {
+                        keyword = 'macro';
+                      } else if (k.includes('hmm')) {
+                        keyword = 'hmm';
+                      }
+                      
+                      if (!keyword) return true;
+                      
+                      const name = (m.name || '').toLowerCase();
+                      const algo = (m.algorithm_type || '').toLowerCase();
+                      const regime = (m.regime || '').toLowerCase();
+                      return name.includes(keyword) || algo.includes(keyword) || regime.includes(keyword);
+                    });
+
                     return (
                       <Tile key={key} style={{ padding: '1.25rem', background: 'var(--cds-layer-01, #262626)', borderTop: `3px solid ${format.color}` }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
@@ -656,12 +686,12 @@ function ModelsContent() {
                           <Select
                             id={`champion-${key}`}
                             labelText="Champion (Active Live Model)"
-                            value={currentConfig.champion || "NONE"}
+                            value={champ}
                             onChange={(e) => handleRouteChange(key, 'champion', e.target.value)}
                             size="md"
                           >
                             <SelectItem value="NONE" text="NONE (Disabled)" />
-                            {models.map((m: any) => (
+                            {filteredModels.map((m: any) => (
                               <SelectItem key={m.id || m.name} value={m.name} text={`${m.name} (${m.algorithm_type || m.regime || 'Model'})`} />
                             ))}
                           </Select>
@@ -671,12 +701,12 @@ function ModelsContent() {
                           <Select
                             id={`challenger-${key}`}
                             labelText="Challenger (Shadow Test Model)"
-                            value={currentConfig.challenger || "NONE"}
+                            value={chall}
                             onChange={(e) => handleRouteChange(key, 'challenger', e.target.value)}
                             size="md"
                           >
                             <SelectItem value="NONE" text="NONE (Disabled)" />
-                            {models.map((m: any) => (
+                            {filteredModels.map((m: any) => (
                               <SelectItem key={m.id || m.name} value={m.name} text={`${m.name} (${m.algorithm_type || m.regime || 'Model'})`} />
                             ))}
                           </Select>

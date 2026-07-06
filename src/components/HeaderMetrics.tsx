@@ -75,23 +75,23 @@ export default function HeaderMetrics() {
   };
 
   const MetricToggle = ({ label, toggled, onToggle, icon: Icon, id }: any) => (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0px 0.5rem', width: '120px', height: '14px' }}>
-      <Icon size={12} color={toggled ? "#24a148" : "#fa4d56"} />
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flex: 1, lineHeight: 1 }}>
-        <span style={{ fontSize: '0.55rem', color: '#a8a8a8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</span>
-        <div style={{ display: 'flex', alignItems: 'center', height: '12px' }}>
-          <Toggle
-            id={id}
-            size="sm"
-            labelText=""
-            labelA=""
-            labelB=""
-            toggled={toggled}
-            onToggle={onToggle}
-            hideLabel
-            style={{ margin: 0, height: '12px' }}
-          />
-        </div>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0px 0.5rem', height: '14px' }}>
+      <Icon size={12} color={toggled ? "#24a148" : "#fa4d56"} style={{ flexShrink: 0 }} />
+      <span style={{ fontSize: '0.55rem', color: '#a8a8a8', textTransform: 'uppercase', letterSpacing: '0.5px', minWidth: '38px', lineHeight: 1, flexShrink: 0 }}>
+        {label}
+      </span>
+      <div style={{ display: 'flex', alignItems: 'center', height: '12px', flexShrink: 0 }}>
+        <Toggle
+          id={id}
+          size="sm"
+          labelText=""
+          labelA=""
+          labelB=""
+          toggled={toggled}
+          onToggle={onToggle}
+          hideLabel
+          style={{ margin: 0, height: '12px' }}
+        />
       </div>
     </div>
   );

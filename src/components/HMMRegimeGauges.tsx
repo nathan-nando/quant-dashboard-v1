@@ -1,18 +1,29 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { RainDrop, Lightning, Renew, Tornado } from '@carbon/icons-react';
 import { API_BASE_URL } from '@/config/env';
 
 interface CircleGaugeProps {
   value: number;
   color: string;
   label: string;
+  icon?: React.ComponentType<any>;
+  isDominant?: boolean;
 }
 
-const CircleGauge: React.FC<CircleGaugeProps> = ({ value, color, label }) => {
+const CircleGauge: React.FC<CircleGaugeProps> = ({ value, color, label, icon: Icon, isDominant }) => {
   const radius = 24;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (value / 100) * circumference;
+
+  // Dynamic white levels: from white approaching gray, slightly bright white, to bright white
+  let strokeColor = 'rgba(255, 255, 255, 0.3)'; // Low level: white approaching gray
+  if (value > 70) {
+    strokeColor = 'rgba(255, 255, 255, 1.0)'; // High level: bright white
+  } else if (value > 30) {
+    strokeColor = 'rgba(255, 255, 255, 0.65)'; // Medium level: slightly bright white
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, minWidth: 0 }}>
@@ -26,7 +37,7 @@ const CircleGauge: React.FC<CircleGaugeProps> = ({ value, color, label }) => {
             cy="29"
             r={radius}
             fill="transparent"
-            stroke={color}
+            stroke={strokeColor}
             strokeWidth="3.5"
             strokeDasharray={circumference}
             strokeDashoffset={strokeDashoffset}
@@ -40,8 +51,25 @@ const CircleGauge: React.FC<CircleGaugeProps> = ({ value, color, label }) => {
         </div>
       </div>
       {/* Label below */}
-      <div style={{ fontSize: '0.65rem', color: '#c6c6c6', marginTop: '0.3rem', textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%' }} title={label}>
-        {label}
+      <div 
+        style={{ 
+          fontSize: '0.65rem', 
+          color: isDominant ? '#ffffff' : '#8d8d8d', 
+          fontWeight: isDominant ? 'bold' : 'normal',
+          marginTop: '0.35rem', 
+          display: 'inline-flex', 
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          gap: '4px',
+          whiteSpace: 'nowrap', 
+          overflow: 'hidden', 
+          textOverflow: 'ellipsis', 
+          width: '100%' 
+        }} 
+        title={label}
+      >
+        {Icon && <Icon size={12} color={isDominant ? '#e0e0e0' : '#757575'} style={{ flexShrink: 0 }} />}
+        <span>{label}</span>
       </div>
     </div>
   );
@@ -67,12 +95,14 @@ export default function HMMRegimeGauges() {
   const meanrevPct = probs ? Math.round((probs.State_2 || 0) * 100) : 0;
   const volatilePct = probs ? Math.round((probs.State_3 || 0) * 100) : 0;
 
+  const maxVal = Math.max(lowVolPct, highVolPct, meanrevPct, volatilePct);
+
   return (
     <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center', width: '100%', height: '100%', padding: '0.35rem 0' }}>
-      <CircleGauge value={lowVolPct} color="#ffffff" label="Low Vol" />
-      <CircleGauge value={highVolPct} color="#ffffff" label="High Vol" />
-      <CircleGauge value={meanrevPct} color="#ffffff" label="Mean Rev" />
-      <CircleGauge value={volatilePct} color="#ffffff" label="Chop/Crisis" />
+      <CircleGauge value={lowVolPct} color="#ffffff" label="Low Vol" icon={RainDrop} isDominant={lowVolPct === maxVal && maxVal > 0} />
+      <CircleGauge value={highVolPct} color="#ffffff" label="High Vol" icon={Lightning} isDominant={highVolPct === maxVal && maxVal > 0} />
+      <CircleGauge value={meanrevPct} color="#ffffff" label="Mean Rev" icon={Renew} isDominant={meanrevPct === maxVal && maxVal > 0} />
+      <CircleGauge value={volatilePct} color="#ffffff" label="Chop/Crisis" icon={Tornado} isDominant={volatilePct === maxVal && maxVal > 0} />
     </div>
   );
 }

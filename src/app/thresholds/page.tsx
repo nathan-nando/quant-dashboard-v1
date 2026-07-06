@@ -43,7 +43,6 @@ export default function ThresholdsPage() {
   const [visibleCategories, setVisibleCategories] = useState({
     "risk-execution": true,
     "alpha-model": true,
-    "regime-detection": true,
     "sltp-multipliers": true,
     "system-config": true
   });
@@ -131,7 +130,7 @@ export default function ThresholdsPage() {
     "ml_conf_macro", "ml_margin_macro",
     "ml_conf_moe"
   ];
-  const regimeKeys = ["adx_trend_threshold", "bb_width_volatility_threshold"];
+
   const sltpKeys = ["use_ai_sl_tp", "sl_mult_trend", "tp_mult_trend", "sl_mult_meanrev", "tp_mult_meanrev", "sl_mult_macro", "tp_mult_macro"];
   const systemKeys = ["engine_active", "cron_interval_minutes"];
 
@@ -313,31 +312,6 @@ export default function ThresholdsPage() {
           </Tile>
         )}
 
-        {visibleCategories["regime-detection"] && (
-          <Tile id="regime-detection" style={{ marginBottom: ".2rem" }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h4 style={{ margin: 0 }}>Regime Detection Thresholds</h4>
-              <Button size="sm" renderIcon={Save} onClick={handleSave} disabled={saving || !hasChanges(regimeKeys)} style={{ border: 'none' }}>
-                {saving ? "Saving..." : "Save"}
-              </Button>
-            </div>
-            <FormGroup legendText="" style={{ marginTop: "1rem", display: "flex", flexDirection: "revert", gap: "1rem", justifyContent: "start" }}>
-              <div>
-                <NumberInput 
-                  id="adx_trend" label="ADX Trend Threshold" value={config.adx_trend_threshold} 
-                  min={1} max={100} onChange={(e: any, { value }: any) => updateConfig("adx_trend_threshold", value)}
-                />
-              </div>
-              <div>
-                <NumberInput 
-                  id="bb_width" label="Bollinger Bands Width Threshold (%)" value={config.bb_width_volatility_threshold} 
-                  min={0.1} max={20} step={0.5} onChange={(e: any, { value }: any) => updateConfig("bb_width_volatility_threshold", value)}
-                />
-              </div>
-            </FormGroup>
-          </Tile>
-        )}
-
         {visibleCategories["sltp-multipliers"] && (
           <Tile id="sltp-multipliers" style={{ marginBottom: ".2rem" }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -440,12 +414,7 @@ export default function ThresholdsPage() {
               </div>
               <a href="#alpha-model" style={{ textDecoration: "none", color: visibleCategories["alpha-model"] ? "#0f62fe" : "#8d8d8d" }}>Alpha / Signal Model</a>
             </li>
-            <li style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <div style={{ cursor: 'pointer', display: 'flex', color: visibleCategories["regime-detection"] ? "#0f62fe" : "#8d8d8d" }} onClick={() => toggleCategory("regime-detection")}>
-                {visibleCategories["regime-detection"] ? <View size={16} /> : <ViewOff size={16} />}
-              </div>
-              <a href="#regime-detection" style={{ textDecoration: "none", color: visibleCategories["regime-detection"] ? "#0f62fe" : "#8d8d8d" }}>Regime Detection</a>
-            </li>
+
             <li style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <div style={{ cursor: 'pointer', display: 'flex', color: visibleCategories["sltp-multipliers"] ? "#0f62fe" : "#8d8d8d" }} onClick={() => toggleCategory("sltp-multipliers")}>
                 {visibleCategories["sltp-multipliers"] ? <View size={16} /> : <ViewOff size={16} />}

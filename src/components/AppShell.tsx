@@ -243,7 +243,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 <HeaderNavigation aria-label="Main" style={{ border: 'none' }} className="desktop-nav">
                   {navItem('/account', 'Account', User)}
                   {navItem('/signals', 'Signals', Activity)}
-                  {navItem('/monitoring', 'Monitoring', Meter)}
+                  {navItem('/thresholds', 'Thresholds', SettingsAdjust)}
                 </HeaderNavigation>
 
                 {/* Spacer — pushes Group 2 toward the right */}
@@ -259,9 +259,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
                 {/* Group 2 — sits just before the global action icons */}
                 <HeaderNavigation aria-label="Tools" style={{ border: 'none' }} className="desktop-nav">
-                  {navItem('/thresholds', 'Thresholds', SettingsAdjust)}
                   {navItem('/models', 'Models', MachineLearningModel)}
                   {navItem('/simulation', 'Simulation', Analytics)}
+                  {navItem('/monitoring', 'Monitoring', Meter)}
                 </HeaderNavigation>
 
                 {/* Global actions */}
@@ -294,9 +294,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   {sideNavItem('/account', 'Account', User, onClickSideNavExpand)}
                   {sideNavItem('/signals', 'Signals', Activity, onClickSideNavExpand)}
                   {sideNavItem('/thresholds', 'Thresholds', SettingsAdjust, onClickSideNavExpand)}
-                  {sideNavItem('/monitoring', 'Monitoring', Meter, onClickSideNavExpand)}
                   {sideNavItem('/models', 'Models', MachineLearningModel, onClickSideNavExpand)}
                   {sideNavItem('/simulation', 'Simulation', Analytics, onClickSideNavExpand)}
+                  {sideNavItem('/monitoring', 'Monitoring', Meter, onClickSideNavExpand)}
 
                   {/* Notifications and Settings inside sidebar - visible on mobile only - pushed to the very bottom as icons only */}
                   <div className="show-on-mobile" style={{ position: 'absolute', bottom: 0, left: 0, right: 0, borderTop: '1px solid #393939', padding: '0.75rem 1.5rem calc(0.75rem + env(safe-area-inset-bottom, 16px)) 1.5rem', backgroundColor: '#161616', zIndex: 10 }}>

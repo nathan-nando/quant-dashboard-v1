@@ -1133,7 +1133,7 @@ function SimulationPageContent() {
                     </Tile>
 
                     <Tile className="sim-chart-tile-regime">
-                      <h4 style={{ marginBottom: '1rem' }}>Regime Performance</h4>
+                      <h4 style={{ marginBottom: '1rem' }}>Model Performance</h4>
                       <div style={{ flex: 1 }}>
                         <RegimeBreakdown 
                           regimeStats={activeRunData.metrics_report?.regime_breakdown || {}} 

@@ -197,10 +197,6 @@ export default function Home() {
   return (
     <div style={{ maxWidth: '100%', padding: '0 2rem', position: 'relative' }}>
 
-      <Column lg={16} md={8} sm={4} className="landing-page__banner">
-        <h3 style={{ marginBottom: ".5rem", fontWeight: 400 }}>Dashboard</h3>
-      </Column>
-
       {/* --- ROW 1: STATIC LIVE STATE METRICS & MARKET SUMMARY --- */}
       <div className="top-metrics-container">
         <div className="dashboard-metrics-wrapper">
