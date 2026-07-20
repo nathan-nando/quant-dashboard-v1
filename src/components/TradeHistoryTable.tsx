@@ -52,6 +52,16 @@ const getRegimeFormat = (regime: string) => {
   return { text: regime.replace('_EXPERT', ' Expert').split('_').map(w => w.charAt(0) + w.slice(1).toLowerCase()).join(' '), color: '#f4f4f4' };
 };
 
+const getFriendlyRegimeText = (regime: string) => {
+  if (!regime) return '';
+  const r = regime.toUpperCase();
+  if (r === 'LOW_VOL' || r === 'LOW VOL') return 'Low Vol';
+  if (r === 'HIGH_VOL' || r === 'HIGH VOL') return 'High Vol';
+  if (r === 'MEAN_REVERTING' || r === 'MEANREV_EXPERT' || r === 'MEANREV' || r === 'MEAN_REV') return 'Mean Rev';
+  if (r === 'VOLATILE_CHOP' || r === 'CHOP' || r === 'CRISIS' || r === 'CHOP/CRISIS') return 'Chop/Crisis';
+  return getRegimeFormat(regime).text;
+};
+
 interface TradeHistoryTableProps {
   trades: Trade[];
   title?: React.ReactNode;
@@ -108,7 +118,8 @@ export default function TradeHistoryTable({
     { key: "formatted_entry_price", header: isLiveTrades ? "Price (Entry/Current) / Lots" : "Price (Entry/Exit) / Lots" },
     { key: "formatted_pnl_money", header: "PnL", width: "65px" },
     ...(isLiveTrades ? [] : [{ key: "formatted_close_reason", header: "Reason", width: "90px" }]),
-    { key: "model_version", header: "Model / Conf" },
+    { key: "regime", header: "Regime", width: "80px" },
+    { key: "model_version", header: "Model" },
   ];
 
   const formatCell = (cellId: string, value: any) => {
@@ -316,55 +327,43 @@ export default function TradeHistoryTable({
       const reason = trade.close_reason;
       if (!reason || reason === '-') return <span style={{ color: '#525252', fontSize: '10px' }}>-</span>;
 
-      const fSize = compact ? '8.5px' : '10px';
+      let color = '#8d8d8d';
+      let label = reason.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+      let iconPath = <circle cx="16" cy="16" r="8" />; // default circle
 
-      type BadgeStyle = { bg: string; color: string; border: string };
-      const badgeMap: Record<string, { label: string; style: BadgeStyle }> = {
-        MARGIN_CALL: {
-          label: '🚨 Margin Call',
-          style: { bg: 'rgba(218,30,40,0.18)', color: '#ff8389', border: '1px solid rgba(218,30,40,0.5)' },
-        },
-        SL_HIT: {
-          label: 'SL Hit',
-          style: { bg: 'rgba(250,77,86,0.12)', color: '#fa4d56', border: '1px solid rgba(250,77,86,0.35)' },
-        },
-        TP_HIT: {
-          label: 'TP Hit',
-          style: { bg: 'rgba(36,161,72,0.12)', color: '#42be65', border: '1px solid rgba(36,161,72,0.35)' },
-        },
-        TIME_EXIT: {
-          label: 'Time Exit',
-          style: { bg: 'rgba(69,137,255,0.12)', color: '#4589ff', border: '1px solid rgba(69,137,255,0.35)' },
-        },
-        SIGNAL_REVERSE: {
-          label: 'Sig. Reverse',
-          style: { bg: 'rgba(168,168,168,0.1)', color: '#a8a8a8', border: '1px solid rgba(168,168,168,0.25)' },
-        },
-        MANUAL: {
-          label: 'Manual',
-          style: { bg: 'rgba(168,168,168,0.1)', color: '#a8a8a8', border: '1px solid rgba(168,168,168,0.25)' },
-        },
-      };
-
-      const entry = badgeMap[reason];
-      const label = entry?.label ?? reason.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
-      const style = entry?.style ?? { bg: 'rgba(168,168,168,0.1)', color: '#a8a8a8', border: '1px solid rgba(168,168,168,0.25)' };
+      if (reason === 'TP_HIT') {
+        color = '#24a148';
+        label = 'TP Hit';
+        iconPath = <path d="M14 21.414l-5.707-5.707-1.414 1.414 7.121 7.121 12-12-1.414-1.414z" />;
+      } else if (reason === 'SL_HIT') {
+        color = '#fa4d56';
+        label = 'SL Hit';
+        iconPath = <circle cx="16" cy="16" r="8" />;
+      } else if (reason === 'TIME_EXIT') {
+        color = '#4589ff';
+        label = 'Time Exit';
+        iconPath = <path d="M16 4C9.383 4 4 9.383 4 16s5.383 12 12 12 12-5.383 12-12S22.617 4 16 4zm0 2c5.523 0 10 4.477 10 10s-4.477 10-10 10S6 21.523 6 16 10.477 6 16 6zm-1 3v8h6v-2h-4v-6h-2z" />;
+      } else if (reason === 'MARGIN_CALL') {
+        color = '#da1e28';
+        label = 'Margin Call';
+        iconPath = <circle cx="16" cy="16" r="8" />;
+      } else if (reason === 'SIGNAL_REVERSE') {
+        color = '#8d8d8d';
+        label = 'Sig. Reverse';
+        iconPath = <circle cx="16" cy="16" r="8" />;
+      } else if (reason === 'MANUAL') {
+        color = '#8d8d8d';
+        label = 'Manual';
+        iconPath = <circle cx="16" cy="16" r="8" />;
+      }
 
       return (
-        <span style={{
-          display: 'inline-block',
-          padding: compact ? '1px 5px' : '2px 7px',
-          borderRadius: '4px',
-          background: style.bg,
-          color: style.color,
-          border: style.border,
-          fontWeight: 'bold',
-          fontSize: fSize,
-          whiteSpace: 'nowrap',
-          letterSpacing: '0.01em',
-        }}>
-          {label}
-        </span>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: compact ? '4px' : '6px', fontWeight: 'bold', fontSize: compact ? '9.5px' : '11px' }}>
+          <svg width="10" height="10" viewBox="0 0 32 32" style={{ fill: color, flexShrink: 0 }}>
+            {iconPath}
+          </svg>
+          <span style={{ color: color, whiteSpace: 'nowrap' }}>{label}</span>
+        </div>
       );
     }
     if (cellId.endsWith(":model_version")) {
@@ -423,6 +422,20 @@ export default function TradeHistoryTable({
             </span>
           )}
         </div>
+      );
+    }
+    if (cellId.endsWith(":regime")) {
+      const rowId = cellId.split(':')[0];
+      const trade = trades.find((t, idx) => (t.trade_id || `trade-${idx}`) === rowId);
+      if (!trade) return "-";
+      const reg = trade.regime;
+      if (!reg || reg === '-') return <span style={{ color: '#525252', fontSize: '10px' }}>-</span>;
+      
+      const format = getRegimeFormat(reg);
+      return (
+        <span style={{ color: format.color, fontWeight: 'bold', fontSize: compact ? '9.5px' : '11px', whiteSpace: 'nowrap' }}>
+          {getFriendlyRegimeText(reg)}
+        </span>
       );
     }
     return value;

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { RainDrop, Lightning, Renew, Tornado } from '@carbon/icons-react';
 import { API_BASE_URL } from '@/config/env';
+import { useGlobalState } from '@/contexts/GlobalStateContext';
 
 interface CircleGaugeProps {
   value: number;
@@ -76,19 +77,18 @@ const CircleGauge: React.FC<CircleGaugeProps> = ({ value, color, label, icon: Ic
 };
 
 export default function HMMRegimeGauges() {
-  const [probs, setProbs] = useState<any>(null);
+  const { state } = useGlobalState();
+  const [initialProbs, setInitialProbs] = useState<any>(null);
 
   useEffect(() => {
-    const fetchProbs = () => {
-      fetch(`${API_BASE_URL}/dashboard/regime/probabilities`)
-        .then(res => res.json())
-        .then(data => setProbs(data))
-        .catch(err => console.error("Error fetching HMM probs:", err));
-    };
-    fetchProbs();
-    const interval = setInterval(fetchProbs, 5000);
-    return () => clearInterval(interval);
+    // Fetch initial probabilities once on mount as fallback before SSE updates arrive
+    fetch(`${API_BASE_URL}/dashboard/regime/probabilities`)
+      .then(res => res.json())
+      .then(data => setInitialProbs(data))
+      .catch(err => console.error("Error fetching HMM probs:", err));
   }, []);
+
+  const probs = state?.hmm_probs || initialProbs;
 
   const lowVolPct = probs ? Math.round((probs.State_0 || 0) * 100) : 0;
   const highVolPct = probs ? Math.round((probs.State_1 || 0) * 100) : 0;

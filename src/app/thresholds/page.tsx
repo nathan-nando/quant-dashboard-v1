@@ -24,6 +24,7 @@ export default function ThresholdsPage() {
     ml_conf_macro: 0.50,
     ml_margin_macro: 0.05,
     ml_conf_moe: 0.50,
+    ml_margin_moe: 0.02,
     adx_trend_threshold: 25,
     bb_width_volatility_threshold: 5.0,
     sl_mult_trend: 1.5,
@@ -128,7 +129,7 @@ export default function ThresholdsPage() {
     "ml_conf_trend", "ml_margin_trend",
     "ml_conf_meanrev", "ml_margin_meanrev",
     "ml_conf_macro", "ml_margin_macro",
-    "ml_conf_moe"
+    "ml_conf_moe", "ml_margin_moe"
   ];
 
   const sltpKeys = ["use_ai_sl_tp", "sl_mult_trend", "tp_mult_trend", "sl_mult_meanrev", "tp_mult_meanrev", "sl_mult_macro", "tp_mult_macro"];
@@ -306,7 +307,10 @@ export default function ThresholdsPage() {
               {/* Global MoE */}
               <Column lg={4} md={2} sm={4}>
                 <h5 style={{ marginBottom: '0.5rem', color: '#8a3ffc' }}>Global MoE</h5>
-                <NumberInput id="ml_conf_moe" label="ML Confidence (Mutlak)" value={config.ml_conf_moe ?? 0.50} min={0.1} max={1.0} step={0.05} onChange={(e: any, { value }: any) => updateConfig("ml_conf_moe", value)} />
+                <NumberInput id="ml_margin_moe" label="ML Margin (Selisih)" value={config.ml_margin_moe ?? 0.02} min={0.01} max={1.0} step={0.01} onChange={(e: any, { value }: any) => updateConfig("ml_margin_moe", value)} />
+                <div style={{marginTop: "0.5rem"}}>
+                  <NumberInput id="ml_conf_moe" label="ML Confidence (Mutlak)" value={config.ml_conf_moe ?? 0.50} min={0.1} max={1.0} step={0.05} onChange={(e: any, { value }: any) => updateConfig("ml_conf_moe", value)} />
+                </div>
               </Column>
             </Grid>
           </Tile>

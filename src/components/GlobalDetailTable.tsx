@@ -617,6 +617,144 @@ export default function GlobalDetailTable({ id, type = 'signal', dataObj, onClos
               )}
             </div>
           )}
+
+          {/* Model Explainability / Features at Entry for Trades */}
+          {(() => {
+            const explainability = data.features_at_entry?.explainability ||
+                                   data.features_at_entry?.model_output?.explainability ||
+                                   data.metadata?.model_output?.explainability ||
+                                   data.metadata?.explainability ||
+                                   data.explainability || null;
+
+            let categories = explainability?.categories || [];
+
+            if (!categories || categories.length === 0) {
+              const baseShapList: any[] = 
+                data.features_at_entry?.shap_values ||
+                data.features_at_entry?.model_output?.shap_values ||
+                data.metadata?.model_output?.shap_values || 
+                data.metadata?.shap_values || 
+                data.shap_values || [];
+              if (baseShapList && baseShapList.length > 0) {
+                categories = [{
+                  name: "Evaluated Features",
+                  key: "all",
+                  count: baseShapList.length,
+                  features: baseShapList
+                }];
+              }
+            }
+
+            const rawFeatures = data.features_at_entry 
+              ? Object.entries(data.features_at_entry).filter(([key, val]) => 
+                  !key.startsWith('_') && 
+                  key !== 'explainability' && 
+                  key !== 'shap_values' && 
+                  val !== null &&
+                  val !== undefined &&
+                  typeof val !== 'object'
+                )
+              : [];
+
+            const hasExplainability = categories && categories.length > 0;
+            const hasRawFeatures = rawFeatures && rawFeatures.length > 0;
+
+            if (!hasExplainability && !hasRawFeatures) return null;
+
+            return (
+              <div style={{ marginTop: '1.5rem', borderTop: '1px solid #393939', paddingTop: '1.25rem' }}>
+                {hasExplainability && (
+                  <div style={{ marginBottom: '1.5rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: "1.25rem" }}>
+                      <h4 style={{ fontSize: "1.0rem", margin: 0, fontWeight: 'bold' }}>Model Explainibility</h4>
+                      <span style={{ fontSize: "0.75rem", color: "#a8a8a8", background: "#262626", padding: "2px 8px", borderRadius: "12px" }}>
+                        SHAP Values
+                      </span>
+                    </div>
+
+                    {(() => {
+                      // Sort categories
+                      const sortedCategories = [...categories].sort((a: any, b: any) => {
+                        const aName = (a.name || '').toLowerCase();
+                        const bName = (b.name || '').toLowerCase();
+                        const aKey = (a.key || '').toLowerCase();
+                        const bKey = (b.key || '').toLowerCase();
+                        const aIsMacro = aName.includes('macro') || aKey.includes('macro');
+                        const bIsMacro = bName.includes('macro') || bKey.includes('macro');
+                        if (aIsMacro && !bIsMacro) return -1;
+                        if (!aIsMacro && bIsMacro) return 1;
+                        return 0;
+                      });
+
+                      let allContribs: number[] = [];
+                      sortedCategories.forEach((cat: any) => {
+                        if (cat.features && Array.isArray(cat.features)) {
+                          cat.features.forEach((f: any) => allContribs.push(Math.abs(Number(f.contribution || 0))));
+                        }
+                      });
+                      const maxContrib = Math.max(...allContribs, 0.0001);
+
+                      return sortedCategories.map((cat: any, cIdx: number) => {
+                        if (!cat.features || cat.features.length === 0) return null;
+                        return (
+                          <div key={cIdx} style={{ marginBottom: cIdx < sortedCategories.length - 1 ? "1.5rem" : "0" }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: "0.5rem" }}>
+                              <h5 style={{ fontSize: "0.875rem", fontWeight: 600, color: "#d1d1d1", margin: 0 }}>
+                                {(cat.name || '').toLowerCase().includes('macro') || (cat.key || '').toLowerCase().includes('macro')
+                                  ? 'Macro Features'
+                                  : (cat.name || '').toLowerCase().includes('technical') || (cat.key || '').toLowerCase().includes('technical')
+                                    ? 'Technical Features'
+                                    : cat.name}
+                              </h5>
+                              <span style={{ fontSize: "0.75rem", color: "#a8a8a8" }}>{cat.count || cat.features.length} features</span>
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem 1.5rem', maxHeight: '280px', overflowY: 'auto', paddingRight: '0.5rem', background: 'transparent', padding: '1rem', borderRadius: '0', border: '1px dashed #393939' }}>
+                              {cat.features.map((item: any, idx: number) => {
+                                const contrib = Number(item.contribution || 0);
+                                const isPos = contrib >= 0;
+                                const pct = Math.min(Math.round((Math.abs(contrib) / maxContrib) * 100), 100);
+                                return (
+                                  <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '4px', paddingBottom: '6px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem' }}>
+                                      <span style={{ fontWeight: '600', color: '#f4f4f4', textTransform: 'uppercase' }}>{item.feature}</span>
+                                      <span style={{ fontWeight: 'bold', color: isPos ? '#42be65' : '#ff8389' }}>
+                                        {isPos ? '+' : ''}{contrib.toFixed(4)}
+                                      </span>
+                                    </div>
+                                    <div style={{ width: '100%', height: '4px', background: '#262626', borderRadius: '0', overflow: 'hidden', display: 'flex', justifyContent: isPos ? 'flex-start' : 'flex-end' }}>
+                                      <div style={{ width: `${pct}%`, height: '100%', background: isPos ? '#42be65' : '#ff8389', transition: 'width 0.3s ease' }} />
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      });
+                    })()}
+                  </div>
+                )}
+
+                {hasRawFeatures && (
+                  <div>
+                    <h4 style={{ fontSize: "1.0rem", marginBottom: "1rem", fontWeight: 'bold' }}>Features at Entry</h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem 1.5rem', maxHeight: '280px', overflowY: 'auto', paddingRight: '0.5rem', background: 'transparent', padding: '1rem', borderRadius: '0', border: '1px dashed #393939' }}>
+                      {rawFeatures.map(([key, val]: [string, any]) => {
+                        const formattedKey = key.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+                        const displayVal = typeof val === 'number' ? val.toFixed(5).replace(/\.?0+$/, '') : String(val);
+                        return (
+                          <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                            <span style={{ fontSize: '0.75rem', color: '#a8a8a8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{formattedKey}</span>
+                            <strong style={{ fontSize: '0.875rem', color: '#f4f4f4' }}>{displayVal}</strong>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </div>
       )}
 

@@ -34,8 +34,12 @@ export default function PnLChart({ trades }: PnLChartProps) {
         horzLines: { color: '#393939' },
       },
       timeScale: {
-        timeVisible: true,
-        secondsVisible: false,
+        timeVisible: false,
+        fixLeftEdge: true,
+        fixRightEdge: true,
+      },
+      localization: {
+        dateFormat: 'yyyy-MM-dd',
       },
       rightPriceScale: {
         borderVisible: false,
@@ -73,43 +77,33 @@ export default function PnLChart({ trades }: PnLChartProps) {
     const sortedTrades = [...trades].filter(t => t.exit_time).sort((a, b) => new Date(a.exit_time!).getTime() - new Date(b.exit_time!).getTime());
     
     let cumulative = 0;
-    const data = sortedTrades.map(t => {
+    const dailyPnL = new Map<string, number>();
+    
+    if (sortedTrades.length > 0) {
+      // Add initial point 0 at one day before the first trade so the chart always has a starting origin
+      const firstDate = new Date(sortedTrades[0].exit_time!);
+      firstDate.setDate(firstDate.getDate() - 1);
+      const initialDateStr = firstDate.toISOString().split('T')[0];
+      dailyPnL.set(initialDateStr, 0);
+    }
+    
+    for (const t of sortedTrades) {
       cumulative += t.pnl_money;
+      // Extract YYYY-MM-DD
+      const dateStr = new Date(t.exit_time!).toISOString().split('T')[0];
+      // Overwrite so that the map stores the final cumulative equity of that day
+      dailyPnL.set(dateStr, cumulative);
+    }
+
+    const finalData = Array.from(dailyPnL.entries()).map(([dateStr, val]) => {
       return {
-        time: (new Date(t.exit_time!).getTime() / 1000) as Time,
-        value: cumulative
+        time: dateStr as Time,
+        value: val
       };
     });
 
     // If we have data, set it
-    if (data.length > 0) {
-      // Remove duplicates by time (lightweight charts needs strictly increasing times)
-      const uniqueData = [];
-      const seenTimes = new Set<number>();
-      for (const item of data) {
-        const timeVal = item.time as number;
-        if (!seenTimes.has(timeVal)) {
-          uniqueData.push(item);
-          seenTimes.add(timeVal);
-        } else {
-          // Overwrite with latest value for the same timestamp
-          uniqueData[uniqueData.length - 1].value = item.value;
-        }
-      }
-
-      // Final pass to ensure strictly increasing times if there are anomalies
-      let finalData = [];
-      let lastTime = -1;
-      for (let i = 0; i < uniqueData.length; i++) {
-         let t = uniqueData[i].time as number;
-         if (t <= lastTime) {
-             t = lastTime + 1;
-             uniqueData[i].time = t as Time;
-         }
-         finalData.push(uniqueData[i]);
-         lastTime = t;
-      }
-
+    if (finalData.length > 0) {
       seriesRef.current.setData(finalData);
       chartRef.current.timeScale().fitContent();
     }

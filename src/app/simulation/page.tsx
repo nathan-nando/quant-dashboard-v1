@@ -364,7 +364,8 @@ function SimulationPageContent() {
     ml_conf_macro: 0.50,
     ml_margin_macro: 0.05,
     meta_conf_macro: 0.50,
-    ml_conf_moe: 0.50
+    ml_conf_moe: 0.50,
+    ml_margin_moe: 0.02
   });
 
   // Tab state synchronized via URL
@@ -535,7 +536,7 @@ function SimulationPageContent() {
         "ml_conf_trend", "ml_margin_trend", "meta_conf_trend",
         "ml_conf_meanrev", "ml_margin_meanrev", "meta_conf_meanrev",
         "ml_conf_macro", "ml_margin_macro", "meta_conf_macro",
-        "ml_conf_moe"
+        "ml_conf_moe", "ml_margin_moe"
       ];
       keysToDelete.forEach(k => delete (payload as any)[k]);
     }
@@ -791,7 +792,10 @@ function SimulationPageContent() {
 
                                   <Column lg={4} md={2} sm={4} style={{ marginBottom: '1rem' }}>
                                     <h5 style={{ marginBottom: '0.5rem', color: '#8a3ffc', fontSize: '0.8rem' }}>Global MoE</h5>
-                                    <div style={{marginTop: "4.2rem"}}>
+                                    <div>
+                                      <TextInput id="ml-margin-moe" type="number" step="0.01" labelText="Meta Learner Margin" value={config.ml_margin_moe ?? 0.02} onChange={(e) => setConfig({...config, ml_margin_moe: parseFloat(e.target.value)})} />
+                                    </div>
+                                    <div style={{marginTop: "0.5rem"}}>
                                       <TextInput id="ml-conf-moe" type="number" step="0.05" labelText="Meta Learner Conf" value={config.ml_conf_moe} onChange={(e) => setConfig({...config, ml_conf_moe: parseFloat(e.target.value)})} />
                                     </div>
                                   </Column>
