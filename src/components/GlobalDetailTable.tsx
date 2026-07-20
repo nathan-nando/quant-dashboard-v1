@@ -176,6 +176,21 @@ export default function GlobalDetailTable({ id, type = 'signal', dataObj, onClos
       
       {data && !loading && !error && type === 'signal' && (
         <div style={{ maxHeight: "65vh", overflowY: "auto", paddingRight: "0.5rem" }}>
+          {data.status === 'FAILED' && data.remarks && (
+            <div style={{
+              background: 'rgba(250, 77, 86, 0.1)',
+              border: '1px solid #fa4d56',
+              borderRadius: '4px',
+              padding: '0.75rem',
+              marginBottom: '1rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.25rem'
+            }}>
+              <span style={{ color: '#fa4d56', fontWeight: 'bold', fontSize: '0.75rem' }}>⚠️ EXECUTION FAILURE REMARKS</span>
+              <span style={{ fontSize: '0.875rem', color: '#f4f4f4' }}>{data.remarks}</span>
+            </div>
+          )}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem 0.75rem', marginBottom: '1.5rem' }}>
             <div>
               <p style={{ color: '#a8a8a8', fontSize: '0.75rem', marginBottom: '4px' }}>Symbol / Direction</p>
