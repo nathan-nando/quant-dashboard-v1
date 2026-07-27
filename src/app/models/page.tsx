@@ -848,11 +848,10 @@ function ModelsContent() {
                   </div>
               )}
           </div>
-          
-          {trainRegime !== "HMM" && (
+          {trainRegime === "MACRO" && (
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: "1rem" }}>
               <div style={{ flex: 1 }}>
-                  <Select id="train-macro-dataset" labelText="Macro Dataset (FRED Series)" value={trainForm.macro_dataset_id} onChange={e => setTrainForm({...trainForm, macro_dataset_id: e.target.value})}>
+                  <Select id="train-macro-dataset" labelText="Macro & HTF Dataset (FRED Series / DXY / H1)" value={trainForm.macro_dataset_id} onChange={e => setTrainForm({...trainForm, macro_dataset_id: e.target.value})}>
                      {datasets.filter(d => d.source_type === "macro").length === 0 ? <SelectItem value="" text="No macro datasets available" disabled /> : null}
                      {(datasets.filter(d => d.source_type === "macro").length > 0 ? datasets.filter(d => d.source_type === "macro") : datasets).map(ds => <SelectItem key={ds.id} value={ds.id} text={`${ds.name} (${ds.total_rows} rows)`} />)}
                   </Select>
@@ -860,24 +859,18 @@ function ModelsContent() {
             </div>
           )}
           
-          {trainRegime !== "HMM" && (
-            <>
-              <NumberInput id="optuna-trials" label="Optuna Tuning Trials" value={trainForm.optuna_trials} onChange={(e, {value}) => setTrainForm({...trainForm, optuna_trials: Number(value)})} min={1} max={500} style={{ marginBottom: "1rem" }} />
-              
-              <RadioButtonGroup
-                legendText="Compute Device"
-                name="device"
-                valueSelected={trainForm.device}
-                onChange={(val) => setTrainForm({ ...trainForm, device: val as string })}
-                style={{ marginBottom: "1.5rem" }}
-              >
-                <RadioButton labelText="GPU (CUDA) - Recommended" value="cuda" id="device-gpu" />
-                <RadioButton labelText="CPU Based" value="cpu" id="device-cpu" />
-              </RadioButtonGroup>
-
-              <Toggle id="use-meta-labeling" labelText="Use Meta Labeling (The Hakim)" toggled={trainForm.use_meta_labeling} onToggle={(val) => setTrainForm({...trainForm, use_meta_labeling: val})} />
-            </>
-          )}
+          <NumberInput id="optuna-trials" label="Optuna Tuning Trials" value={trainForm.optuna_trials} onChange={(e, {value}) => setTrainForm({...trainForm, optuna_trials: Number(value)})} min={1} max={500} style={{ marginBottom: "1rem" }} />
+          
+          <RadioButtonGroup
+            legendText="Compute Device"
+            name="device"
+            valueSelected={trainForm.device}
+            onChange={(val) => setTrainForm({ ...trainForm, device: val as string })}
+            style={{ marginBottom: "1.5rem" }}
+          >
+            <RadioButton labelText="GPU (CUDA) - Recommended" value="cuda" id="device-gpu" />
+            <RadioButton labelText="CPU Based" value="cpu" id="device-cpu" />
+          </RadioButtonGroup>
         </FormGroup>
       </Modal>
 
