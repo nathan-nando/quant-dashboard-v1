@@ -13,6 +13,7 @@ import { API_BASE_URL } from '@/config/env';
 
 const getRegimeFormat = (regime: string) => {
   if (!regime) return { text: 'UNKNOWN', color: '#f4f4f4' };
+  if (regime === 'SCALPING' || regime === 'SCALPER' || regime === 'scalping' || regime === 'scalper') return { text: '⚡ M1 Scalping LightGBM', color: '#0f62fe' };
   if (regime === 'MOE_ENSEMBLE' || regime === 'MoE' || regime === 'Ensemble' || regime === 'MOE') return { text: 'MoE Gating Network & Meta', color: '#0f62fe' };
   if (regime === 'HMM' || regime === 'HMM_REGIME') return { text: 'HMM Regime Detector', color: '#8a3ffc' };
   if (regime === 'TREND_EXPERT' || regime === 'trend') return { text: 'MoE Trend Expert', color: '#24a148' };
@@ -572,34 +573,16 @@ function ModelsContent() {
                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                            <MachineLearningModel size={28} style={{ color: '#0f62fe' }} />
                            <div>
-                             <h4 style={{ fontWeight: 600, margin: 0, color: '#f4f4f4' }}>MoE Ensemble Pipeline</h4>
-                             <p style={{ fontSize: '0.75rem', color: '#a8a8a8', margin: 0, marginTop: '0.25rem' }}>3 Experts (Trend, MeanRev, Macro) + Gating & Meta</p>
+                             <h4 style={{ fontWeight: 600, margin: 0, color: '#f4f4f4' }}>M1 Scalping Model (Triple Barrier)</h4>
+                             <p style={{ fontSize: '0.75rem', color: '#a8a8a8', margin: 0, marginTop: '0.25rem' }}>LightGBM Classifier + ONNX Export</p>
                            </div>
                          </div>
                        </div>
                        <p style={{ fontSize: '0.8rem', color: '#c6c6c6', marginBottom: '1.25rem', lineHeight: '1.4' }}>
-                         Latih ulang secara serentak ketiga model pakar (XGBoost ONNX), kalibrasi jaringan Gating, dan metamodel penentu probabilitas akhir berdasarkan histori dataset terbaru.
+                         Latih ulang model M1 Scalping berbasis Triple Barrier Method (Profit Take, Stop Loss, & Holding Time limits) untuk deteksi sinyal mikro berkecepatan tinggi.
                        </p>
-                       <Button kind="primary" size="sm" renderIcon={Play} onClick={() => openTrainModal("MOE_ENSEMBLE")}>
-                          Train MoE Ensemble
-                       </Button>
-                    </Tile>
-
-                    <Tile style={{ padding: '1.5rem', background: 'var(--cds-layer-01, #262626)', borderLeft: '4px solid #8a3ffc' }}>
-                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
-                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                           <Activity size={28} style={{ color: '#8a3ffc' }} />
-                           <div>
-                             <h4 style={{ fontWeight: 600, margin: 0, color: '#f4f4f4' }}>HMM Regime Detector</h4>
-                             <p style={{ fontSize: '0.75rem', color: '#a8a8a8', margin: 0, marginTop: '0.25rem' }}>4-State Gaussian Hidden Markov Model</p>
-                           </div>
-                         </div>
-                       </div>
-                       <p style={{ fontSize: '0.8rem', color: '#c6c6c6', marginBottom: '1.25rem', lineHeight: '1.4' }}>
-                         Latih ulang model pendeteksi cuaca pasar probabilistik (Low Vol Trend, High Vol Trend, Mean Reverting, dan Volatile Chop/Crisis) menggunakan imbal hasil & volatilitas.
-                       </p>
-                       <Button kind="primary" size="sm" renderIcon={Play} onClick={() => openTrainModal("HMM")}>
-                          Train HMM Detector
+                       <Button kind="primary" size="sm" renderIcon={Play} onClick={() => openTrainModal("SCALPING")}>
+                          Train Scalping Model
                        </Button>
                     </Tile>
                 </div>
@@ -807,14 +790,10 @@ function ModelsContent() {
       </Modal>
 
       {/* TRAIN SETTINGS MODAL */}
-      <Modal open={isTrainModalOpen} onRequestClose={() => setTrainModalOpen(false)} onRequestSubmit={startTraining} modalHeading={`Train settings for ${trainRegime === 'HMM' ? 'HMM Regime Detector' : 'MoE Ensemble Pipeline'}`} primaryButtonText="Start Training" secondaryButtonText="Cancel">
+      <Modal open={isTrainModalOpen} onRequestClose={() => setTrainModalOpen(false)} onRequestSubmit={startTraining} modalHeading={`Train settings for ${trainRegime === 'SCALPING' ? 'M1 Scalping Model' : 'Scalping Model'}`} primaryButtonText="Start Training" secondaryButtonText="Cancel">
         <FormGroup legendText="">
           <Select id="train-algo" labelText="Algorithm" value={trainForm.algorithm} onChange={e => setTrainForm({...trainForm, algorithm: e.target.value})} style={{ marginBottom: "1rem" }}>
-             {trainRegime === "HMM" ? (
-               <SelectItem value="Gaussian HMM" text="Gaussian HMM (4-State)" />
-             ) : (
-               <SelectItem value="XGBoost MoE Ensemble" text="XGBoost MoE Ensemble (3 Experts + Gating + Meta)" />
-             )}
+             <SelectItem value="LightGBM Triple Barrier" text="LightGBM Triple Barrier ONNX" />
           </Select>
           <TextInput id="model-name-train" labelText="Custom Model Name (Optional)" placeholder="e.g. xgboost_bull_v2" value={trainForm.model_name} onChange={e => setTrainForm({...trainForm, model_name: e.target.value})} style={{ marginBottom: "1rem" }} />
           
