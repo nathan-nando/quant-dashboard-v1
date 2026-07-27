@@ -1,43 +1,22 @@
 "use client";
 
-import { Grid, Column, Tile, FormGroup, NumberInput, Button, Toggle, ToastNotification, RadioButtonGroup, RadioButton } from "@carbon/react";
+import { Grid, Column, Tile, FormGroup, NumberInput, Button, Toggle, ToastNotification } from "@carbon/react";
 import { View, ViewOff, Save } from "@carbon/icons-react";
 import { useEffect, useState } from "react";
 import { API_BASE_URL } from '@/config/env';
 
 export default function ThresholdsPage() {
   const [config, setConfig] = useState<any>({
-    engine_active: false,
+    engine_active: true,
     auto_execution_enabled: false,
     use_equity_kill_switch: true,
     max_drawdown_equity_pct: 10.0,
     use_daily_kill_switch: true,
     max_daily_drawdown_pct: 5.0,
-    use_ai_sl_tp: true,
     risk_control_mode: "manual",
     risk_per_trade_pct: 1.0,
     max_open_positions: 1,
-    ml_conf_trend: 0.50,
-    ml_margin_trend: 0.10,
-    ml_conf_meanrev: 0.50,
-    ml_margin_meanrev: 0.05,
-    ml_conf_macro: 0.50,
-    ml_margin_macro: 0.05,
-    ml_conf_moe: 0.50,
-    ml_margin_moe: 0.02,
-    adx_trend_threshold: 25,
-    bb_width_volatility_threshold: 5.0,
-    sl_mult_trend: 1.5,
-    tp_mult_trend: 3.0,
-    sl_mult_meanrev: 1.5,
-    tp_mult_meanrev: 1.5,
-    sl_mult_macro: 2.0,
-    tp_mult_macro: 2.0,
-    cron_interval_minutes: 3,
-    max_sl_pips: 500,
-    max_tp_pips: 1500,
-    max_holding_hours: 120,
-    trading_mode: "SNIPER",
+    trading_mode: "SCALPING",
     scalping_tp_pips: 15.0,
     scalping_sl_pips: 5.0,
     scalping_max_holding_minutes: 15,
@@ -57,9 +36,8 @@ export default function ThresholdsPage() {
   
   const [visibleCategories, setVisibleCategories] = useState({
     "risk-execution": true,
-    "alpha-model": true,
-    "sltp-multipliers": true,
-    "system-config": true
+    "macro-soft-switch": true,
+    "scalping-limits": true
   });
 
   const [loading, setLoading] = useState(true);
@@ -79,7 +57,7 @@ export default function ThresholdsPage() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const payload = { ...config };
+      const payload = { ...config, trading_mode: "SCALPING" };
       
       for (const key in payload) {
         if (typeof payload[key] === 'string') {
@@ -87,12 +65,6 @@ export default function ThresholdsPage() {
           if (!isNaN(parsed)) {
             payload[key] = parsed;
           }
-        }
-        
-        if (["ml_conf_", "ml_margin_", "meta_conf_"].some(prefix => key.startsWith(prefix))) {
-           if (typeof payload[key] === 'number' && payload[key] > 1.0 && payload[key] <= 100) {
-              payload[key] = payload[key] / 100.0;
-           }
         }
       }
 
@@ -108,21 +80,12 @@ export default function ThresholdsPage() {
       }
       setOriginalConfig({ ...payload });
       setConfig({ ...payload });
-      setToastMsg({ kind: "success", title: "Configuration Saved", subtitle: "System parameters updated successfully!", caption: new Date().toLocaleTimeString() });
+      setToastMsg({ kind: "success", title: "Configuration Saved", subtitle: "M1 Scalping & Macro parameters updated successfully!", caption: new Date().toLocaleTimeString() });
     } catch (err: any) {
       setToastMsg({ kind: "error", title: "Error", subtitle: err.message || "Failed to save configuration.", caption: new Date().toLocaleTimeString() });
     } finally {
       setSaving(false);
     }
-  };
-
-  
-  const parseValue = (val: any) => {
-    if (typeof val === 'string') {
-      const parsed = Number(val.replace(',', '.'));
-      return isNaN(parsed) ? val : parsed;
-    }
-    return Number(val);
   };
 
   const updateConfig = (key: string, value: any) => {
@@ -138,29 +101,20 @@ export default function ThresholdsPage() {
     return keys.some(key => config[key] !== originalConfig[key]);
   };
 
-  const riskKeys = ["auto_execution_enabled", "use_equity_kill_switch", "max_drawdown_equity_pct", "use_daily_kill_switch", "max_daily_drawdown_pct", "risk_control_mode", "risk_per_trade_pct", "max_open_positions", "max_sl_pips", "max_tp_pips", "max_holding_hours"];
-  const alphaKeys = [
-    "ml_conf_trend", "ml_margin_trend",
-    "ml_conf_meanrev", "ml_margin_meanrev",
-    "ml_conf_macro", "ml_margin_macro",
-    "ml_conf_moe", "ml_margin_moe"
-  ];
+  const riskKeys = ["auto_execution_enabled", "use_equity_kill_switch", "max_drawdown_equity_pct", "use_daily_kill_switch", "max_daily_drawdown_pct", "risk_control_mode", "risk_per_trade_pct", "max_open_positions"];
+  const macroKeys = ["scalping_base_confidence", "macro_soft_switch_sensitivity", "macro_refresh_interval_minutes", "macro_news_buffer_minutes", "macro_vix_pause_threshold"];
+  const scalpingKeys = ["engine_active", "scalping_tp_pips", "scalping_sl_pips", "scalping_max_holding_minutes", "scalping_max_trades_per_day", "scalping_max_trades_per_hour", "scalping_max_spread_pips", "scalping_min_atr_pips", "scalping_max_consecutive_losses"];
 
-  const sltpKeys = ["use_ai_sl_tp", "sl_mult_trend", "tp_mult_trend", "sl_mult_meanrev", "tp_mult_meanrev", "sl_mult_macro", "tp_mult_macro"];
-  const systemKeys = ["engine_active", "cron_interval_minutes", "trading_mode", "scalping_tp_pips", "scalping_sl_pips", "scalping_max_holding_minutes", "scalping_max_trades_per_day", "scalping_max_trades_per_hour", "scalping_max_spread_pips", "scalping_min_atr_pips", "scalping_max_consecutive_losses", "scalping_base_confidence", "macro_soft_switch_sensitivity", "macro_refresh_interval_minutes", "macro_news_buffer_minutes", "macro_vix_pause_threshold"];
-
-  if (loading) return <div>Loading configuration...</div>;
+  if (loading) return <div>Loading scalping threshold configuration...</div>;
 
   return (
-    <Grid style={{ position: 'relative' }}>
-      {/* --- FLASH MESSAGE --- */}
+    <div style={{ padding: "2rem" }}>
       {toastMsg && (
         <div style={{ position: "fixed", top: "4rem", right: "2rem", zIndex: 9999 }}>
           <ToastNotification
-            key={Date.now()}
             kind={toastMsg.kind}
             title={toastMsg.title}
-            subtitle={toastMsg.subtitle as any}
+            subtitle={toastMsg.subtitle}
             caption={toastMsg.caption}
             timeout={5000}
             onClose={() => setToastMsg(null)}
@@ -168,333 +122,211 @@ export default function ThresholdsPage() {
         </div>
       )}
 
-      <Column lg={16} md={8} sm={4} className="landing-page__banner">
-        <h3 style={{ marginBottom: "1rem", fontWeight: 400 }}>Thresholds</h3>
-      </Column>
-      
-      <Column lg={12} md={6} sm={4}>
-        {visibleCategories["risk-execution"] && (
-          <Tile id="risk-execution" style={{ marginBottom: ".2rem" }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h4 style={{ margin: 0 }}>Risk & Execution Parameters</h4>
-              <Button size="sm" renderIcon={Save} onClick={handleSave} disabled={saving || !hasChanges(riskKeys)} style={{ border: 'none' }}>
-                {saving ? "Saving..." : "Save"}
-              </Button>
-            </div>
-            <FormGroup legendText="" style={{ marginTop: "1rem" }}>
-              <Toggle 
-                id="auto_exec" 
-                labelText="Auto Trade Master Switch" 
-                labelA="Off" 
-                labelB="On" 
-                toggled={config.auto_execution_enabled}
-                onToggle={(val) => updateConfig("auto_execution_enabled", val)}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem" }}>
+        <div>
+          <h2>⚡ M1 Scalping & Macro Thresholds</h2>
+          <p style={{ color: "#a8a8a8", marginTop: "0.25rem" }}>
+            Configure real-time Soft Switching sensitivity, Macro bias refresh, and M1 micro-scalping risk controls.
+          </p>
+        </div>
+        <Button 
+          renderIcon={Save} 
+          onClick={handleSave} 
+          disabled={saving}
+        >
+          {saving ? "Saving..." : "Save Scalping Config"}
+        </Button>
+      </div>
+
+      <Grid className="dashboard-grid">
+        {/* PANEL 1: RISK & CAPITAL CONTROLS */}
+        <Column sm={4} md={8} lg={16} style={{ marginBottom: "1.5rem" }}>
+          <Tile style={{ borderLeft: hasChanges(riskKeys) ? "4px solid #f1c21b" : "none" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <h4>🛡️ Risk & Capital Controls</h4>
+              <Button 
+                kind="ghost" 
+                hasIconOnly 
+                iconDescription={visibleCategories["risk-execution"] ? "Hide" : "Show"}
+                renderIcon={visibleCategories["risk-execution"] ? ViewOff : View}
+                onClick={() => toggleCategory("risk-execution")}
               />
-              <div style={{marginTop: "1.5rem", display: "flex", gap: "2rem"}}>
-                <div style={{ flex: 1 }}>
-                  <Toggle 
-                    id="use_equity_kill_switch" 
-                    labelText="Halt on Max Drawdown Equity" 
-                    labelA="Off" 
-                    labelB="On" 
+            </div>
+            {visibleCategories["risk-execution"] && (
+              <div style={{ marginTop: "1rem" }}>
+                <div style={{ display: "flex", gap: "2rem", marginBottom: "1rem" }}>
+                  <Toggle
+                    id="auto_execution_enabled"
+                    labelText="Auto Execution Mode"
+                    labelA="Disabled"
+                    labelB="Active"
+                    toggled={config.auto_execution_enabled}
+                    onToggle={(val) => updateConfig("auto_execution_enabled", val)}
+                  />
+                  <Toggle
+                    id="use_equity_kill_switch"
+                    labelText="Max Equity Drawdown Switch"
+                    labelA="Disabled"
+                    labelB="Active"
                     toggled={config.use_equity_kill_switch}
                     onToggle={(val) => updateConfig("use_equity_kill_switch", val)}
                   />
-                  {config.use_equity_kill_switch && (
-                    <div style={{marginTop: "1.5rem"}}>
-                      <NumberInput 
-                        id="max_drawdown_equity" label="Max Drawdown Equity (%)" value={config.max_drawdown_equity_pct} 
-                        min={1} max={100} onChange={(e: any, { value }: any) => updateConfig("max_drawdown_equity_pct", value)}
-                      />
-                    </div>
-                  )}
-                </div>
-                <div style={{ flex: 1 }}>
-                  <Toggle 
-                    id="use_daily_kill_switch" 
-                    labelText="Halt on Daily Drawdown" 
-                    labelA="Off" 
-                    labelB="On" 
+                  <Toggle
+                    id="use_daily_kill_switch"
+                    labelText="Max Daily Drawdown Switch"
+                    labelA="Disabled"
+                    labelB="Active"
                     toggled={config.use_daily_kill_switch}
                     onToggle={(val) => updateConfig("use_daily_kill_switch", val)}
                   />
-                  {config.use_daily_kill_switch && (
-                    <div style={{marginTop: "1.5rem"}}>
-                      <NumberInput 
-                        id="max_daily_drawdown" label="Daily Drawdown Floor (%)" value={config.max_daily_drawdown_pct} 
-                        min={1} max={100} onChange={(e: any, { value }: any) => updateConfig("max_daily_drawdown_pct", value)}
-                      />
-                    </div>
-                  )}
                 </div>
-              </div>
-              <div style={{marginTop: "1.5rem"}}>
-                <FormGroup legendText="Risk Control Mode">
-                  <RadioButtonGroup
-                    name="risk_control_mode"
-                    defaultSelected="manual"
-                    valueSelected={config.risk_control_mode}
-                    onChange={(selection: any) => updateConfig("risk_control_mode", selection)}
-                    orientation="horizontal"
-                  >
-                    <RadioButton value="auto_lowest" id="radio-auto-lowest" labelText="Auto Lowest (0.01 Lot)" />
-                    <RadioButton value="manual" id="radio-manual" labelText="Manual (Fixed %)" />
-                  </RadioButtonGroup>
-                </FormGroup>
-              </div>
-              {config.risk_control_mode !== "auto_lowest" && (
-                <div style={{marginTop: "1rem"}}>
-                  <NumberInput 
-                    id="risk_per_trade" label="Risk Per Trade (%)" value={config.risk_per_trade_pct} 
-                    min={0.1} max={100} step={0.1} onChange={(e: any, { value }: any) => updateConfig("risk_per_trade_pct", value)}
+
+                <div style={{ display: "flex", gap: "2rem", marginTop: "1rem" }}>
+                  <NumberInput
+                    id="max_drawdown_equity_pct"
+                    label="Max Equity DD (%)"
+                    value={config.max_drawdown_equity_pct}
+                    min={1} max={50} step={0.5}
+                    onChange={(e: any, { value }: any) => updateConfig("max_drawdown_equity_pct", value)}
                   />
-                </div>
-              )}
-              <div style={{marginTop: "1rem", display: "flex", gap: "2rem"}}>
-                <div style={{ flex: 1 }}>
-                  <NumberInput 
-                    id="max_positions" label="Max Open Positions" value={config.max_open_positions} 
-                    min={1} max={20} onChange={(e: any, { value }: any) => updateConfig("max_open_positions", value)}
+                  <NumberInput
+                    id="max_daily_drawdown_pct"
+                    label="Max Daily DD (%)"
+                    value={config.max_daily_drawdown_pct}
+                    min={1} max={20} step={0.5}
+                    onChange={(e: any, { value }: any) => updateConfig("max_daily_drawdown_pct", value)}
                   />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <NumberInput 
-                    id="max_holding_hours" label="Max Holding Time (Hours)" value={config.max_holding_hours ?? 120} 
-                    min={1} max={1000} onChange={(e: any, { value }: any) => updateConfig("max_holding_hours", value)}
+                  <NumberInput
+                    id="risk_per_trade_pct"
+                    label="Risk Per Trade (%)"
+                    value={config.risk_per_trade_pct}
+                    min={0.1} max={5.0} step={0.1}
+                    onChange={(e: any, { value }: any) => updateConfig("risk_per_trade_pct", value)}
+                  />
+                  <NumberInput
+                    id="max_open_positions"
+                    label="Max Open Positions"
+                    value={config.max_open_positions}
+                    min={1} max={5}
+                    onChange={(e: any, { value }: any) => updateConfig("max_open_positions", value)}
                   />
                 </div>
               </div>
-              <div style={{marginTop: "1rem", display: "flex", gap: "2rem"}}>
-                <div style={{ flex: 1 }}>
-                  <NumberInput 
-                    id="max_sl_pips" label="Max SL (Pips)" value={config.max_sl_pips ?? 500} 
-                    min={10} max={5000} onChange={(e: any, { value }: any) => updateConfig("max_sl_pips", value)}
-                  />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <NumberInput 
-                    id="max_tp_pips" label="Max TP (Pips)" value={config.max_tp_pips ?? 1500} 
-                    min={10} max={10000} onChange={(e: any, { value }: any) => updateConfig("max_tp_pips", value)}
-                  />
-                </div>
-              </div>
-            </FormGroup>
+            )}
           </Tile>
-        )}
+        </Column>
 
-        {visibleCategories["alpha-model"] && (
-          <Tile id="alpha-model" style={{ marginBottom: ".2rem" }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h4 style={{ margin: 0 }}>Alpha / Signal Model Thresholds</h4>
-              <Button size="sm" renderIcon={Save} onClick={handleSave} disabled={saving || !hasChanges(alphaKeys)} style={{ border: 'none' }}>
-                {saving ? "Saving..." : "Save"}
-              </Button>
-            </div>
-            <Grid style={{ padding: 0, margin: '1rem -1rem 0 -1rem' }}>
-              {/* Trend Expert */}
-              <Column lg={4} md={2} sm={4} style={{ marginBottom: '1rem' }}>
-                <h5 style={{ marginBottom: '0.5rem', color: '#24a148' }}>Trend Expert</h5>
-                <NumberInput id="ml_margin_trend" label="ML Margin (Selisih)" value={config.ml_margin_trend ?? 0.10} min={0.01} max={1.0} step={0.01} onChange={(e: any, { value }: any) => updateConfig("ml_margin_trend", value)} />
-                <div style={{marginTop: "0.5rem"}}>
-                  <NumberInput id="ml_conf_trend" label="ML Confidence (Mutlak)" value={config.ml_conf_trend ?? 0.50} min={0.1} max={1.0} step={0.05} onChange={(e: any, { value }: any) => updateConfig("ml_conf_trend", value)} />
-                </div>
-              </Column>
-              
-              {/* MeanRev Expert */}
-              <Column lg={4} md={2} sm={4} style={{ marginBottom: '1rem' }}>
-                <h5 style={{ marginBottom: '0.5rem', color: '#0f62fe' }}>MeanRev Expert</h5>
-                <NumberInput id="ml_margin_meanrev" label="ML Margin (Selisih)" value={config.ml_margin_meanrev ?? 0.05} min={0.01} max={1.0} step={0.01} onChange={(e: any, { value }: any) => updateConfig("ml_margin_meanrev", value)} />
-                <div style={{marginTop: "0.5rem"}}>
-                  <NumberInput id="ml_conf_meanrev" label="ML Confidence (Mutlak)" value={config.ml_conf_meanrev ?? 0.50} min={0.1} max={1.0} step={0.05} onChange={(e: any, { value }: any) => updateConfig("ml_conf_meanrev", value)} />
-                </div>
-              </Column>
-
-              {/* Macro Expert */}
-              <Column lg={4} md={2} sm={4} style={{ marginBottom: '1rem' }}>
-                <h5 style={{ marginBottom: '0.5rem', color: '#f1c21b' }}>Macro Expert</h5>
-                <NumberInput id="ml_margin_macro" label="ML Margin (Selisih)" value={config.ml_margin_macro ?? 0.05} min={0.01} max={1.0} step={0.01} onChange={(e: any, { value }: any) => updateConfig("ml_margin_macro", value)} />
-                <div style={{marginTop: "0.5rem"}}>
-                  <NumberInput id="ml_conf_macro" label="ML Confidence (Mutlak)" value={config.ml_conf_macro ?? 0.50} min={0.1} max={1.0} step={0.05} onChange={(e: any, { value }: any) => updateConfig("ml_conf_macro", value)} />
-                </div>
-              </Column>
-
-              {/* Global MoE */}
-              <Column lg={4} md={2} sm={4}>
-                <h5 style={{ marginBottom: '0.5rem', color: '#8a3ffc' }}>Global MoE</h5>
-                <NumberInput id="ml_margin_moe" label="ML Margin (Selisih)" value={config.ml_margin_moe ?? 0.02} min={0.01} max={1.0} step={0.01} onChange={(e: any, { value }: any) => updateConfig("ml_margin_moe", value)} />
-                <div style={{marginTop: "0.5rem"}}>
-                  <NumberInput id="ml_conf_moe" label="ML Confidence (Mutlak)" value={config.ml_conf_moe ?? 0.50} min={0.1} max={1.0} step={0.05} onChange={(e: any, { value }: any) => updateConfig("ml_conf_moe", value)} />
-                </div>
-              </Column>
-            </Grid>
-          </Tile>
-        )}
-
-        {visibleCategories["sltp-multipliers"] && (
-          <Tile id="sltp-multipliers" style={{ marginBottom: ".2rem" }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h4 style={{ margin: 0 }}>SL/TP Multipliers</h4>
-              <Button size="sm" renderIcon={Save} onClick={handleSave} disabled={saving || !hasChanges(sltpKeys)} style={{ border: 'none' }}>
-                {saving ? "Saving..." : "Save"}
-              </Button>
-            </div>
-            <div style={{marginBottom: "1.5rem"}}>
-              <Toggle 
-                id="use_ai_sl_tp" 
-                labelText="SL/TP Control Mode" 
-                labelA="Manual Fallback" 
-                labelB="Fully AI Driven" 
-                toggled={config.use_ai_sl_tp}
-                onToggle={(val) => updateConfig("use_ai_sl_tp", val)}
+        {/* PANEL 2: MACRO EVALUATOR & SOFT SWITCHING */}
+        <Column sm={4} md={8} lg={16} style={{ marginBottom: "1.5rem" }}>
+          <Tile style={{ borderLeft: hasChanges(macroKeys) ? "4px solid #f1c21b" : "none" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <h4>🌐 Macro Evaluator & Dynamic Soft Switching</h4>
+              <Button 
+                kind="ghost" 
+                hasIconOnly 
+                iconDescription={visibleCategories["macro-soft-switch"] ? "Hide" : "Show"}
+                renderIcon={visibleCategories["macro-soft-switch"] ? ViewOff : View}
+                onClick={() => toggleCategory("macro-soft-switch")}
               />
             </div>
-            
-                <FormGroup legendText="Trend Expert" style={{ marginTop: "1rem" }}>
-                  <div style={{ display: 'flex', gap: '1rem' }}>
-                    <NumberInput 
-                      id="sl_trend" label="SL Multiplier" value={config.sl_mult_trend} 
-                      min={0.1} max={10.0} step={0.1} onChange={(e: any, { value }: any) => updateConfig("sl_mult_trend", value)}
-                    />
-                    <NumberInput 
-                      id="tp_trend" label="TP Multiplier" value={config.tp_mult_trend} 
-                      min={0.1} max={10.0} step={0.1} onChange={(e: any, { value }: any) => updateConfig("tp_mult_trend", value)}
-                    />
-                  </div>
-                </FormGroup>
-                <FormGroup legendText="MeanRev Expert" style={{ marginTop: "1rem" }}>
-                  <div style={{ display: 'flex', gap: '1rem' }}>
-                    <NumberInput 
-                      id="sl_mr" label="SL Multiplier" value={config.sl_mult_meanrev} 
-                      min={0.1} max={10.0} step={0.1} onChange={(e: any, { value }: any) => updateConfig("sl_mult_meanrev", value)}
-                    />
-                    <NumberInput 
-                      id="tp_mr" label="TP Multiplier" value={config.tp_mult_meanrev} 
-                      min={0.1} max={10.0} step={0.1} onChange={(e: any, { value }: any) => updateConfig("tp_mult_meanrev", value)}
-                    />
-                  </div>
-                </FormGroup>
-                <FormGroup legendText="Macro Expert" style={{ marginTop: "1rem" }}>
-                  <div style={{ display: 'flex', gap: '1rem' }}>
-                    <NumberInput 
-                      id="sl_macro" label="SL Multiplier" value={config.sl_mult_macro} 
-                      min={0.1} max={10.0} step={0.1} onChange={(e: any, { value }: any) => updateConfig("sl_mult_macro", value)}
-                    />
-                    <NumberInput 
-                      id="tp_macro" label="TP Multiplier" value={config.tp_mult_macro} 
-                      min={0.1} max={10.0} step={0.1} onChange={(e: any, { value }: any) => updateConfig("tp_mult_macro", value)}
-                    />
-                  </div>
-                </FormGroup>
-          </Tile>
-        )}
-
-        {visibleCategories["system-config"] && (
-          <Tile id="system-config" style={{ marginBottom: ".2rem" }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h4 style={{ margin: 0 }}>System Engine Config</h4>
-              <Button size="sm" renderIcon={Save} onClick={handleSave} disabled={saving || !hasChanges(systemKeys)} style={{ border: 'none' }}>
-                {saving ? "Saving..." : "Save"}
-              </Button>
-            </div>
-            <FormGroup legendText="" style={{ marginTop: "1rem" }}>
-              <Toggle 
-                id="engine_active" 
-                labelText="Engine Active (Cron Job)" 
-                labelA="Off" 
-                labelB="On" 
-                toggled={config.engine_active}
-                onToggle={(val) => updateConfig("engine_active", val)}
-              />
-              <div style={{marginTop: "2rem"}}>
-                <FormGroup legendText="Trading Mode (Sniper vs Scalping)">
-                  <RadioButtonGroup
-                    name="trading_mode"
-                    defaultSelected="SNIPER"
-                    valueSelected={config.trading_mode}
-                    onChange={(selection: any) => updateConfig("trading_mode", selection)}
-                    orientation="horizontal"
-                  >
-                    <RadioButton value="SNIPER" id="radio-mode-sniper" labelText="Sniper (H1)" />
-                    <RadioButton value="SCALPING" id="radio-mode-scalping" labelText="Scalping (M1)" />
-                  </RadioButtonGroup>
-                </FormGroup>
-              </div>
-
-              {config.trading_mode === "SCALPING" && (
-                <div style={{marginTop: "2rem", padding: "1rem", backgroundColor: "rgba(0,0,0,0.05)", borderRadius: "4px"}}>
-                  <h5 style={{ marginBottom: "1rem" }}>Macro & Soft Switching Parameters</h5>
-                  <div style={{ display: "flex", gap: "2rem", marginBottom: "1rem" }}>
-                    <NumberInput id="scalping_base_confidence" label="Base Confidence" value={config.scalping_base_confidence} min={0.1} max={0.9} step={0.05} onChange={(e: any, { value }: any) => updateConfig("scalping_base_confidence", value)} />
-                    <NumberInput id="macro_soft_switch_sensitivity" label="Soft Switch Sensitivity" value={config.macro_soft_switch_sensitivity} min={0.05} max={0.4} step={0.05} onChange={(e: any, { value }: any) => updateConfig("macro_soft_switch_sensitivity", value)} />
-                  </div>
-                  <div style={{ display: "flex", gap: "2rem", marginBottom: "1.5rem" }}>
-                    <NumberInput id="macro_refresh_interval_minutes" label="Macro Refresh (Mins)" value={config.macro_refresh_interval_minutes} min={1} max={60} onChange={(e: any, { value }: any) => updateConfig("macro_refresh_interval_minutes", value)} />
-                    <NumberInput id="macro_news_buffer_minutes" label="News Buffer (Mins)" value={config.macro_news_buffer_minutes} min={1} max={60} onChange={(e: any, { value }: any) => updateConfig("macro_news_buffer_minutes", value)} />
-                  </div>
-
-                  <h5 style={{ marginBottom: "1rem" }}>Scalping Execution & Target Limits</h5>
-                  <div style={{ display: "flex", gap: "2rem", marginBottom: "1rem" }}>
-                    <NumberInput id="scalping_sl_pips" label="SL (Pips)" value={config.scalping_sl_pips} min={1} max={50} step={0.5} onChange={(e: any, { value }: any) => updateConfig("scalping_sl_pips", value)} />
-                    <NumberInput id="scalping_tp_pips" label="TP (Pips)" value={config.scalping_tp_pips} min={1} max={100} step={0.5} onChange={(e: any, { value }: any) => updateConfig("scalping_tp_pips", value)} />
-                  </div>
-                  <div style={{ display: "flex", gap: "2rem", marginBottom: "1rem" }}>
-                    <NumberInput id="scalping_max_trades_per_hour" label="Max Trades / Hour" value={config.scalping_max_trades_per_hour} min={1} max={100} onChange={(e: any, { value }: any) => updateConfig("scalping_max_trades_per_hour", value)} />
-                    <NumberInput id="scalping_max_trades_per_day" label="Max Trades / Day" value={config.scalping_max_trades_per_day} min={1} max={500} onChange={(e: any, { value }: any) => updateConfig("scalping_max_trades_per_day", value)} />
-                  </div>
-                  <div style={{ display: "flex", gap: "2rem", marginBottom: "1rem" }}>
-                    <NumberInput id="scalping_max_spread_pips" label="Max Spread (Pips)" value={config.scalping_max_spread_pips} min={0.1} max={10.0} step={0.1} onChange={(e: any, { value }: any) => updateConfig("scalping_max_spread_pips", value)} />
-                    <NumberInput id="scalping_min_atr_pips" label="Min ATR (Pips)" value={config.scalping_min_atr_pips} min={0.1} max={10.0} step={0.1} onChange={(e: any, { value }: any) => updateConfig("scalping_min_atr_pips", value)} />
-                  </div>
-                  <div style={{ display: "flex", gap: "2rem" }}>
-                    <NumberInput id="scalping_max_holding_minutes" label="Max Hold (Mins)" value={config.scalping_max_holding_minutes} min={1} max={120} onChange={(e: any, { value }: any) => updateConfig("scalping_max_holding_minutes", value)} />
-                    <NumberInput id="macro_vix_pause_threshold" label="Max VIX Ceiling" value={config.macro_vix_pause_threshold} min={15} max={50} onChange={(e: any, { value }: any) => updateConfig("macro_vix_pause_threshold", value)} />
-                  </div>
+            {visibleCategories["macro-soft-switch"] && (
+              <div style={{ marginTop: "1rem" }}>
+                <p style={{ color: "#8d8d8d", fontSize: "0.85rem", marginBottom: "1rem" }}>
+                  The continuous Soft Switch formula dynamically shifts confidence thresholds: 
+                  <code style={{ color: "#3dd68c" }}> BUY = Base - (MacroWeight × Sensitivity)</code> | 
+                  <code style={{ color: "#ff7b72" }}> SELL = Base + (MacroWeight × Sensitivity)</code>
+                </p>
+                <div style={{ display: "flex", gap: "2rem", marginBottom: "1rem" }}>
+                  <NumberInput
+                    id="scalping_base_confidence"
+                    label="Base Scalper Confidence"
+                    value={config.scalping_base_confidence}
+                    min={0.1} max={0.9} step={0.05}
+                    onChange={(e: any, { value }: any) => updateConfig("scalping_base_confidence", value)}
+                  />
+                  <NumberInput
+                    id="macro_soft_switch_sensitivity"
+                    label="Soft Switch Sensitivity"
+                    value={config.macro_soft_switch_sensitivity}
+                    min={0.05} max={0.4} step={0.05}
+                    onChange={(e: any, { value }: any) => updateConfig("macro_soft_switch_sensitivity", value)}
+                  />
+                  <NumberInput
+                    id="macro_refresh_interval_minutes"
+                    label="Macro Refresh (Mins)"
+                    value={config.macro_refresh_interval_minutes}
+                    min={1} max={60}
+                    onChange={(e: any, { value }: any) => updateConfig("macro_refresh_interval_minutes", value)}
+                  />
                 </div>
-              )}
-
-              <div style={{marginTop: "2rem"}}>
-                <NumberInput 
-                  id="cron_interval" label="Engine Cycle Interval (Minutes)" value={config.cron_interval_minutes} 
-                  min={1} max={60} step={1} onChange={(e: any, { value }: any) => updateConfig("cron_interval_minutes", value)}
-                />
+                <div style={{ display: "flex", gap: "2rem" }}>
+                  <NumberInput
+                    id="macro_news_buffer_minutes"
+                    label="High-Impact News Buffer (Mins)"
+                    value={config.macro_news_buffer_minutes}
+                    min={1} max={60}
+                    onChange={(e: any, { value }: any) => updateConfig("macro_news_buffer_minutes", value)}
+                  />
+                  <NumberInput
+                    id="macro_vix_pause_threshold"
+                    label="Max VIX Volatility Ceiling"
+                    value={config.macro_vix_pause_threshold}
+                    min={15} max={50}
+                    onChange={(e: any, { value }: any) => updateConfig("macro_vix_pause_threshold", value)}
+                  />
+                </div>
               </div>
-            </FormGroup>
+            )}
           </Tile>
-        )}
-      </Column>
+        </Column>
 
-      <Column lg={4} md={2} sm={0}>
-        <div style={{ position: "sticky", top: "5rem" }}>
-          <h4 style={{ marginBottom: "1rem", fontSize: "14px", fontWeight: "bold" }}>Table of Contents</h4>
-          <ul style={{ listStyleType: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: "0.5rem", fontSize: "13px" }}>
-            <li style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <div style={{ cursor: 'pointer', display: 'flex', color: visibleCategories["risk-execution"] ? "#0f62fe" : "#8d8d8d" }} onClick={() => toggleCategory("risk-execution")}>
-                {visibleCategories["risk-execution"] ? <View size={16} /> : <ViewOff size={16} />}
-              </div>
-              <a href="#risk-execution" style={{ textDecoration: "none", color: visibleCategories["risk-execution"] ? "#0f62fe" : "#8d8d8d" }}>Risk & Execution</a>
-            </li>
-            <li style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <div style={{ cursor: 'pointer', display: 'flex', color: visibleCategories["alpha-model"] ? "#0f62fe" : "#8d8d8d" }} onClick={() => toggleCategory("alpha-model")}>
-                {visibleCategories["alpha-model"] ? <View size={16} /> : <ViewOff size={16} />}
-              </div>
-              <a href="#alpha-model" style={{ textDecoration: "none", color: visibleCategories["alpha-model"] ? "#0f62fe" : "#8d8d8d" }}>Alpha / Signal Model</a>
-            </li>
+        {/* PANEL 3: M1 SCALPING EXECUTION & TARGET LIMITS */}
+        <Column sm={4} md={8} lg={16} style={{ marginBottom: "1.5rem" }}>
+          <Tile style={{ borderLeft: hasChanges(scalpingKeys) ? "4px solid #f1c21b" : "none" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <h4>⚡ M1 Scalping Execution & Micro Limits</h4>
+              <Button 
+                kind="ghost" 
+                hasIconOnly 
+                iconDescription={visibleCategories["scalping-limits"] ? "Hide" : "Show"}
+                renderIcon={visibleCategories["scalping-limits"] ? ViewOff : View}
+                onClick={() => toggleCategory("scalping-limits")}
+              />
+            </div>
+            {visibleCategories["scalping-limits"] && (
+              <div style={{ marginTop: "1rem" }}>
+                <div style={{ marginBottom: "1.5rem" }}>
+                  <Toggle
+                    id="engine_active"
+                    labelText="Master Scalping Engine Switch"
+                    labelA="Offline"
+                    labelB="Online"
+                    toggled={config.engine_active}
+                    onToggle={(val) => updateConfig("engine_active", val)}
+                  />
+                </div>
 
-            <li style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <div style={{ cursor: 'pointer', display: 'flex', color: visibleCategories["sltp-multipliers"] ? "#0f62fe" : "#8d8d8d" }} onClick={() => toggleCategory("sltp-multipliers")}>
-                {visibleCategories["sltp-multipliers"] ? <View size={16} /> : <ViewOff size={16} />}
+                <div style={{ display: "flex", gap: "2rem", marginBottom: "1rem" }}>
+                  <NumberInput id="scalping_sl_pips" label="Stop Loss (Pips)" value={config.scalping_sl_pips} min={1} max={50} step={0.5} onChange={(e: any, { value }: any) => updateConfig("scalping_sl_pips", value)} />
+                  <NumberInput id="scalping_tp_pips" label="Take Profit (Pips)" value={config.scalping_tp_pips} min={1} max={100} step={0.5} onChange={(e: any, { value }: any) => updateConfig("scalping_tp_pips", value)} />
+                </div>
+                <div style={{ display: "flex", gap: "2rem", marginBottom: "1rem" }}>
+                  <NumberInput id="scalping_max_trades_per_hour" label="Max Trades / Hour" value={config.scalping_max_trades_per_hour} min={1} max={100} onChange={(e: any, { value }: any) => updateConfig("scalping_max_trades_per_hour", value)} />
+                  <NumberInput id="scalping_max_trades_per_day" label="Max Trades / Day" value={config.scalping_max_trades_per_day} min={1} max={500} onChange={(e: any, { value }: any) => updateConfig("scalping_max_trades_per_day", value)} />
+                </div>
+                <div style={{ display: "flex", gap: "2rem", marginBottom: "1rem" }}>
+                  <NumberInput id="scalping_max_spread_pips" label="Max Spread (Pips)" value={config.scalping_max_spread_pips} min={0.1} max={10.0} step={0.1} onChange={(e: any, { value }: any) => updateConfig("scalping_max_spread_pips", value)} />
+                  <NumberInput id="scalping_min_atr_pips" label="Min Volatility ATR (Pips)" value={config.scalping_min_atr_pips} min={0.1} max={10.0} step={0.1} onChange={(e: any, { value }: any) => updateConfig("scalping_min_atr_pips", value)} />
+                </div>
+                <div style={{ display: "flex", gap: "2rem" }}>
+                  <NumberInput id="scalping_max_holding_minutes" label="Max Position Hold (Mins)" value={config.scalping_max_holding_minutes} min={1} max={120} onChange={(e: any, { value }: any) => updateConfig("scalping_max_holding_minutes", value)} />
+                  <NumberInput id="scalping_max_consecutive_losses" label="Max Consec. Losses" value={config.scalping_max_consecutive_losses} min={1} max={10} onChange={(e: any, { value }: any) => updateConfig("scalping_max_consecutive_losses", value)} />
+                </div>
               </div>
-              <a href="#sltp-multipliers" style={{ textDecoration: "none", color: visibleCategories["sltp-multipliers"] ? "#0f62fe" : "#8d8d8d" }}>SL/TP Multipliers</a>
-            </li>
-            <li style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <div style={{ cursor: 'pointer', display: 'flex', color: visibleCategories["system-config"] ? "#0f62fe" : "#8d8d8d" }} onClick={() => toggleCategory("system-config")}>
-                {visibleCategories["system-config"] ? <View size={16} /> : <ViewOff size={16} />}
-              </div>
-              <a href="#system-config" style={{ textDecoration: "none", color: visibleCategories["system-config"] ? "#0f62fe" : "#8d8d8d" }}>System Engine Config</a>
-            </li>
-          </ul>
-        </div>
-      </Column>
-    </Grid>
+            )}
+          </Tile>
+        </Column>
+      </Grid>
+    </div>
   );
 }

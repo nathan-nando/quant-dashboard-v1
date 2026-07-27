@@ -13,12 +13,8 @@ import { API_BASE_URL } from '@/config/env';
 
 const getRegimeFormat = (regime: string) => {
   if (!regime) return { text: 'UNKNOWN', color: '#f4f4f4' };
-  if (regime === 'SCALPING' || regime === 'SCALPER' || regime === 'scalping' || regime === 'scalper') return { text: '⚡ M1 Scalping LightGBM', color: '#0f62fe' };
-  if (regime === 'MOE_ENSEMBLE' || regime === 'MoE' || regime === 'Ensemble' || regime === 'MOE') return { text: 'MoE Gating Network & Meta', color: '#0f62fe' };
-  if (regime === 'HMM' || regime === 'HMM_REGIME') return { text: 'HMM Regime Detector', color: '#8a3ffc' };
-  if (regime === 'TREND_EXPERT' || regime === 'trend') return { text: 'MoE Trend Expert', color: '#24a148' };
-  if (regime === 'MEANREV_EXPERT' || regime === 'meanrev') return { text: 'MoE MeanRev Expert', color: '#4589ff' };
-  if (regime === 'MACRO_EXPERT' || regime === 'macro') return { text: 'MoE Macro Expert', color: '#f1c21b' };
+  if (regime === 'SCALPER_M1' || regime === 'SCALPING' || regime === 'SCALPER') return { text: '⚡ M1 Scalping LightGBM', color: '#0f62fe' };
+  if (regime === 'MACRO_EVALUATOR' || regime === 'MACRO') return { text: '🌐 Macro Trend Evaluator', color: '#24a148' };
   return { text: regime, color: '#f4f4f4' };
 };
 
@@ -46,11 +42,8 @@ function ModelsContent() {
   const [datasets, setDatasets] = useState<any[]>([]);
   const [initialModelRouting, setInitialModelRouting] = useState<any>(null);
   const [modelRouting, setModelRouting] = useState<any>({
-    MOE_ENSEMBLE: { champion: "NONE", challenger: "NONE" },
-    TREND_EXPERT: { champion: "NONE", challenger: "NONE" },
-    MEANREV_EXPERT: { champion: "NONE", challenger: "NONE" },
-    MACRO_EXPERT: { champion: "NONE", challenger: "NONE" },
-    HMM: { champion: "NONE", challenger: "NONE" }
+    SCALPER_M1: { champion: "scalper_v1.onnx", challenger: "NONE" },
+    MACRO_EVALUATOR: { champion: "macro_evaluator_v1", challenger: "NONE" }
   });
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [savingRouting, setSavingRouting] = useState(false);
