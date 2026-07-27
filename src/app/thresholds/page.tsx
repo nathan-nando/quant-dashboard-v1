@@ -45,7 +45,12 @@ export default function ThresholdsPage() {
     scalping_max_trades_per_hour: 10,
     scalping_max_spread_pips: 3.0,
     scalping_min_atr_pips: 1.0,
-    scalping_max_consecutive_losses: 3
+    scalping_max_consecutive_losses: 3,
+    scalping_base_confidence: 0.50,
+    macro_soft_switch_sensitivity: 0.20,
+    macro_refresh_interval_minutes: 15,
+    macro_news_buffer_minutes: 15,
+    macro_vix_pause_threshold: 25.0
   });
 
   const [originalConfig, setOriginalConfig] = useState<any>(null);
@@ -142,7 +147,7 @@ export default function ThresholdsPage() {
   ];
 
   const sltpKeys = ["use_ai_sl_tp", "sl_mult_trend", "tp_mult_trend", "sl_mult_meanrev", "tp_mult_meanrev", "sl_mult_macro", "tp_mult_macro"];
-  const systemKeys = ["engine_active", "cron_interval_minutes", "trading_mode", "scalping_tp_pips", "scalping_sl_pips", "scalping_max_holding_minutes", "scalping_max_trades_per_day", "scalping_max_trades_per_hour", "scalping_max_spread_pips", "scalping_min_atr_pips", "scalping_max_consecutive_losses"];
+  const systemKeys = ["engine_active", "cron_interval_minutes", "trading_mode", "scalping_tp_pips", "scalping_sl_pips", "scalping_max_holding_minutes", "scalping_max_trades_per_day", "scalping_max_trades_per_hour", "scalping_max_spread_pips", "scalping_min_atr_pips", "scalping_max_consecutive_losses", "scalping_base_confidence", "macro_soft_switch_sensitivity", "macro_refresh_interval_minutes", "macro_news_buffer_minutes", "macro_vix_pause_threshold"];
 
   if (loading) return <div>Loading configuration...</div>;
 
@@ -417,7 +422,17 @@ export default function ThresholdsPage() {
 
               {config.trading_mode === "SCALPING" && (
                 <div style={{marginTop: "2rem", padding: "1rem", backgroundColor: "rgba(0,0,0,0.05)", borderRadius: "4px"}}>
-                  <h5 style={{ marginBottom: "1rem" }}>Scalping Specific Configuration</h5>
+                  <h5 style={{ marginBottom: "1rem" }}>Macro & Soft Switching Parameters</h5>
+                  <div style={{ display: "flex", gap: "2rem", marginBottom: "1rem" }}>
+                    <NumberInput id="scalping_base_confidence" label="Base Confidence" value={config.scalping_base_confidence} min={0.1} max={0.9} step={0.05} onChange={(e: any, { value }: any) => updateConfig("scalping_base_confidence", value)} />
+                    <NumberInput id="macro_soft_switch_sensitivity" label="Soft Switch Sensitivity" value={config.macro_soft_switch_sensitivity} min={0.05} max={0.4} step={0.05} onChange={(e: any, { value }: any) => updateConfig("macro_soft_switch_sensitivity", value)} />
+                  </div>
+                  <div style={{ display: "flex", gap: "2rem", marginBottom: "1.5rem" }}>
+                    <NumberInput id="macro_refresh_interval_minutes" label="Macro Refresh (Mins)" value={config.macro_refresh_interval_minutes} min={1} max={60} onChange={(e: any, { value }: any) => updateConfig("macro_refresh_interval_minutes", value)} />
+                    <NumberInput id="macro_news_buffer_minutes" label="News Buffer (Mins)" value={config.macro_news_buffer_minutes} min={1} max={60} onChange={(e: any, { value }: any) => updateConfig("macro_news_buffer_minutes", value)} />
+                  </div>
+
+                  <h5 style={{ marginBottom: "1rem" }}>Scalping Execution & Target Limits</h5>
                   <div style={{ display: "flex", gap: "2rem", marginBottom: "1rem" }}>
                     <NumberInput id="scalping_sl_pips" label="SL (Pips)" value={config.scalping_sl_pips} min={1} max={50} step={0.5} onChange={(e: any, { value }: any) => updateConfig("scalping_sl_pips", value)} />
                     <NumberInput id="scalping_tp_pips" label="TP (Pips)" value={config.scalping_tp_pips} min={1} max={100} step={0.5} onChange={(e: any, { value }: any) => updateConfig("scalping_tp_pips", value)} />
@@ -432,7 +447,7 @@ export default function ThresholdsPage() {
                   </div>
                   <div style={{ display: "flex", gap: "2rem" }}>
                     <NumberInput id="scalping_max_holding_minutes" label="Max Hold (Mins)" value={config.scalping_max_holding_minutes} min={1} max={120} onChange={(e: any, { value }: any) => updateConfig("scalping_max_holding_minutes", value)} />
-                    <NumberInput id="scalping_max_consecutive_losses" label="Max Consec. Losses" value={config.scalping_max_consecutive_losses} min={1} max={10} onChange={(e: any, { value }: any) => updateConfig("scalping_max_consecutive_losses", value)} />
+                    <NumberInput id="macro_vix_pause_threshold" label="Max VIX Ceiling" value={config.macro_vix_pause_threshold} min={15} max={50} onChange={(e: any, { value }: any) => updateConfig("macro_vix_pause_threshold", value)} />
                   </div>
                 </div>
               )}
