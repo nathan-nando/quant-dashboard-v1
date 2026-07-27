@@ -113,11 +113,8 @@ function ModelsContent() {
       const dsData = await dsRes.json();
       
       const formattedRouting: Record<string, { champion: string; challenger: string }> = {
-        MOE_ENSEMBLE: { champion: "NONE", challenger: "NONE" },
-        TREND_EXPERT: { champion: "NONE", challenger: "NONE" },
-        MEANREV_EXPERT: { champion: "NONE", challenger: "NONE" },
-        MACRO_EXPERT: { champion: "NONE", challenger: "NONE" },
-        HMM: { champion: "NONE", challenger: "NONE" }
+        SCALPER_M1: { champion: "scalper_v1.onnx", challenger: "NONE" },
+        MACRO_EVALUATOR: { champion: "macro_evaluator_v1", challenger: "NONE" }
       };
       for(const k in routeData) {
         if (k in formattedRouting) {
