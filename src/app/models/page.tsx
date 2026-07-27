@@ -558,6 +558,7 @@ function ModelsContent() {
             {currentTab === 'train' && (
               <>
                 <div className="models-train-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '0.2rem', marginBottom: '0.2rem' }}>
+                    {/* Card 1: M1 Scalping Model */}
                     <Tile style={{ padding: '1.5rem', background: 'var(--cds-layer-01, #262626)', borderLeft: '4px solid #0f62fe' }}>
                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -573,6 +574,25 @@ function ModelsContent() {
                        </p>
                        <Button kind="primary" size="sm" renderIcon={Play} onClick={() => openTrainModal("SCALPING")}>
                           Train Scalping Model
+                       </Button>
+                    </Tile>
+
+                    {/* Card 2: Macro & Trend Evaluator */}
+                    <Tile style={{ padding: '1.5rem', background: 'var(--cds-layer-01, #262626)', borderLeft: '4px solid #24a148' }}>
+                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                           <MachineLearningModel size={28} style={{ color: '#24a148' }} />
+                           <div>
+                             <h4 style={{ fontWeight: 600, margin: 0, color: '#f4f4f4' }}>Macro & Trend Evaluator Model</h4>
+                             <p style={{ fontSize: '0.75rem', color: '#a8a8a8', margin: 0, marginTop: '0.25rem' }}>H1/M15 Alignment + DXY Inverse Correlation</p>
+                           </div>
+                         </div>
+                       </div>
+                       <p style={{ fontSize: '0.8rem', color: '#c6c6c6', marginBottom: '1.25rem', lineHeight: '1.4' }}>
+                         Latih ulang atau kalibrasi bobot Macro Evaluator (-1.0 s/d +1.0) untuk memperbarui dinamika ambang batas Soft Switching secara otomatis di Redis.
+                       </p>
+                       <Button kind="secondary" size="sm" renderIcon={Play} onClick={() => openTrainModal("MACRO")}>
+                          Train Macro Evaluator
                        </Button>
                     </Tile>
                 </div>
