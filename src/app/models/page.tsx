@@ -859,8 +859,6 @@ function ModelsContent() {
             </div>
           )}
           
-          <NumberInput id="optuna-trials" label="Optuna Tuning Trials" value={trainForm.optuna_trials} onChange={(e, {value}) => setTrainForm({...trainForm, optuna_trials: Number(value)})} min={1} max={500} style={{ marginBottom: "1rem" }} />
-          
           <RadioButtonGroup
             legendText="Compute Device"
             name="device"
