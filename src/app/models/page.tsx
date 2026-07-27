@@ -330,8 +330,8 @@ function ModelsContent() {
     const techDs = datasets.find(ds => ds.source_type === "technical") || datasets[0];
     const macroDs = datasets.find(ds => ds.source_type === "macro") || datasets.find(ds => ds !== techDs) || datasets[0];
     setTrainForm({ 
-      algorithm: regime === "HMM" ? "Gaussian HMM" : "XGBoost MoE Ensemble", 
-      model_name: "", 
+      algorithm: regime === "MACRO" ? "Macro Weight Evaluator" : "LightGBM Triple Barrier ONNX", 
+      model_name: regime === "MACRO" ? "macro_evaluator_v1" : "scalper_v1", 
       optuna_trials: 50, 
       skip_ingestion: true, 
       dataset_id: techDs ? techDs.id : "", 
@@ -754,6 +754,8 @@ function ModelsContent() {
             <SelectItem value="macro" text="🏛️ Macro Indicators Only (FRED Series)" />
           </Select>
           <Select id="ds-tf" labelText="Timeframe" value={datasetForm.timeframe} onChange={e => setDatasetForm({...datasetForm, timeframe: e.target.value})} style={{ marginBottom: "1rem" }}>
+            <SelectItem value="M1" text="1 Minute (M1 Scalping)" />
+            <SelectItem value="M5" text="5 Minutes (M5 Scalping)" />
             <SelectItem value="M15" text="15 Minutes" />
             <SelectItem value="H1" text="1 Hour" />
             <SelectItem value="H4" text="4 Hours" />
@@ -793,10 +795,14 @@ function ModelsContent() {
       </Modal>
 
       {/* TRAIN SETTINGS MODAL */}
-      <Modal open={isTrainModalOpen} onRequestClose={() => setTrainModalOpen(false)} onRequestSubmit={startTraining} modalHeading={`Train settings for ${trainRegime === 'SCALPING' ? 'M1 Scalping Model' : 'Scalping Model'}`} primaryButtonText="Start Training" secondaryButtonText="Cancel">
+      <Modal open={isTrainModalOpen} onRequestClose={() => setTrainModalOpen(false)} onRequestSubmit={startTraining} modalHeading={`Train settings for ${trainRegime === 'MACRO' ? 'Macro & Trend Evaluator' : 'M1 Scalping Model'}`} primaryButtonText="Start Training" secondaryButtonText="Cancel">
         <FormGroup legendText="">
           <Select id="train-algo" labelText="Algorithm" value={trainForm.algorithm} onChange={e => setTrainForm({...trainForm, algorithm: e.target.value})} style={{ marginBottom: "1rem" }}>
-             <SelectItem value="LightGBM Triple Barrier" text="LightGBM Triple Barrier ONNX" />
+             {trainRegime === "MACRO" ? (
+               <SelectItem value="Macro Weight Evaluator" text="Macro Weight Evaluator (H1/M15 + DXY Alignment)" />
+             ) : (
+               <SelectItem value="LightGBM Triple Barrier ONNX" text="LightGBM Triple Barrier ONNX" />
+             )}
           </Select>
           <TextInput id="model-name-train" labelText="Custom Model Name (Optional)" placeholder="e.g. xgboost_bull_v2" value={trainForm.model_name} onChange={e => setTrainForm({...trainForm, model_name: e.target.value})} style={{ marginBottom: "1rem" }} />
           
