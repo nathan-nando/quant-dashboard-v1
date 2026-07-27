@@ -36,7 +36,16 @@ export default function ThresholdsPage() {
     cron_interval_minutes: 3,
     max_sl_pips: 500,
     max_tp_pips: 1500,
-    max_holding_hours: 120
+    max_holding_hours: 120,
+    trading_mode: "SNIPER",
+    scalping_tp_pips: 15.0,
+    scalping_sl_pips: 5.0,
+    scalping_max_holding_minutes: 15,
+    scalping_max_trades_per_day: 80,
+    scalping_max_trades_per_hour: 10,
+    scalping_max_spread_pips: 3.0,
+    scalping_min_atr_pips: 1.0,
+    scalping_max_consecutive_losses: 3
   });
 
   const [originalConfig, setOriginalConfig] = useState<any>(null);
@@ -133,7 +142,7 @@ export default function ThresholdsPage() {
   ];
 
   const sltpKeys = ["use_ai_sl_tp", "sl_mult_trend", "tp_mult_trend", "sl_mult_meanrev", "tp_mult_meanrev", "sl_mult_macro", "tp_mult_macro"];
-  const systemKeys = ["engine_active", "cron_interval_minutes"];
+  const systemKeys = ["engine_active", "cron_interval_minutes", "trading_mode", "scalping_tp_pips", "scalping_sl_pips", "scalping_max_holding_minutes", "scalping_max_trades_per_day", "scalping_max_trades_per_hour", "scalping_max_spread_pips", "scalping_min_atr_pips", "scalping_max_consecutive_losses"];
 
   if (loading) return <div>Loading configuration...</div>;
 
@@ -391,6 +400,43 @@ export default function ThresholdsPage() {
                 toggled={config.engine_active}
                 onToggle={(val) => updateConfig("engine_active", val)}
               />
+              <div style={{marginTop: "2rem"}}>
+                <FormGroup legendText="Trading Mode (Sniper vs Scalping)">
+                  <RadioButtonGroup
+                    name="trading_mode"
+                    defaultSelected="SNIPER"
+                    valueSelected={config.trading_mode}
+                    onChange={(selection: any) => updateConfig("trading_mode", selection)}
+                    orientation="horizontal"
+                  >
+                    <RadioButton value="SNIPER" id="radio-mode-sniper" labelText="Sniper (H1)" />
+                    <RadioButton value="SCALPING" id="radio-mode-scalping" labelText="Scalping (M1)" />
+                  </RadioButtonGroup>
+                </FormGroup>
+              </div>
+
+              {config.trading_mode === "SCALPING" && (
+                <div style={{marginTop: "2rem", padding: "1rem", backgroundColor: "rgba(0,0,0,0.05)", borderRadius: "4px"}}>
+                  <h5 style={{ marginBottom: "1rem" }}>Scalping Specific Configuration</h5>
+                  <div style={{ display: "flex", gap: "2rem", marginBottom: "1rem" }}>
+                    <NumberInput id="scalping_sl_pips" label="SL (Pips)" value={config.scalping_sl_pips} min={1} max={50} step={0.5} onChange={(e: any, { value }: any) => updateConfig("scalping_sl_pips", value)} />
+                    <NumberInput id="scalping_tp_pips" label="TP (Pips)" value={config.scalping_tp_pips} min={1} max={100} step={0.5} onChange={(e: any, { value }: any) => updateConfig("scalping_tp_pips", value)} />
+                  </div>
+                  <div style={{ display: "flex", gap: "2rem", marginBottom: "1rem" }}>
+                    <NumberInput id="scalping_max_trades_per_hour" label="Max Trades / Hour" value={config.scalping_max_trades_per_hour} min={1} max={100} onChange={(e: any, { value }: any) => updateConfig("scalping_max_trades_per_hour", value)} />
+                    <NumberInput id="scalping_max_trades_per_day" label="Max Trades / Day" value={config.scalping_max_trades_per_day} min={1} max={500} onChange={(e: any, { value }: any) => updateConfig("scalping_max_trades_per_day", value)} />
+                  </div>
+                  <div style={{ display: "flex", gap: "2rem", marginBottom: "1rem" }}>
+                    <NumberInput id="scalping_max_spread_pips" label="Max Spread (Pips)" value={config.scalping_max_spread_pips} min={0.1} max={10.0} step={0.1} onChange={(e: any, { value }: any) => updateConfig("scalping_max_spread_pips", value)} />
+                    <NumberInput id="scalping_min_atr_pips" label="Min ATR (Pips)" value={config.scalping_min_atr_pips} min={0.1} max={10.0} step={0.1} onChange={(e: any, { value }: any) => updateConfig("scalping_min_atr_pips", value)} />
+                  </div>
+                  <div style={{ display: "flex", gap: "2rem" }}>
+                    <NumberInput id="scalping_max_holding_minutes" label="Max Hold (Mins)" value={config.scalping_max_holding_minutes} min={1} max={120} onChange={(e: any, { value }: any) => updateConfig("scalping_max_holding_minutes", value)} />
+                    <NumberInput id="scalping_max_consecutive_losses" label="Max Consec. Losses" value={config.scalping_max_consecutive_losses} min={1} max={10} onChange={(e: any, { value }: any) => updateConfig("scalping_max_consecutive_losses", value)} />
+                  </div>
+                </div>
+              )}
+
               <div style={{marginTop: "2rem"}}>
                 <NumberInput 
                   id="cron_interval" label="Engine Cycle Interval (Minutes)" value={config.cron_interval_minutes} 
