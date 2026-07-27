@@ -48,8 +48,12 @@ export default function ThresholdsPage() {
     fetch(`${API_BASE_URL}/configurations/thresholds`)
       .then(res => res.json())
       .then(data => {
-        setConfig(data);
-        setOriginalConfig(data);
+        setConfig((prev: any) => ({ ...prev, ...data }));
+        setOriginalConfig((prev: any) => ({ ...prev, ...data }));
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error("Failed to fetch thresholds:", err);
         setLoading(false);
       });
   }, []);
@@ -80,7 +84,7 @@ export default function ThresholdsPage() {
       }
       setOriginalConfig({ ...payload });
       setConfig({ ...payload });
-      setToastMsg({ kind: "success", title: "Configuration Saved", subtitle: "M1 Scalping & Macro parameters updated successfully!", caption: new Date().toLocaleTimeString() });
+      setToastMsg({ kind: "success", title: "Configuration Saved", subtitle: "Scalping parameters updated successfully!", caption: new Date().toLocaleTimeString() });
     } catch (err: any) {
       setToastMsg({ kind: "error", title: "Error", subtitle: err.message || "Failed to save configuration.", caption: new Date().toLocaleTimeString() });
     } finally {
@@ -105,10 +109,10 @@ export default function ThresholdsPage() {
   const macroKeys = ["scalping_base_confidence", "macro_soft_switch_sensitivity", "macro_refresh_interval_minutes", "macro_news_buffer_minutes", "macro_vix_pause_threshold"];
   const scalpingKeys = ["engine_active", "scalping_tp_pips", "scalping_sl_pips", "scalping_max_holding_minutes", "scalping_max_trades_per_day", "scalping_max_trades_per_hour", "scalping_max_spread_pips", "scalping_min_atr_pips", "scalping_max_consecutive_losses"];
 
-  if (loading) return <div>Loading scalping threshold configuration...</div>;
+  if (loading) return <div>Loading threshold configuration...</div>;
 
   return (
-    <div style={{ padding: "2rem" }}>
+    <div style={{ padding: "1rem" }}>
       {toastMsg && (
         <div style={{ position: "fixed", top: "4rem", right: "2rem", zIndex: 9999 }}>
           <ToastNotification
@@ -122,39 +126,34 @@ export default function ThresholdsPage() {
         </div>
       )}
 
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem" }}>
-        <div>
-          <h2>⚡ M1 Scalping & Macro Thresholds</h2>
-          <p style={{ color: "#a8a8a8", marginTop: "0.25rem" }}>
-            Configure real-time Soft Switching sensitivity, Macro bias refresh, and M1 micro-scalping risk controls.
-          </p>
-        </div>
-        <Button 
-          renderIcon={Save} 
-          onClick={handleSave} 
-          disabled={saving}
-        >
-          {saving ? "Saving..." : "Save Scalping Config"}
-        </Button>
-      </div>
+      {/* CLEAN COMPACT HEADER MATCHING OTHER PAGES */}
+      <Grid fullWidth style={{ padding: 0, marginBottom: "0.2rem" }}>
+        <Column lg={16} md={8} sm={4} className="landing-page__banner" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h3 style={{ fontWeight: 400 }}>Scalping Thresholds Configuration</h3>
+          <Button renderIcon={Save} onClick={handleSave} disabled={saving} size="sm">
+            {saving ? "Saving..." : "Save Configuration"}
+          </Button>
+        </Column>
+      </Grid>
 
-      <Grid className="dashboard-grid">
+      <Grid className="dashboard-grid" style={{ padding: 0 }}>
         {/* PANEL 1: RISK & CAPITAL CONTROLS */}
-        <Column sm={4} md={8} lg={16} style={{ marginBottom: "1.5rem" }}>
-          <Tile style={{ borderLeft: hasChanges(riskKeys) ? "4px solid #f1c21b" : "none" }}>
+        <Column sm={4} md={8} lg={16} style={{ marginBottom: "0.1rem" }}>
+          <Tile style={{ borderLeft: hasChanges(riskKeys) ? "4px solid #f1c21b" : "none", padding: "1.25rem" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <h4>🛡️ Risk & Capital Controls</h4>
+              <h5 style={{ fontWeight: 600, color: "#f4f4f4" }}>🛡️ Risk & Capital Controls</h5>
               <Button 
                 kind="ghost" 
                 hasIconOnly 
+                size="sm"
                 iconDescription={visibleCategories["risk-execution"] ? "Hide" : "Show"}
                 renderIcon={visibleCategories["risk-execution"] ? ViewOff : View}
                 onClick={() => toggleCategory("risk-execution")}
               />
             </div>
             {visibleCategories["risk-execution"] && (
-              <div style={{ marginTop: "1rem" }}>
-                <div style={{ display: "flex", gap: "2rem", marginBottom: "1rem" }}>
+              <div style={{ marginTop: "0.75rem" }}>
+                <div style={{ display: "flex", gap: "2rem", marginBottom: "0.75rem" }}>
                   <Toggle
                     id="auto_execution_enabled"
                     labelText="Auto Execution Mode"
@@ -181,7 +180,7 @@ export default function ThresholdsPage() {
                   />
                 </div>
 
-                <div style={{ display: "flex", gap: "2rem", marginTop: "1rem" }}>
+                <div style={{ display: "flex", gap: "1.5rem" }}>
                   <NumberInput
                     id="max_drawdown_equity_pct"
                     label="Max Equity DD (%)"
@@ -217,26 +216,22 @@ export default function ThresholdsPage() {
         </Column>
 
         {/* PANEL 2: MACRO EVALUATOR & SOFT SWITCHING */}
-        <Column sm={4} md={8} lg={16} style={{ marginBottom: "1.5rem" }}>
-          <Tile style={{ borderLeft: hasChanges(macroKeys) ? "4px solid #f1c21b" : "none" }}>
+        <Column sm={4} md={8} lg={16} style={{ marginBottom: "0.1rem" }}>
+          <Tile style={{ borderLeft: hasChanges(macroKeys) ? "4px solid #f1c21b" : "none", padding: "1.25rem" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <h4>🌐 Macro Evaluator & Dynamic Soft Switching</h4>
+              <h5 style={{ fontWeight: 600, color: "#f4f4f4" }}>🌐 Macro Evaluator & Dynamic Soft Switching</h5>
               <Button 
                 kind="ghost" 
                 hasIconOnly 
+                size="sm"
                 iconDescription={visibleCategories["macro-soft-switch"] ? "Hide" : "Show"}
                 renderIcon={visibleCategories["macro-soft-switch"] ? ViewOff : View}
                 onClick={() => toggleCategory("macro-soft-switch")}
               />
             </div>
             {visibleCategories["macro-soft-switch"] && (
-              <div style={{ marginTop: "1rem" }}>
-                <p style={{ color: "#8d8d8d", fontSize: "0.85rem", marginBottom: "1rem" }}>
-                  The continuous Soft Switch formula dynamically shifts confidence thresholds: 
-                  <code style={{ color: "#3dd68c" }}> BUY = Base - (MacroWeight × Sensitivity)</code> | 
-                  <code style={{ color: "#ff7b72" }}> SELL = Base + (MacroWeight × Sensitivity)</code>
-                </p>
-                <div style={{ display: "flex", gap: "2rem", marginBottom: "1rem" }}>
+              <div style={{ marginTop: "0.75rem" }}>
+                <div style={{ display: "flex", gap: "1.5rem", marginBottom: "0.75rem" }}>
                   <NumberInput
                     id="scalping_base_confidence"
                     label="Base Scalper Confidence"
@@ -259,7 +254,7 @@ export default function ThresholdsPage() {
                     onChange={(e: any, { value }: any) => updateConfig("macro_refresh_interval_minutes", value)}
                   />
                 </div>
-                <div style={{ display: "flex", gap: "2rem" }}>
+                <div style={{ display: "flex", gap: "1.5rem" }}>
                   <NumberInput
                     id="macro_news_buffer_minutes"
                     label="High-Impact News Buffer (Mins)"
@@ -281,21 +276,22 @@ export default function ThresholdsPage() {
         </Column>
 
         {/* PANEL 3: M1 SCALPING EXECUTION & TARGET LIMITS */}
-        <Column sm={4} md={8} lg={16} style={{ marginBottom: "1.5rem" }}>
-          <Tile style={{ borderLeft: hasChanges(scalpingKeys) ? "4px solid #f1c21b" : "none" }}>
+        <Column sm={4} md={8} lg={16} style={{ marginBottom: "0.1rem" }}>
+          <Tile style={{ borderLeft: hasChanges(scalpingKeys) ? "4px solid #f1c21b" : "none", padding: "1.25rem" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <h4>⚡ M1 Scalping Execution & Micro Limits</h4>
+              <h5 style={{ fontWeight: 600, color: "#f4f4f4" }}>⚡ M1 Scalping Execution & Micro Limits</h5>
               <Button 
                 kind="ghost" 
                 hasIconOnly 
+                size="sm"
                 iconDescription={visibleCategories["scalping-limits"] ? "Hide" : "Show"}
                 renderIcon={visibleCategories["scalping-limits"] ? ViewOff : View}
                 onClick={() => toggleCategory("scalping-limits")}
               />
             </div>
             {visibleCategories["scalping-limits"] && (
-              <div style={{ marginTop: "1rem" }}>
-                <div style={{ marginBottom: "1.5rem" }}>
+              <div style={{ marginTop: "0.75rem" }}>
+                <div style={{ marginBottom: "1rem" }}>
                   <Toggle
                     id="engine_active"
                     labelText="Master Scalping Engine Switch"
@@ -306,19 +302,15 @@ export default function ThresholdsPage() {
                   />
                 </div>
 
-                <div style={{ display: "flex", gap: "2rem", marginBottom: "1rem" }}>
+                <div style={{ display: "flex", gap: "1.5rem", marginBottom: "0.75rem" }}>
                   <NumberInput id="scalping_sl_pips" label="Stop Loss (Pips)" value={config.scalping_sl_pips} min={1} max={50} step={0.5} onChange={(e: any, { value }: any) => updateConfig("scalping_sl_pips", value)} />
                   <NumberInput id="scalping_tp_pips" label="Take Profit (Pips)" value={config.scalping_tp_pips} min={1} max={100} step={0.5} onChange={(e: any, { value }: any) => updateConfig("scalping_tp_pips", value)} />
-                </div>
-                <div style={{ display: "flex", gap: "2rem", marginBottom: "1rem" }}>
                   <NumberInput id="scalping_max_trades_per_hour" label="Max Trades / Hour" value={config.scalping_max_trades_per_hour} min={1} max={100} onChange={(e: any, { value }: any) => updateConfig("scalping_max_trades_per_hour", value)} />
                   <NumberInput id="scalping_max_trades_per_day" label="Max Trades / Day" value={config.scalping_max_trades_per_day} min={1} max={500} onChange={(e: any, { value }: any) => updateConfig("scalping_max_trades_per_day", value)} />
                 </div>
-                <div style={{ display: "flex", gap: "2rem", marginBottom: "1rem" }}>
+                <div style={{ display: "flex", gap: "1.5rem" }}>
                   <NumberInput id="scalping_max_spread_pips" label="Max Spread (Pips)" value={config.scalping_max_spread_pips} min={0.1} max={10.0} step={0.1} onChange={(e: any, { value }: any) => updateConfig("scalping_max_spread_pips", value)} />
                   <NumberInput id="scalping_min_atr_pips" label="Min Volatility ATR (Pips)" value={config.scalping_min_atr_pips} min={0.1} max={10.0} step={0.1} onChange={(e: any, { value }: any) => updateConfig("scalping_min_atr_pips", value)} />
-                </div>
-                <div style={{ display: "flex", gap: "2rem" }}>
                   <NumberInput id="scalping_max_holding_minutes" label="Max Position Hold (Mins)" value={config.scalping_max_holding_minutes} min={1} max={120} onChange={(e: any, { value }: any) => updateConfig("scalping_max_holding_minutes", value)} />
                   <NumberInput id="scalping_max_consecutive_losses" label="Max Consec. Losses" value={config.scalping_max_consecutive_losses} min={1} max={10} onChange={(e: any, { value }: any) => updateConfig("scalping_max_consecutive_losses", value)} />
                 </div>

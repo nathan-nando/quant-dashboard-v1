@@ -623,23 +623,16 @@ function ModelsContent() {
                     const champ = currentConfig.champion || "NONE";
                     const chall = currentConfig.challenger || "NONE";
                     
-                    // Filter models based on the routing panel key keyword
+                    // Filter models based on scalper vs macro routing key
                     const filteredModels = models.filter((m: any) => {
-                      // Always include the currently active routing choices to prevent breaking selects
                       if (m.name === champ || m.name === chall) return true;
                       
                       const k = key.toLowerCase();
                       let keyword = '';
-                      if (k.includes('gating') || k.includes('ensemble')) {
-                        keyword = 'ensemble';
-                      } else if (k.includes('trend')) {
-                        keyword = 'trend';
-                      } else if (k.includes('meanrev')) {
-                        keyword = 'meanrev';
+                      if (k.includes('scalper')) {
+                        keyword = 'scalper';
                       } else if (k.includes('macro')) {
                         keyword = 'macro';
-                      } else if (k.includes('hmm')) {
-                        keyword = 'hmm';
                       }
                       
                       if (!keyword) return true;
