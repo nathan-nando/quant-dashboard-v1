@@ -279,7 +279,7 @@ export default function ThresholdsPage() {
         <Column sm={4} md={8} lg={16} style={{ marginBottom: "0.1rem" }}>
           <Tile style={{ borderLeft: hasChanges(scalpingKeys) ? "4px solid #f1c21b" : "none", padding: "1.25rem" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <h5 style={{ fontWeight: 600, color: "#f4f4f4" }}>⚡ M1 Scalping Execution & Micro Limits</h5>
+              <h5 style={{ fontWeight: 600, color: "#f4f4f4" }}>⚡ M5 Scalping Execution & Micro Limits</h5>
               <Button 
                 kind="ghost" 
                 hasIconOnly 

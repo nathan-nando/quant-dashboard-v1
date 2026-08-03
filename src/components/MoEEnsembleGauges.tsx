@@ -31,7 +31,7 @@ const ValueGauge: React.FC<GaugeProps> = ({ value, label, sublabel, color = "#0f
 export default function MoEEnsembleGauges() {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center', width: '100%', height: '100%', padding: '0.35rem 0' }}>
-      <ValueGauge value="LightGBM ONNX" label="Engine Model" sublabel="M1 Triple Barrier" color="#0f62fe" icon={MachineLearningModel} />
+      <ValueGauge value="LightGBM ONNX" label="Engine Model" sublabel="M5 Triple Barrier" color="#0f62fe" icon={MachineLearningModel} />
       <ValueGauge value="Soft Switch" label="Macro Gating" sublabel="Continuous Dynamic" color="#24a148" icon={Lightning} />
       <ValueGauge value="Active" label="Risk Shield" sublabel="Max 3.0 Spread" color="#8a3ffc" icon={Security} />
     </div>

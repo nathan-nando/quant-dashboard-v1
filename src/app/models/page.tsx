@@ -42,7 +42,7 @@ function ModelsContent() {
   const [datasets, setDatasets] = useState<any[]>([]);
   const [initialModelRouting, setInitialModelRouting] = useState<any>(null);
   const [modelRouting, setModelRouting] = useState<any>({
-    SCALPER_M1: { champion: "scalper_v1.onnx", challenger: "NONE" },
+    SCALPER_M5: { champion: "scalper_m5_v1.onnx", challenger: "NONE" },
     MACRO_EVALUATOR: { champion: "macro_evaluator_v1", challenger: "NONE" }
   });
   const [isLoadingData, setIsLoadingData] = useState(true);
@@ -113,7 +113,7 @@ function ModelsContent() {
       const dsData = await dsRes.json();
       
       const formattedRouting: Record<string, { champion: string; challenger: string }> = {
-        SCALPER_M1: { champion: "scalper_v1.onnx", challenger: "NONE" },
+        SCALPER_M5: { champion: "scalper_m5_v1.onnx", challenger: "NONE" },
         MACRO_EVALUATOR: { champion: "macro_evaluator_v1", challenger: "NONE" }
       };
       for(const k in routeData) {
@@ -331,7 +331,7 @@ function ModelsContent() {
     const macroDs = datasets.find(ds => ds.source_type === "macro") || datasets.find(ds => ds !== techDs) || datasets[0];
     setTrainForm({ 
       algorithm: regime === "MACRO" ? "Macro Weight Evaluator" : "LightGBM Triple Barrier ONNX", 
-      model_name: regime === "MACRO" ? "macro_evaluator_v1" : "scalper_v1", 
+      model_name: regime === "MACRO" ? "macro_evaluator_v1" : "scalper_m5_v1", 
       optuna_trials: 50, 
       skip_ingestion: true, 
       dataset_id: techDs ? techDs.id : "", 
@@ -558,19 +558,19 @@ function ModelsContent() {
             {currentTab === 'train' && (
               <>
                 <div className="models-train-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '0.2rem', marginBottom: '0.2rem' }}>
-                    {/* Card 1: M1 Scalping Model */}
+                    {/* Card 1: M5 Scalping Model */}
                     <Tile style={{ padding: '1.5rem', background: 'var(--cds-layer-01, #262626)', borderLeft: '4px solid #0f62fe' }}>
                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                            <MachineLearningModel size={28} style={{ color: '#0f62fe' }} />
                            <div>
-                             <h4 style={{ fontWeight: 600, margin: 0, color: '#f4f4f4' }}>M1 Scalping Model (Triple Barrier)</h4>
+                             <h4 style={{ fontWeight: 600, margin: 0, color: '#f4f4f4' }}>M5 Scalping Model (Triple Barrier)</h4>
                              <p style={{ fontSize: '0.75rem', color: '#a8a8a8', margin: 0, marginTop: '0.25rem' }}>LightGBM Classifier + ONNX Export</p>
                            </div>
                          </div>
                        </div>
                        <p style={{ fontSize: '0.8rem', color: '#c6c6c6', marginBottom: '1.25rem', lineHeight: '1.4' }}>
-                         Latih ulang model M1 Scalping berbasis Triple Barrier Method (Profit Take, Stop Loss, & Holding Time limits) untuk deteksi sinyal mikro berkecepatan tinggi.
+                         Latih ulang model M5 Scalping berbasis Triple Barrier Method (Profit Take, Stop Loss, & Holding Time limits) untuk deteksi sinyal mikro berkecepatan tinggi.
                        </p>
                        <Button kind="primary" size="sm" renderIcon={Play} onClick={() => openTrainModal("SCALPING")}>
                           Train Scalping Model
@@ -795,7 +795,7 @@ function ModelsContent() {
       </Modal>
 
       {/* TRAIN SETTINGS MODAL */}
-      <Modal open={isTrainModalOpen} onRequestClose={() => setTrainModalOpen(false)} onRequestSubmit={startTraining} modalHeading={`Train settings for ${trainRegime === 'MACRO' ? 'Macro & Trend Evaluator' : 'M1 Scalping Model'}`} primaryButtonText="Start Training" secondaryButtonText="Cancel">
+      <Modal open={isTrainModalOpen} onRequestClose={() => setTrainModalOpen(false)} onRequestSubmit={startTraining} modalHeading={`Train settings for ${trainRegime === 'MACRO' ? 'Macro & Trend Evaluator' : 'M5 Scalping Model'}`} primaryButtonText="Start Training" secondaryButtonText="Cancel">
         <FormGroup legendText="">
           <Select id="train-algo" labelText="Algorithm" value={trainForm.algorithm} onChange={e => setTrainForm({...trainForm, algorithm: e.target.value})} style={{ marginBottom: "1rem" }}>
              {trainRegime === "MACRO" ? (
