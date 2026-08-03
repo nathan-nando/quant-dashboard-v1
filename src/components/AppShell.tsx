@@ -236,8 +236,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 >
                   QuantV1
                 </HeaderName>
-                <div className="show-on-mobile-flex">
+                <div className="show-on-mobile-flex" style={{ display: 'flex', alignItems: 'center', flex: 1, justifyContent: 'space-between', paddingRight: '0.5rem' }}>
                   <MobileAccountBadge />
+                  <div style={{ marginLeft: 'auto', flexShrink: 0 }}>
+                    <HeaderMetrics idPrefix="mobile-" />
+                  </div>
                 </div>
                 {/* Group 1 — starts flush after brand, aligns with page content */}
                 <HeaderNavigation aria-label="Main" style={{ border: 'none' }} className="desktop-nav">
@@ -254,7 +257,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                     </div>
                     <HeaderAccountBadge />
                   </div>
-                  <HeaderMetrics />
+                  <HeaderMetrics idPrefix="desktop-" />
                 </div>
 
                 {/* Group 2 — sits just before the global action icons */}

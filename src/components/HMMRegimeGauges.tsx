@@ -1,31 +1,79 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { ChartLine, Lightning, Scale, Warning } from '@carbon/icons-react';
+import { ChartLine, Lightning, Scale } from '@carbon/icons-react';
 import { API_BASE_URL } from '@/config/env';
 import { useGlobalState } from '@/contexts/GlobalStateContext';
 
-interface GaugeProps {
-  value: string | number;
+interface RadialGaugeProps {
+  pct: number; // 0 to 100
   label: string;
+  valueStr: string;
+  color: string;
   sublabel?: string;
-  color?: string;
   icon?: React.ComponentType<any>;
+  isHighlighted?: boolean;
 }
 
-const ValueGauge: React.FC<GaugeProps> = ({ value, label, sublabel, color = "#0f62fe", icon: Icon }) => {
+const RadialGauge: React.FC<RadialGaugeProps> = ({ pct, label, valueStr, color, sublabel, icon: Icon, isHighlighted }) => {
+  const r = 22;
+  const stroke = 4.5;
+  const circ = 2 * Math.PI * r;
+  const clampedPct = Math.max(0, Math.min(100, pct));
+  const strokeDashoffset = circ - (clampedPct / 100) * circ;
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, minWidth: 0, padding: '0.2rem' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '0.2rem' }}>
-        {Icon && <Icon size={14} color={color} />}
-        <span style={{ fontSize: '0.7rem', color: '#a8a8a8', fontWeight: 500 }}>{label}</span>
+    <div style={{ 
+      flex: 1, 
+      display: 'flex', 
+      flexDirection: 'column', 
+      alignItems: 'center', 
+      justifyContent: 'center',
+      background: 'transparent',
+      padding: '0.4rem 0.2rem',
+      height: '100%',
+      transition: 'all 0.4s ease'
+    }}>
+      {/* Gauge Ring */}
+      <div style={{ position: 'relative', width: 52, height: 52, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <svg width="52" height="52" style={{ transform: 'rotate(-90deg)' }}>
+          {/* Background Track Ring */}
+          <circle cx="26" cy="26" r={r} fill="none" stroke="#262626" strokeWidth={stroke} />
+          {/* Active Colored Ring */}
+          <circle
+            cx="26"
+            cy="26"
+            r={r}
+            fill="none"
+            stroke={color}
+            strokeWidth={stroke}
+            strokeDasharray={circ}
+            strokeDashoffset={strokeDashoffset}
+            strokeLinecap="round"
+            style={{ transition: 'stroke-dashoffset 0.6s ease-out, stroke 0.4s ease' }}
+          />
+        </svg>
+        {/* Center Text or Icon */}
+        <div style={{ position: 'absolute', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+          {Icon ? (
+            <Icon size={18} color={color} />
+          ) : (
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#f4f4f4' }}>
+              {valueStr}
+            </span>
+          )}
+        </div>
       </div>
-      <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#ffffff' }}>
-        {value}
+
+      {/* Label */}
+      <div style={{ fontSize: '0.68rem', fontWeight: 600, color: '#f4f4f4', marginTop: '0.25rem', textAlign: 'center', whiteSpace: 'nowrap' }}>
+        {label}
       </div>
-      {sublabel && (
-        <span style={{ fontSize: '0.65rem', color: color, marginTop: '0.15rem' }}>{sublabel}</span>
-      )}
+
+      {/* Sublabel */}
+      <div style={{ fontSize: '0.62rem', color: color, fontWeight: 500, textAlign: 'center', marginTop: '0.1rem' }}>
+        {sublabel || valueStr}
+      </div>
     </div>
   );
 };
@@ -53,12 +101,61 @@ export default function HMMRegimeGauges() {
     return "#f1c21b";
   };
 
+  const biasColor = getBiasColor(bias);
+  const isBearish = weight < -0.10;
+  const isBullish = weight > 0.10;
+  
+  const weightColor = isBullish ? "#24a148" : (isBearish ? "#da1e28" : "#f1c21b");
+  const weightPct = Math.abs(weight) * 100; // Ring fills according to absolute strength 0-100%
+
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center', width: '100%', height: '100%', padding: '0.35rem 0' }}>
-      <ValueGauge value={bias.split(" ")[0]} label="Macro Bias" sublabel={bias.split(" ")[1] || ""} color={getBiasColor(bias)} icon={Lightning} />
-      <ValueGauge value={`${(weight * 100).toFixed(0)}%`} label="Macro Weight" sublabel={weight >= 0 ? "Bullish Alignment" : "Bearish Alignment"} color={weight >= 0 ? "#24a148" : "#da1e28"} icon={ChartLine} />
-      <ValueGauge value={buyThresh} label="BUY Thresh" sublabel="Soft Switched" color="#24a148" icon={Scale} />
-      <ValueGauge value={sellThresh} label="SELL Thresh" sublabel="Soft Switched" color="#da1e28" icon={Scale} />
+    <div style={{ 
+      display: 'flex', 
+      alignItems: 'center', 
+      justifyContent: 'space-between', 
+      width: '100%', 
+      height: '100%', 
+      padding: '0.3rem 0.4rem',
+      gap: '0.5rem'
+    }}>
+      {/* Gauge 1: Macro Bias */}
+      <RadialGauge 
+        pct={100} 
+        label="Macro Bias" 
+        valueStr={bias.split(" ")[0]} 
+        sublabel={bias} 
+        color={biasColor} 
+        icon={Lightning} 
+      />
+
+      {/* Gauge 2: Macro Weight (Bearish Red / Bullish Green Ring, clean positive magnitude) */}
+      <RadialGauge 
+        pct={weightPct} 
+        label="Macro Weight" 
+        valueStr={`${Math.abs(Math.round(weight * 100))}%`} 
+        sublabel={isBullish ? "Bullish Alignment" : (isBearish ? "Bearish Alignment" : "Neutral Alignment")} 
+        color={weightColor} 
+      />
+
+      {/* Gauge 3: BUY Threshold */}
+      <RadialGauge 
+        pct={buyThresh * 100} 
+        label="BUY Threshold" 
+        valueStr={`${(buyThresh * 100).toFixed(1)}%`} 
+        sublabel={isBullish ? "Favored (Easier)" : (isBearish ? "Hurdle Raised" : "Standard 50%")} 
+        color={isBullish ? "#24a148" : "#8d8d8d"} 
+        isHighlighted={isBullish}
+      />
+
+      {/* Gauge 4: SELL Threshold */}
+      <RadialGauge 
+        pct={sellThresh * 100} 
+        label="SELL Threshold" 
+        valueStr={`${(sellThresh * 100).toFixed(1)}%`} 
+        sublabel={isBearish ? "Favored (Easier)" : (isBullish ? "Hurdle Raised" : "Standard 50%")} 
+        color={isBearish ? "#da1e28" : "#8d8d8d"} 
+        isHighlighted={isBearish}
+      />
     </div>
   );
 }

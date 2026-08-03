@@ -6,7 +6,7 @@ import { Toggle, Modal, Loading } from '@carbon/react';
 import { useGlobalState } from '@/contexts/GlobalStateContext';
 import { API_BASE_URL } from '@/config/env';
 
-export default function HeaderMetrics() {
+export default function HeaderMetrics({ idPrefix = "" }: { idPrefix?: string }) {
   const { state } = useGlobalState();
   const [modalConfig, setModalConfig] = useState<{
     isOpen: boolean;
@@ -100,14 +100,14 @@ export default function HeaderMetrics() {
     <>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0px', justifyContent: 'center' }}>
         <MetricToggle 
-          id="engine-nav-toggle"
+          id={`${idPrefix}engine-nav-toggle`}
           label="Engine" 
           toggled={state.engine_active} 
           onToggle={handleToggleEngine}
           icon={Power}
         />
         <MetricToggle 
-          id="auto-nav-toggle"
+          id={`${idPrefix}auto-nav-toggle`}
           label="Auto" 
           toggled={state.auto_execution} 
           onToggle={handleToggleAuto}

@@ -1,6 +1,6 @@
 "use client";
 
-import { Grid, Column, Tile, FormGroup, NumberInput, Button, Toggle, ToastNotification } from "@carbon/react";
+import { Grid, Column, Tile, FormGroup, NumberInput, Button, Toggle, ToastNotification, Select, SelectItem } from "@carbon/react";
 import { View, ViewOff, Save } from "@carbon/icons-react";
 import { useEffect, useState } from "react";
 import { API_BASE_URL } from '@/config/env';
@@ -17,6 +17,7 @@ export default function ThresholdsPage() {
     risk_per_trade_pct: 1.0,
     max_open_positions: 1,
     trading_mode: "SCALPING",
+    scalping_timeframe: "M5",
     scalping_tp_pips: 15.0,
     scalping_sl_pips: 5.0,
     scalping_max_holding_minutes: 15,
@@ -64,7 +65,7 @@ export default function ThresholdsPage() {
       const payload = { ...config, trading_mode: "SCALPING" };
       
       for (const key in payload) {
-        if (typeof payload[key] === 'string') {
+        if (key !== 'scalping_timeframe' && typeof payload[key] === 'string') {
           const parsed = Number(payload[key].replace(',', '.'));
           if (!isNaN(parsed)) {
             payload[key] = parsed;
@@ -107,7 +108,7 @@ export default function ThresholdsPage() {
 
   const riskKeys = ["auto_execution_enabled", "use_equity_kill_switch", "max_drawdown_equity_pct", "use_daily_kill_switch", "max_daily_drawdown_pct", "risk_control_mode", "risk_per_trade_pct", "max_open_positions"];
   const macroKeys = ["scalping_base_confidence", "macro_soft_switch_sensitivity", "macro_refresh_interval_minutes", "macro_news_buffer_minutes", "macro_vix_pause_threshold"];
-  const scalpingKeys = ["engine_active", "scalping_tp_pips", "scalping_sl_pips", "scalping_max_holding_minutes", "scalping_max_trades_per_day", "scalping_max_trades_per_hour", "scalping_max_spread_pips", "scalping_min_atr_pips", "scalping_max_consecutive_losses"];
+  const scalpingKeys = ["engine_active", "scalping_timeframe", "scalping_tp_pips", "scalping_sl_pips", "scalping_max_holding_minutes", "scalping_max_trades_per_day", "scalping_max_trades_per_hour", "scalping_max_spread_pips", "scalping_min_atr_pips", "scalping_max_consecutive_losses"];
 
   if (loading) return <div>Loading threshold configuration...</div>;
 
@@ -126,17 +127,15 @@ export default function ThresholdsPage() {
         </div>
       )}
 
-      {/* CLEAN COMPACT HEADER MATCHING OTHER PAGES */}
-      <Grid fullWidth style={{ padding: 0, marginBottom: "0.2rem" }}>
-        <Column lg={16} md={8} sm={4} className="landing-page__banner" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h3 style={{ fontWeight: 400 }}>Scalping Thresholds Configuration</h3>
+      <Grid className="dashboard-grid" style={{ padding: 0 }}>
+        {/* CLEAN COMPACT HEADER MATCHING OTHER PAGES */}
+        <Column lg={16} md={8} sm={4} className="landing-page__banner" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: "0.1rem" }}>
+          <h3 style={{ fontWeight: 400 }}>Threshold Configurations</h3>
           <Button renderIcon={Save} onClick={handleSave} disabled={saving} size="sm">
             {saving ? "Saving..." : "Save Configuration"}
           </Button>
         </Column>
-      </Grid>
 
-      <Grid className="dashboard-grid" style={{ padding: 0 }}>
         {/* PANEL 1: RISK & CAPITAL CONTROLS */}
         <Column sm={4} md={8} lg={16} style={{ marginBottom: "0.1rem" }}>
           <Tile style={{ borderLeft: hasChanges(riskKeys) ? "4px solid #f1c21b" : "none", padding: "1.25rem" }}>
@@ -153,7 +152,7 @@ export default function ThresholdsPage() {
             </div>
             {visibleCategories["risk-execution"] && (
               <div style={{ marginTop: "0.75rem" }}>
-                <div style={{ display: "flex", gap: "2rem", marginBottom: "0.75rem" }}>
+                <div style={{ display: "flex", gap: "2.5rem", marginBottom: "1rem", flexWrap: "wrap" }}>
                   <Toggle
                     id="auto_execution_enabled"
                     labelText="Auto Execution Mode"
@@ -180,35 +179,43 @@ export default function ThresholdsPage() {
                   />
                 </div>
 
-                <div style={{ display: "flex", gap: "1.5rem" }}>
-                  <NumberInput
-                    id="max_drawdown_equity_pct"
-                    label="Max Equity DD (%)"
-                    value={config.max_drawdown_equity_pct}
-                    min={1} max={50} step={0.5}
-                    onChange={(e: any, { value }: any) => updateConfig("max_drawdown_equity_pct", value)}
-                  />
-                  <NumberInput
-                    id="max_daily_drawdown_pct"
-                    label="Max Daily DD (%)"
-                    value={config.max_daily_drawdown_pct}
-                    min={1} max={20} step={0.5}
-                    onChange={(e: any, { value }: any) => updateConfig("max_daily_drawdown_pct", value)}
-                  />
-                  <NumberInput
-                    id="risk_per_trade_pct"
-                    label="Risk Per Trade (%)"
-                    value={config.risk_per_trade_pct}
-                    min={0.1} max={5.0} step={0.1}
-                    onChange={(e: any, { value }: any) => updateConfig("risk_per_trade_pct", value)}
-                  />
-                  <NumberInput
-                    id="max_open_positions"
-                    label="Max Open Positions"
-                    value={config.max_open_positions}
-                    min={1} max={5}
-                    onChange={(e: any, { value }: any) => updateConfig("max_open_positions", value)}
-                  />
+                <div style={{ display: "flex", gap: "0.1rem", marginBottom: "0.1rem", flexWrap: "wrap" }}>
+                  <div style={{ width: "190px" }}>
+                    <NumberInput
+                      id="max_drawdown_equity_pct"
+                      label="Max Equity DD (%)"
+                      value={config.max_drawdown_equity_pct}
+                      min={1} max={50} step={0.5}
+                      onChange={(e: any, { value }: any) => updateConfig("max_drawdown_equity_pct", value)}
+                    />
+                  </div>
+                  <div style={{ width: "190px" }}>
+                    <NumberInput
+                      id="max_daily_drawdown_pct"
+                      label="Max Daily DD (%)"
+                      value={config.max_daily_drawdown_pct}
+                      min={1} max={20} step={0.5}
+                      onChange={(e: any, { value }: any) => updateConfig("max_daily_drawdown_pct", value)}
+                    />
+                  </div>
+                  <div style={{ width: "190px" }}>
+                    <NumberInput
+                      id="risk_per_trade_pct"
+                      label="Risk Per Trade (%)"
+                      value={config.risk_per_trade_pct}
+                      min={0.1} max={5.0} step={0.1}
+                      onChange={(e: any, { value }: any) => updateConfig("risk_per_trade_pct", value)}
+                    />
+                  </div>
+                  <div style={{ width: "190px" }}>
+                    <NumberInput
+                      id="max_open_positions"
+                      label="Max Open Positions"
+                      value={config.max_open_positions}
+                      min={1} max={5}
+                      onChange={(e: any, { value }: any) => updateConfig("max_open_positions", value)}
+                    />
+                  </div>
                 </div>
               </div>
             )}
@@ -231,51 +238,61 @@ export default function ThresholdsPage() {
             </div>
             {visibleCategories["macro-soft-switch"] && (
               <div style={{ marginTop: "0.75rem" }}>
-                <div style={{ display: "flex", gap: "1.5rem", marginBottom: "0.75rem" }}>
-                  <NumberInput
-                    id="scalping_base_confidence"
-                    label="Base Scalper Confidence"
-                    value={config.scalping_base_confidence}
-                    min={0.1} max={0.9} step={0.05}
-                    onChange={(e: any, { value }: any) => updateConfig("scalping_base_confidence", value)}
-                  />
-                  <NumberInput
-                    id="macro_soft_switch_sensitivity"
-                    label="Soft Switch Sensitivity"
-                    value={config.macro_soft_switch_sensitivity}
-                    min={0.05} max={0.4} step={0.05}
-                    onChange={(e: any, { value }: any) => updateConfig("macro_soft_switch_sensitivity", value)}
-                  />
-                  <NumberInput
-                    id="macro_refresh_interval_minutes"
-                    label="Macro Refresh (Mins)"
-                    value={config.macro_refresh_interval_minutes}
-                    min={1} max={60}
-                    onChange={(e: any, { value }: any) => updateConfig("macro_refresh_interval_minutes", value)}
-                  />
+                <div style={{ display: "flex", gap: "0.1rem", marginBottom: "0.1rem", flexWrap: "wrap" }}>
+                  <div style={{ width: "190px" }}>
+                    <NumberInput
+                      id="scalping_base_confidence"
+                      label="Base Scalper Confidence"
+                      value={config.scalping_base_confidence}
+                      min={0.1} max={0.9} step={0.05}
+                      onChange={(e: any, { value }: any) => updateConfig("scalping_base_confidence", value)}
+                    />
+                  </div>
+                  <div style={{ width: "190px" }}>
+                    <NumberInput
+                      id="macro_soft_switch_sensitivity"
+                      label="Soft Switch Sensitivity"
+                      value={config.macro_soft_switch_sensitivity}
+                      min={0.05} max={0.4} step={0.05}
+                      onChange={(e: any, { value }: any) => updateConfig("macro_soft_switch_sensitivity", value)}
+                    />
+                  </div>
+                  <div style={{ width: "190px" }}>
+                    <NumberInput
+                      id="macro_refresh_interval_minutes"
+                      label="Macro Refresh (Mins)"
+                      value={config.macro_refresh_interval_minutes}
+                      min={1} max={60}
+                      onChange={(e: any, { value }: any) => updateConfig("macro_refresh_interval_minutes", value)}
+                    />
+                  </div>
                 </div>
-                <div style={{ display: "flex", gap: "1.5rem" }}>
-                  <NumberInput
-                    id="macro_news_buffer_minutes"
-                    label="High-Impact News Buffer (Mins)"
-                    value={config.macro_news_buffer_minutes}
-                    min={1} max={60}
-                    onChange={(e: any, { value }: any) => updateConfig("macro_news_buffer_minutes", value)}
-                  />
-                  <NumberInput
-                    id="macro_vix_pause_threshold"
-                    label="Max VIX Volatility Ceiling"
-                    value={config.macro_vix_pause_threshold}
-                    min={15} max={50}
-                    onChange={(e: any, { value }: any) => updateConfig("macro_vix_pause_threshold", value)}
-                  />
+                <div style={{ display: "flex", gap: "0.1rem", marginBottom: "0.1rem", flexWrap: "wrap" }}>
+                  <div style={{ width: "190px" }}>
+                    <NumberInput
+                      id="macro_news_buffer_minutes"
+                      label="High-Impact News Buffer (Mins)"
+                      value={config.macro_news_buffer_minutes}
+                      min={1} max={60}
+                      onChange={(e: any, { value }: any) => updateConfig("macro_news_buffer_minutes", value)}
+                    />
+                  </div>
+                  <div style={{ width: "190px" }}>
+                    <NumberInput
+                      id="macro_vix_pause_threshold"
+                      label="Max VIX Volatility Ceiling"
+                      value={config.macro_vix_pause_threshold}
+                      min={15} max={50}
+                      onChange={(e: any, { value }: any) => updateConfig("macro_vix_pause_threshold", value)}
+                    />
+                  </div>
                 </div>
               </div>
             )}
           </Tile>
         </Column>
 
-        {/* PANEL 3: M1 SCALPING EXECUTION & TARGET LIMITS */}
+        {/* PANEL 3: M5 SCALPING EXECUTION & TARGET LIMITS */}
         <Column sm={4} md={8} lg={16} style={{ marginBottom: "0.1rem" }}>
           <Tile style={{ borderLeft: hasChanges(scalpingKeys) ? "4px solid #f1c21b" : "none", padding: "1.25rem" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -291,7 +308,7 @@ export default function ThresholdsPage() {
             </div>
             {visibleCategories["scalping-limits"] && (
               <div style={{ marginTop: "0.75rem" }}>
-                <div style={{ marginBottom: "1rem" }}>
+                <div style={{ display: "flex", gap: "2.5rem", alignItems: "center", marginBottom: "1rem", flexWrap: "wrap" }}>
                   <Toggle
                     id="engine_active"
                     labelText="Master Scalping Engine Switch"
@@ -300,19 +317,34 @@ export default function ThresholdsPage() {
                     toggled={config.engine_active}
                     onToggle={(val) => updateConfig("engine_active", val)}
                   />
+                  <div style={{ width: "240px" }}>
+                    <Select
+                      id="scalping_timeframe"
+                      labelText="Signal Trigger Timeframe"
+                      value={config.scalping_timeframe || "M5"}
+                      onChange={(e: any) => updateConfig("scalping_timeframe", e.target.value)}
+                      size="md"
+                    >
+                      <SelectItem value="M5" text="5 Minutes (M5 - Default)" />
+                      <SelectItem value="M1" text="1 Minute (M1)" />
+                      <SelectItem value="M15" text="15 Minutes (M15)" />
+                      <SelectItem value="M30" text="30 Minutes (M30)" />
+                      <SelectItem value="H1" text="1 Hour (H1)" />
+                    </Select>
+                  </div>
                 </div>
 
-                <div style={{ display: "flex", gap: "1.5rem", marginBottom: "0.75rem" }}>
-                  <NumberInput id="scalping_sl_pips" label="Stop Loss (Pips)" value={config.scalping_sl_pips} min={1} max={50} step={0.5} onChange={(e: any, { value }: any) => updateConfig("scalping_sl_pips", value)} />
-                  <NumberInput id="scalping_tp_pips" label="Take Profit (Pips)" value={config.scalping_tp_pips} min={1} max={100} step={0.5} onChange={(e: any, { value }: any) => updateConfig("scalping_tp_pips", value)} />
-                  <NumberInput id="scalping_max_trades_per_hour" label="Max Trades / Hour" value={config.scalping_max_trades_per_hour} min={1} max={100} onChange={(e: any, { value }: any) => updateConfig("scalping_max_trades_per_hour", value)} />
-                  <NumberInput id="scalping_max_trades_per_day" label="Max Trades / Day" value={config.scalping_max_trades_per_day} min={1} max={500} onChange={(e: any, { value }: any) => updateConfig("scalping_max_trades_per_day", value)} />
+                <div style={{ display: "flex", gap: "0.1rem", marginBottom: "0.1rem", flexWrap: "wrap" }}>
+                  <div style={{ width: "190px" }}><NumberInput id="scalping_sl_pips" label="Stop Loss (Pips)" value={config.scalping_sl_pips} min={1} max={50} step={0.5} onChange={(e: any, { value }: any) => updateConfig("scalping_sl_pips", value)} /></div>
+                  <div style={{ width: "190px" }}><NumberInput id="scalping_tp_pips" label="Take Profit (Pips)" value={config.scalping_tp_pips} min={1} max={100} step={0.5} onChange={(e: any, { value }: any) => updateConfig("scalping_tp_pips", value)} /></div>
+                  <div style={{ width: "190px" }}><NumberInput id="scalping_max_trades_per_hour" label="Max Trades / Hour" value={config.scalping_max_trades_per_hour} min={1} max={100} onChange={(e: any, { value }: any) => updateConfig("scalping_max_trades_per_hour", value)} /></div>
+                  <div style={{ width: "190px" }}><NumberInput id="scalping_max_trades_per_day" label="Max Trades / Day" value={config.scalping_max_trades_per_day} min={1} max={500} onChange={(e: any, { value }: any) => updateConfig("scalping_max_trades_per_day", value)} /></div>
                 </div>
-                <div style={{ display: "flex", gap: "1.5rem" }}>
-                  <NumberInput id="scalping_max_spread_pips" label="Max Spread (Pips)" value={config.scalping_max_spread_pips} min={0.1} max={10.0} step={0.1} onChange={(e: any, { value }: any) => updateConfig("scalping_max_spread_pips", value)} />
-                  <NumberInput id="scalping_min_atr_pips" label="Min Volatility ATR (Pips)" value={config.scalping_min_atr_pips} min={0.1} max={10.0} step={0.1} onChange={(e: any, { value }: any) => updateConfig("scalping_min_atr_pips", value)} />
-                  <NumberInput id="scalping_max_holding_minutes" label="Max Position Hold (Mins)" value={config.scalping_max_holding_minutes} min={1} max={120} onChange={(e: any, { value }: any) => updateConfig("scalping_max_holding_minutes", value)} />
-                  <NumberInput id="scalping_max_consecutive_losses" label="Max Consec. Losses" value={config.scalping_max_consecutive_losses} min={1} max={10} onChange={(e: any, { value }: any) => updateConfig("scalping_max_consecutive_losses", value)} />
+                <div style={{ display: "flex", gap: "0.1rem", marginBottom: "0.1rem", flexWrap: "wrap" }}>
+                  <div style={{ width: "190px" }}><NumberInput id="scalping_max_spread_pips" label="Max Spread (Pips)" value={config.scalping_max_spread_pips} min={0.1} max={10.0} step={0.1} onChange={(e: any, { value }: any) => updateConfig("scalping_max_spread_pips", value)} /></div>
+                  <div style={{ width: "190px" }}><NumberInput id="scalping_min_atr_pips" label="Min Volatility ATR (Pips)" value={config.scalping_min_atr_pips} min={0.1} max={10.0} step={0.1} onChange={(e: any, { value }: any) => updateConfig("scalping_min_atr_pips", value)} /></div>
+                  <div style={{ width: "190px" }}><NumberInput id="scalping_max_holding_minutes" label="Max Position Hold (Mins)" value={config.scalping_max_holding_minutes} min={1} max={120} onChange={(e: any, { value }: any) => updateConfig("scalping_max_holding_minutes", value)} /></div>
+                  <div style={{ width: "190px" }}><NumberInput id="scalping_max_consecutive_losses" label="Max Consec. Losses" value={config.scalping_max_consecutive_losses} min={1} max={10} onChange={(e: any, { value }: any) => updateConfig("scalping_max_consecutive_losses", value)} /></div>
                 </div>
               </div>
             )}

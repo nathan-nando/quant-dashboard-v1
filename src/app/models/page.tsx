@@ -181,10 +181,25 @@ function ModelsContent() {
       body: "Are you sure you want to delete this model?",
       onConfirm: async () => {
         try {
-          await fetch(`${API_BASE_URL}/models/${id}`, { method: "DELETE" });
-          fetchData();
-          setNotification({ kind: "success", title: "Model Deleted", subtitle: "Model was successfully deleted." });
-        } catch(e) { console.error(e); }
+          const res = await fetch(`${API_BASE_URL}/models/${id}`, { method: "DELETE" });
+          if (res.ok) {
+            await fetchData();
+            setNotification({ kind: "success", title: "Model Deleted", subtitle: "Model was successfully deleted." });
+          } else {
+            const errText = await res.text();
+            let msg = "Failed to delete model.";
+            try {
+              const errJson = JSON.parse(errText);
+              if (errJson.detail) msg = errJson.detail;
+            } catch {
+              if (errText) msg = errText;
+            }
+            setNotification({ kind: "error", title: "Delete Failed", subtitle: msg });
+          }
+        } catch(e: any) { 
+          console.error(e);
+          setNotification({ kind: "error", title: "Delete Failed", subtitle: e.message || "Network error when deleting model." });
+        }
         setConfirmModalConfig(prev => ({ ...prev, isOpen: false }));
       }
     });
@@ -288,10 +303,25 @@ function ModelsContent() {
       body: "Are you sure you want to delete this dataset? Physical file will also be deleted.",
       onConfirm: async () => {
         try {
-          await fetch(`${API_BASE_URL}/datasets/${id}`, { method: "DELETE" });
-          fetchData();
-          setNotification({ kind: "success", title: "Dataset Deleted", subtitle: "Dataset was successfully deleted." });
-        } catch(e) { console.error(e); }
+          const res = await fetch(`${API_BASE_URL}/datasets/${id}`, { method: "DELETE" });
+          if (res.ok) {
+            await fetchData();
+            setNotification({ kind: "success", title: "Dataset Deleted", subtitle: "Dataset was successfully deleted." });
+          } else {
+            const errText = await res.text();
+            let msg = "Failed to delete dataset.";
+            try {
+              const errJson = JSON.parse(errText);
+              if (errJson.detail) msg = errJson.detail;
+            } catch {
+              if (errText) msg = errText;
+            }
+            setNotification({ kind: "error", title: "Delete Failed", subtitle: msg });
+          }
+        } catch(e: any) { 
+          console.error(e); 
+          setNotification({ kind: "error", title: "Delete Failed", subtitle: e.message || "Network error when deleting dataset." });
+        }
         setConfirmModalConfig(prev => ({ ...prev, isOpen: false }));
       }
     });

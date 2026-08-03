@@ -17,12 +17,14 @@ const TIMEFRAMES: Record<string, number> = {
 
 export default function CandlestickChart({ 
   symbol = "XAUUSD", 
+  initialTimeframe = "M5",
   onHistoryUpdate, 
   signals = [],
   maxHistoryLimit,
   visibleBarsCount
 }: { 
   symbol?: string, 
+  initialTimeframe?: string,
   onHistoryUpdate?: (data: any[]) => void, 
   signals?: any[],
   maxHistoryLimit?: number,
@@ -37,7 +39,7 @@ export default function CandlestickChart({
   const markersRef = useRef<any>(null);
   const { state } = useGlobalState();
   const [isInitialized, setIsInitialized] = useState(false);
-  const [timeframe, setTimeframe] = useState<string>("H1");
+  const [timeframe, setTimeframe] = useState<string>(initialTimeframe);
   const [marketStatus, setMarketStatus] = useState<string>("OPEN");
   const [showMarkers, setShowMarkers] = useState<boolean>(true);
 
