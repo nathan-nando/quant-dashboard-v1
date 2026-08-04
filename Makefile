@@ -1,6 +1,6 @@
 # Makefile for QuantV1 Dashboard Portal
 
-.PHONY: help dev serve build start docker-build docker-up docker-down docker-logs docker-restart docker-clean
+.PHONY: help dev serve build start docker-build docker-up docker-down docker-logs docker-restart docker-clean rebuild
 
 # Default target showing help
 help:
@@ -49,3 +49,5 @@ docker-restart:
 
 docker-clean:
 	docker compose down --rmi local --volumes --remove-orphans
+
+rebuild:docker-build docker-up

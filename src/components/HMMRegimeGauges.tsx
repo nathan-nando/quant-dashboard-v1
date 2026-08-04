@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { Toggle } from '@carbon/react';
 import { ChartLine, Lightning, Scale, Globe } from '@carbon/icons-react';
 import { API_BASE_URL } from '@/config/env';
 import { useGlobalState } from '@/contexts/GlobalStateContext';
@@ -78,6 +79,86 @@ const RadialGauge: React.FC<RadialGaugeProps> = ({ pct, label, valueStr, color, 
   );
 };
 
+interface VerticalMacroStepperProps {
+  currentBias: string;
+}
+
+const STEPS = [
+  { key: "STRONG BULLISH", label: "STRONG BULLISH", color: "#24a148" },
+  { key: "MODERATE BULLISH", label: "MODERATE BULLISH", color: "#42be65" },
+  { key: "NEUTRAL SIDEWAYS", label: "NEUTRAL SIDEWAYS", color: "#f1c21b" },
+  { key: "MODERATE BEARISH", label: "MODERATE BEARISH", color: "#ff8389" },
+  { key: "STRONG BEARISH", label: "STRONG BEARISH", color: "#da1e28" },
+];
+
+const VerticalMacroStepper: React.FC<VerticalMacroStepperProps> = ({ currentBias }) => {
+  const normalizedBias = (currentBias || "NEUTRAL SIDEWAYS").toUpperCase();
+
+  return (
+    <div style={{ 
+      display: 'flex', 
+      flexDirection: 'column', 
+      alignItems: 'flex-start', 
+      justifyContent: 'center', 
+      padding: '0.2rem 0.6rem',
+      position: 'relative',
+      height: '100%',
+      minWidth: '145px'
+    }}>
+      
+      <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: '5px', width: '100%' }}>
+        {/* Solid White Vertical Connecting Line */}
+        <div style={{ 
+          position: 'absolute', 
+          left: '6px', 
+          top: '6px', 
+          bottom: '6px', 
+          width: '2px', 
+          background: 'rgba(255, 255, 255, 0.45)', 
+          zIndex: 1 
+        }} />
+
+        {STEPS.map((step) => {
+          const isActive = normalizedBias.includes(step.key) || (step.key === "NEUTRAL SIDEWAYS" && normalizedBias.includes("NEUTRAL"));
+          return (
+            <div key={step.key} style={{ display: 'flex', alignItems: 'center', gap: '8px', zIndex: 2 }}>
+              {/* Colored Dot (Line is white, only active dot is colored) */}
+              <div style={{ 
+                width: '14px', 
+                height: '14px', 
+                borderRadius: '50%', 
+                background: isActive ? step.color : '#161616', 
+                border: isActive ? `2px solid ${step.color}` : '2px solid rgba(255, 255, 255, 0.5)', 
+                boxShadow: isActive ? `0 0 10px ${step.color}` : 'none', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                transition: 'all 0.3s ease',
+                flexShrink: 0
+              }}>
+                {isActive && (
+                  <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#ffffff' }} />
+                )}
+              </div>
+              {/* Step Label */}
+              <span style={{ 
+                fontSize: '0.62rem', 
+                fontWeight: isActive ? 700 : 500, 
+                color: isActive ? step.color : '#8d8d8d', 
+                letterSpacing: '0.3px',
+                transition: 'all 0.3s ease',
+                whiteSpace: 'nowrap'
+              }}>
+                {step.label}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
 export default function HMMRegimeGauges() {
   const { state } = useGlobalState();
   const [macroData, setMacroData] = useState<any>(null);
@@ -96,13 +177,6 @@ export default function HMMRegimeGauges() {
   const sellThresh = data.sell_threshold !== undefined ? data.sell_threshold : 0.50;
   const isMacroActive = state?.use_macro_model !== undefined ? Boolean(state.use_macro_model) : true;
 
-  const getBiasColor = (b: string) => {
-    if (b.includes("BULLISH")) return "#24a148";
-    if (b.includes("BEARISH")) return "#da1e28";
-    return "#f1c21b";
-  };
-
-  const biasColor = getBiasColor(bias);
   const isBearish = weight < -0.10;
   const isBullish = weight > 0.10;
   
@@ -113,33 +187,52 @@ export default function HMMRegimeGauges() {
     <div style={{ 
       display: 'flex', 
       alignItems: 'center', 
-      justifyContent: 'space-between', 
+      justifyContent: 'space-around', 
       width: '100%', 
       height: '100%', 
-      padding: '0.3rem 0.2rem',
-      gap: '0.25rem'
+      padding: '0.3rem',
+      gap: '0.3rem',
+      overflowX: 'hidden'
     }}>
-      {/* Gauge 0: Macro Gating Status */}
-      <RadialGauge 
-        pct={isMacroActive ? 100 : 0} 
-        label="Macro Gating" 
-        valueStr={isMacroActive ? "ACTIVE" : "OFF"} 
-        sublabel={isMacroActive ? "Engine Veto Active" : "Informational Only"} 
-        color={isMacroActive ? "#24a148" : "#8d8d8d"} 
-        icon={Globe} 
-      />
+      {/* Compact Macro Gating Toggle Switch */}
+      <div style={{ 
+        display: 'flex', 
+        flexDirection: 'column', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        padding: '0.4rem 0.2rem',
+        minWidth: '90px'
+      }}>
+        <div style={{ fontSize: '0.68rem', fontWeight: 600, color: '#f4f4f4', marginBottom: '0.35rem', textAlign: 'center', whiteSpace: 'nowrap' }}>
+          Macro Gating
+        </div>
+        <Toggle 
+          id="macro-gating-toggle-widget"
+          size="sm"
+          labelA="OFF"
+          labelB="ON"
+          toggled={isMacroActive}
+          onToggle={async (checked) => {
+            try {
+              await fetch(`${API_BASE_URL}/configurations/system`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ key: 'use_macro_model', value: checked, category: 'thresholds' })
+              });
+            } catch (err) {
+              console.error("Error toggling macro gating:", err);
+            }
+          }}
+        />
+        <div style={{ fontSize: '0.62rem', color: isMacroActive ? '#24a148' : '#8d8d8d', fontWeight: 500, textAlign: 'center', marginTop: '0.3rem', whiteSpace: 'nowrap' }}>
+          {isMacroActive ? "Veto Active" : "Disabled"}
+        </div>
+      </div>
 
-      {/* Gauge 1: Macro Bias */}
-      <RadialGauge 
-        pct={100} 
-        label="Macro Bias" 
-        valueStr={bias.split(" ")[0]} 
-        sublabel={bias} 
-        color={biasColor} 
-        icon={Lightning} 
-      />
+      {/* Gauge 1: Vertical Macro Bias Stepper Line */}
+      <VerticalMacroStepper currentBias={bias} />
 
-      {/* Gauge 2: Macro Weight (Bearish Red / Bullish Green Ring, clean positive magnitude) */}
+      {/* Gauge 2: Macro Weight */}
       <RadialGauge 
         pct={weightPct} 
         label="Macro Weight" 

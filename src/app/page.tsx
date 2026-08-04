@@ -127,43 +127,37 @@ export default function Home() {
   const defaultLayouts = {
     lg: [
       { i: 'chart', x: 0, y: 0, w: 4, h: 4, minW: 3, minH: 2 },
-      { i: 'hmm_gauges', x: 4, y: 0, w: 3, h: 2, minW: 2, minH: 2 },
-      { i: 'moe_gauges', x: 7, y: 0, w: 3, h: 2, minW: 2, minH: 2 },
-      { i: 'attribution', x: 4, y: 2, w: 3, h: 2, minW: 2, minH: 2 },
-      { i: 'shap', x: 7, y: 2, w: 3, h: 2, minW: 2, minH: 2 },
-      { i: 'trades', x: 0, y: 4, w: 4, h: 5, minW: 2, minH: 2 },
-      { i: 'signals', x: 4, y: 4, w: 4, h: 5, minW: 3, minH: 2 },
-      { i: 'macro_calendar', x: 8, y: 4, w: 2, h: 5, minW: 2, minH: 2 }
+      { i: 'hmm_gauges', x: 4, y: 0, w: 3.6, h: 2, minW: 2, minH: 2 },
+      { i: 'macro_calendar', x: 7.6, y: 0, w: 2.4, h: 2, minW: 2, minH: 2 },
+      { i: 'attribution', x: 4, y: 2, w: 3.6, h: 2, minW: 2, minH: 2 },
+      { i: 'shap', x: 7.6, y: 2, w: 2.4, h: 2, minW: 2, minH: 2 },
+      { i: 'trades', x: 0, y: 4, w: 5, h: 5, minW: 3, minH: 2 },
+      { i: 'signals', x: 5, y: 4, w: 5, h: 5, minW: 3, minH: 2 }
     ],
     md: [
       { i: 'chart', x: 0, y: 0, w: 4, h: 4 },
-      { i: 'hmm_gauges', x: 4, y: 0, w: 2, h: 2 },
-      { i: 'moe_gauges', x: 6, y: 0, w: 2, h: 2 },
-      { i: 'attribution', x: 4, y: 2, w: 2, h: 2 },
-      { i: 'shap', x: 6, y: 2, w: 2, h: 2 },
-      { i: 'trades', x: 0, y: 4, w: 3, h: 5 },
-      { i: 'signals', x: 3, y: 4, w: 3, h: 5 },
-      { i: 'macro_calendar', x: 6, y: 4, w: 2, h: 5 }
+      { i: 'hmm_gauges', x: 4, y: 0, w: 4, h: 2 },
+      { i: 'macro_calendar', x: 4, y: 2, w: 4, h: 2 },
+      { i: 'attribution', x: 0, y: 4, w: 4, h: 2 },
+      { i: 'shap', x: 4, y: 4, w: 4, h: 2 },
+      { i: 'trades', x: 0, y: 6, w: 4, h: 5 },
+      { i: 'signals', x: 4, y: 6, w: 4, h: 5 }
     ],
     sm: [
       { i: 'trades', x: 0, y: 0, w: 4, h: 4 },
       { i: 'chart', x: 0, y: 4, w: 4, h: 4 },
       { i: 'hmm_gauges', x: 0, y: 8, w: 4, h: 3 },
-      { i: 'moe_gauges', x: 0, y: 11, w: 4, h: 3 },
+      { i: 'macro_calendar', x: 0, y: 11, w: 4, h: 3 },
       { i: 'signals', x: 0, y: 14, w: 4, h: 5 },
-      { i: 'attribution', x: 0, y: 19, w: 4, h: 3 },
-      { i: 'shap', x: 0, y: 22, w: 4, h: 3 },
-      { i: 'macro_calendar', x: 0, y: 25, w: 4, h: 4 }
+      { i: 'attribution', x: 0, y: 19, w: 4, h: 3 }
     ],
     xs: [
       { i: 'trades', x: 0, y: 0, w: 2, h: 4 },
       { i: 'chart', x: 0, y: 4, w: 2, h: 3 },
       { i: 'hmm_gauges', x: 0, y: 7, w: 2, h: 3 },
-      { i: 'moe_gauges', x: 0, y: 10, w: 2, h: 3 },
-      { i: 'signals', x: 0, y: 13, w: 2, h: 5 },
-      { i: 'attribution', x: 0, y: 18, w: 2, h: 3 },
-      { i: 'shap', x: 0, y: 21, w: 2, h: 3 },
-      { i: 'macro_calendar', x: 0, y: 24, w: 2, h: 3 }
+      { i: 'signals', x: 0, y: 10, w: 2, h: 5 },
+      { i: 'attribution', x: 0, y: 15, w: 2, h: 3 },
+      { i: 'macro_calendar', x: 0, y: 18, w: 2, h: 3 }
     ]
   };
   const [layouts, setLayouts] = useState<any>(defaultLayouts);
@@ -174,14 +168,14 @@ export default function Home() {
       const keysToRemove: string[] = [];
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        if (key && (key.startsWith("quantDashboardLayout_") || key === "dashboard-layouts") && key !== "quantDashboardLayout_v43") {
+        if (key && (key.startsWith("quantDashboardLayout_") || key === "dashboard-layouts") && key !== "quantDashboardLayout_v47") {
           keysToRemove.push(key);
         }
       }
       keysToRemove.forEach(k => localStorage.removeItem(k));
     } catch (e) {}
  
-    const saved = localStorage.getItem('quantDashboardLayout_v43');
+    const saved = localStorage.getItem('quantDashboardLayout_v47');
     if (saved) {
       try {
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -192,7 +186,7 @@ export default function Home() {
  
   const handleLayoutChange = (layout: any, allLayouts: any) => {
     setLayouts(allLayouts);
-    localStorage.setItem("quantDashboardLayout_v43", JSON.stringify(allLayouts));
+    localStorage.setItem("quantDashboardLayout_v47", JSON.stringify(allLayouts));
   };
   return (
     <div style={{ maxWidth: '100%', padding: '0 2rem', position: 'relative' }}>
@@ -523,11 +517,6 @@ export default function Home() {
         </div>
 
 
-        <div key="moe_gauges">
-          <DashboardPanel title="Mixture of Experts" tooltipInfo="Live AI ensemble weights.">
-            <MoEEnsembleGauges />
-          </DashboardPanel>
-        </div>
 
         <div key="hmm_gauges">
           <DashboardPanel title="Regime Detection" tooltipInfo="Hidden Markov Model regime probabilities.">
