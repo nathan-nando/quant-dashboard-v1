@@ -1,15 +1,20 @@
 import React, { useEffect, useState } from 'react';
-import { Loading } from '@carbon/react';
+import { Loading, Tag } from '@carbon/react';
 import { API_BASE_URL } from '@/config/env';
+import { useGlobalState } from '@/contexts/GlobalStateContext';
 
 interface AttributionData {
   attribution_waterfall: { category: string; value: number }[];
-  summary: { total_trades: number; win_rate: number; net_pnl: number };
+  summary: { total_trades: number; win_rate: number; net_pnl: number; account_mode?: string; account_name?: string };
 }
 
 const AttributionPanel: React.FC = () => {
+  const { state } = useGlobalState();
   const [data, setData] = useState<AttributionData | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const activeMode = state?.account_info?.mode;
+  const activeLogin = state?.account_info?.login;
 
   useEffect(() => {
     fetch(`${API_BASE_URL}/attribution/`)
@@ -19,21 +24,34 @@ const AttributionPanel: React.FC = () => {
         setLoading(false);
       })
       .catch(err => {
-        console.error('Failed to fetch attribution data', err);
+        console.error('Failed to fetch account summary data', err);
         setLoading(false);
       });
-  }, []);
+  }, [activeMode, activeLogin]);
 
   if (loading) return <div style={{ padding: '1rem' }}><Loading withOverlay={false} small /></div>;
-  if (!data) return <div style={{ padding: '1rem', color: '#8d8d8d' }}>No attribution data</div>;
+  if (!data) return <div style={{ padding: '1rem', color: '#8d8d8d' }}>No account summary data</div>;
 
   const maxVal = Math.max(...data.attribution_waterfall.map(d => Math.abs(d.value)), 1);
+  const accMode = data.summary.account_mode || activeMode || "DEMO";
 
   return (
     <div style={{ padding: '0.5rem 1rem', display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', borderBottom: '1px solid #393939', paddingBottom: '0.5rem' }}>
         <div>
-          <div style={{ fontSize: '0.75rem', color: '#a8a8a8' }}>Net PnL</div>
+          <div style={{ fontSize: '0.75rem', color: '#a8a8a8', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            Net PnL 
+            <span style={{ 
+              fontSize: '0.65rem', 
+              padding: '1px 5px', 
+              borderRadius: '2px', 
+              backgroundColor: accMode === 'LIVE' ? '#24a148' : '#0f62fe', 
+              color: '#fff', 
+              fontWeight: 600 
+            }}>
+              {accMode}
+            </span>
+          </div>
           <div style={{ fontSize: '1.25rem', color: data.summary.net_pnl >= 0 ? '#24a148' : '#fa4d56' }}>
             ${data.summary.net_pnl.toFixed(2)}
           </div>

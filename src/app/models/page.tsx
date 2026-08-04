@@ -42,7 +42,7 @@ function ModelsContent() {
   const [datasets, setDatasets] = useState<any[]>([]);
   const [initialModelRouting, setInitialModelRouting] = useState<any>(null);
   const [modelRouting, setModelRouting] = useState<any>({
-    SCALPER_M5: { champion: "scalper_m5_v1.onnx", challenger: "NONE" },
+    SCALPER_M5: { champion: "scalper_buy_v2 / scalper_sell_v2", challenger: "NONE" },
     MACRO_EVALUATOR: { champion: "macro_evaluator_v1", challenger: "NONE" }
   });
   const [isLoadingData, setIsLoadingData] = useState(true);
@@ -113,7 +113,7 @@ function ModelsContent() {
       const dsData = await dsRes.json();
       
       const formattedRouting: Record<string, { champion: string; challenger: string }> = {
-        SCALPER_M5: { champion: "scalper_m5_v1.onnx", challenger: "NONE" },
+        SCALPER_M5: { champion: "scalper_buy_v2 / scalper_sell_v2", challenger: "NONE" },
         MACRO_EVALUATOR: { champion: "macro_evaluator_v1", challenger: "NONE" }
       };
       for(const k in routeData) {
@@ -360,8 +360,8 @@ function ModelsContent() {
     const techDs = datasets.find(ds => ds.source_type === "technical") || datasets[0];
     const macroDs = datasets.find(ds => ds.source_type === "macro") || datasets.find(ds => ds !== techDs) || datasets[0];
     setTrainForm({ 
-      algorithm: regime === "MACRO" ? "Macro Weight Evaluator" : "LightGBM Triple Barrier ONNX", 
-      model_name: regime === "MACRO" ? "macro_evaluator_v1" : "scalper_m5_v1", 
+      algorithm: regime === "MACRO" ? "Macro Weight Evaluator" : "Dual Binary LightGBM + Isotonic Calibration", 
+      model_name: regime === "MACRO" ? "macro_evaluator_v1" : "scalper_v2_dual", 
       optuna_trials: 50, 
       skip_ingestion: true, 
       dataset_id: techDs ? techDs.id : "", 
@@ -594,13 +594,13 @@ function ModelsContent() {
                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                            <MachineLearningModel size={28} style={{ color: '#0f62fe' }} />
                            <div>
-                             <h4 style={{ fontWeight: 600, margin: 0, color: '#f4f4f4' }}>M5 Scalping Model (Triple Barrier)</h4>
-                             <p style={{ fontSize: '0.75rem', color: '#a8a8a8', margin: 0, marginTop: '0.25rem' }}>LightGBM Classifier + ONNX Export</p>
+                             <h4 style={{ fontWeight: 600, margin: 0, color: '#f4f4f4' }}>M5 Dual Binary Scalping Model</h4>
+                             <p style={{ fontSize: '0.75rem', color: '#a8a8a8', margin: 0, marginTop: '0.25rem' }}>Dual LightGBM (BUY/SELL) + Isotonic Calibration</p>
                            </div>
                          </div>
                        </div>
                        <p style={{ fontSize: '0.8rem', color: '#c6c6c6', marginBottom: '1.25rem', lineHeight: '1.4' }}>
-                         Latih ulang model M5 Scalping berbasis Triple Barrier Method (Profit Take, Stop Loss, & Holding Time limits) untuk deteksi sinyal mikro berkecepatan tinggi.
+                         Latih ulang model M5 Scalping berbasis Dual Binary Classifiers (BUY-vs-rest & SELL-vs-rest) dengan Fair Intra-Bar Resolution, Purged CV, & Isotonic Probability Calibration.
                        </p>
                        <Button kind="primary" size="sm" renderIcon={Play} onClick={() => openTrainModal("SCALPING")}>
                           Train Scalping Model

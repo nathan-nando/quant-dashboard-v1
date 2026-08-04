@@ -24,7 +24,7 @@ interface GlobalTableProps {
   headers: Array<{ key: string; header: string; width?: string }>;
   fetchUrl?: string; // If provided, uses server-side logic
   initialData?: any[]; // Fallback for local logic
-  formatCell?: (cellId: string, value: any) => React.ReactNode;
+  formatCell?: (cellId: string, value: any, row?: any) => React.ReactNode;
   toolbarActions?: React.ReactNode; // Extra buttons for toolbar
   onViewDetails?: (rowId: any) => void;
   onPageDataChange?: (currentData: any[]) => void;
@@ -259,40 +259,42 @@ export default function GlobalTable({
                 </TableRow>
               </TableHead>
               <TableBody>
-                {rows.map((row: any) => (
-                  <TableRow 
-                    key={row.id}
-                    className="clickable-row-mobile"
-                    onClick={(e: React.MouseEvent) => {
-                      if (onViewDetails && typeof window !== 'undefined' && window.innerWidth <= 768) {
-                        const target = e.target as HTMLElement;
-                        if (
-                          target.closest('button') || 
-                          target.closest('a') || 
-                          target.closest('input') ||
-                          target.closest('.cds--toggle') ||
-                          target.closest('.cds--checkbox') ||
-                          target.closest('.cds--btn')
-                        ) {
-                          return;
+                {rows.map((row: any) => {
+                  const rawItem = processedData.find((item: any) => String(item.id) === String(row.id));
+                  return (
+                    <TableRow 
+                      key={row.id}
+                      className="clickable-row-mobile"
+                      onClick={(e: React.MouseEvent) => {
+                        if (onViewDetails && typeof window !== 'undefined' && window.innerWidth <= 768) {
+                          const target = e.target as HTMLElement;
+                          if (
+                            target.closest('button') || 
+                            target.closest('a') || 
+                            target.closest('input') ||
+                            target.closest('.cds--toggle') ||
+                            target.closest('.cds--checkbox') ||
+                            target.closest('.cds--btn')
+                          ) {
+                            return;
+                          }
+                          onViewDetails(row.id);
                         }
-                        onViewDetails(row.id);
-                      }
-                    }}
-                  >
-                    {row.cells.map((cell: any) => {
-                      const colKey = cell.id.split(':').pop();
-                      const headerConf = headers.find(h => h.key === colKey);
-                      return (
-                        <TableCell key={cell.id} style={{ 
-                          fontSize: compact ? "9.5px" : "11px", 
-                          padding: compact ? "0.15rem 0.3rem" : "0.4rem",
-                          ...(headerConf?.width ? { width: headerConf.width } : {})
-                        }}>
-                          {formatCell ? formatCell(cell.id, cell.value) : cell.value}
-                        </TableCell>
-                      );
-                    })}
+                      }}
+                    >
+                      {row.cells.map((cell: any) => {
+                        const colKey = cell.id.split(':').pop();
+                        const headerConf = headers.find(h => h.key === colKey);
+                        return (
+                          <TableCell key={cell.id} style={{ 
+                            fontSize: compact ? "9.5px" : "11px", 
+                            padding: compact ? "0.15rem 0.3rem" : "0.4rem",
+                            ...(headerConf?.width ? { width: headerConf.width } : {})
+                          }}>
+                            {formatCell ? formatCell(cell.id, cell.value, rawItem) : cell.value}
+                          </TableCell>
+                        );
+                      })}
                     {onViewDetails && (
                       <TableCell style={{ padding: compact ? "0.15rem" : "0.2rem", textAlign: "center", width: "50px" }}>
                         <Button 
@@ -313,7 +315,8 @@ export default function GlobalTable({
                       </TableCell>
                     )}
                   </TableRow>
-                ))}
+                  );
+                })}
                 {rows.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={headers.length + (onViewDetails ? 1 : 0)} style={{ textAlign: "center", padding: "2rem" }}>

@@ -70,16 +70,18 @@ const ShapPanel: React.FC<ShapPanelProps> = ({ shapValues, explainability, direc
       {probabilities && Object.keys(probabilities).length > 0 && (
         <div style={{ display: 'flex', gap: '0.8rem', flexWrap: 'wrap', paddingTop: '0.3rem' }}>
           {Object.entries(probabilities).map(([cls, prob]) => {
-            const formattedProb = (Number(prob) * 100).toFixed(1) + '%';
+            const numVal = Number(prob);
+            const formattedProb = isNaN(numVal) ? String(prob) : (numVal <= 1.0 ? (numVal * 100).toFixed(1) + '%' : numVal.toFixed(1) + '%');
             let clsColor = '#a8a8a8';
-            if (cls === 'BUY') clsColor = '#24a148';
-            if (cls === 'SELL') clsColor = '#fa4d56';
-            if (cls === 'NEUTRAL') clsColor = '#ffffff';
+            let label = cls.toUpperCase();
+            if (cls.toLowerCase().includes('buy')) { clsColor = '#24a148'; label = 'BUY'; }
+            else if (cls.toLowerCase().includes('sell')) { clsColor = '#fa4d56'; label = 'SELL'; }
+            else if (cls === 'NEUTRAL') { clsColor = '#ffffff'; }
             
             return (
               <div key={cls} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '0.8rem' }}>
                 <span style={{ display: 'inline-block', width: '6px', height: '6px', borderRadius: '50%', background: clsColor }} />
-                <span style={{ color: '#c6c6c6' }}>{cls}:</span>
+                <span style={{ color: '#c6c6c6' }}>{label}:</span>
                 <span style={{ color: clsColor, fontWeight: 'bold' }}>{formattedProb}</span>
               </div>
             );

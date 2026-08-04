@@ -282,6 +282,52 @@ export default function GlobalDetailTable({ id, type = 'signal', dataObj, onClos
               </p>
             </div>
           </div>
+
+          {/* Dual Binary Calibration Summary Card */}
+          {(() => {
+            const mo = data.metadata?.model_output || data.signal_metadata?.model_output || {};
+            const calBuy = mo.cal_buy !== undefined ? mo.cal_buy : (data.metadata?.cal_buy !== undefined ? data.metadata?.cal_buy : undefined);
+            const calSell = mo.cal_sell !== undefined ? mo.cal_sell : (data.metadata?.cal_sell !== undefined ? data.metadata?.cal_sell : undefined);
+            const rawBuy = mo.raw_buy !== undefined ? mo.raw_buy : data.metadata?.raw_buy;
+            const rawSell = mo.raw_sell !== undefined ? mo.raw_sell : data.metadata?.raw_sell;
+            const appThresh = mo.applied_threshold !== undefined ? mo.applied_threshold : data.metadata?.applied_threshold;
+
+            if (calBuy === undefined && calSell === undefined) return null;
+
+            return (
+              <div style={{
+                background: 'rgba(255, 255, 255, 0.03)',
+                border: '1px dashed #525252',
+                borderRadius: '4px',
+                padding: '0.75rem 1rem',
+                marginBottom: '1.25rem'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#f4f4f4' }}>🎯 Dual Model Signal Probabilities</span>
+                  {appThresh !== undefined && (
+                    <span style={{ fontSize: '0.75rem', color: '#f1c21b', background: 'rgba(241, 194, 27, 0.1)', padding: '2px 8px', borderRadius: '4px' }}>
+                      Applied Threshold: {(appThresh * 100).toFixed(1)}%
+                    </span>
+                  )}
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem' }}>
+                  <div style={{ background: 'rgba(36, 161, 72, 0.08)', padding: '0.5rem 0.75rem', borderLeft: '3px solid #24a148', borderRadius: '2px' }}>
+                    <div style={{ fontSize: '0.75rem', color: '#a8a8a8' }}>BUY Probability</div>
+                    <div style={{ fontSize: '1rem', fontWeight: 'bold', color: '#24a148' }}>
+                      {(calBuy * 100).toFixed(2)}%
+                    </div>
+                  </div>
+                  <div style={{ background: 'rgba(250, 77, 86, 0.08)', padding: '0.5rem 0.75rem', borderLeft: '3px solid #fa4d56', borderRadius: '2px' }}>
+                    <div style={{ fontSize: '0.75rem', color: '#a8a8a8' }}>SELL Probability</div>
+                    <div style={{ fontSize: '1rem', fontWeight: 'bold', color: '#fa4d56' }}>
+                      {(calSell * 100).toFixed(2)}%
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
           <h4 style={{ marginBottom: "1rem", fontSize: "1rem", borderTop: "1px solid #393939", paddingTop: "1rem" }}>Associated Trades</h4>
           {data.trades && data.trades.length > 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', marginBottom: '1rem' }}>

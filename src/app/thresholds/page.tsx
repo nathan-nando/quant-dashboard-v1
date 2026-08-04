@@ -27,8 +27,8 @@ export default function ThresholdsPage() {
     scalping_min_atr_pips: 1.0,
     scalping_max_consecutive_losses: 3,
     use_macro_model: true,
-    scalping_base_confidence: 0.50,
-    macro_soft_switch_sensitivity: 0.20,
+    scalping_base_confidence: 0.45,
+    macro_soft_switch_sensitivity: 0.15,
     macro_refresh_interval_minutes: 15,
     macro_news_buffer_minutes: 15,
     macro_vix_pause_threshold: 25.0
@@ -186,7 +186,7 @@ export default function ThresholdsPage() {
                       id="max_drawdown_equity_pct"
                       label="Max Equity DD (%)"
                       value={config.max_drawdown_equity_pct}
-                      min={1} max={50} step={0.5}
+                      min={1} max={60} step={0.5}
                       onChange={(e: any, { value }: any) => updateConfig("max_drawdown_equity_pct", value)}
                     />
                   </div>
@@ -195,7 +195,7 @@ export default function ThresholdsPage() {
                       id="max_daily_drawdown_pct"
                       label="Max Daily DD (%)"
                       value={config.max_daily_drawdown_pct}
-                      min={1} max={20} step={0.5}
+                      min={1} max={60} step={0.5}
                       onChange={(e: any, { value }: any) => updateConfig("max_daily_drawdown_pct", value)}
                     />
                   </div>
