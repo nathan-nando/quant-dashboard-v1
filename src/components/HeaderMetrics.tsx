@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Power, MachineLearningModel } from '@carbon/icons-react';
+import { Power, MachineLearningModel, Globe } from '@carbon/icons-react';
 import { Toggle, Modal, Loading } from '@carbon/react';
 import { useGlobalState } from '@/contexts/GlobalStateContext';
 import { API_BASE_URL } from '@/config/env';
@@ -74,6 +74,28 @@ export default function HeaderMetrics({ idPrefix = "" }: { idPrefix?: string }) 
     });
   };
 
+  const handleToggleMacro = (checked: boolean) => {
+    setModalConfig({
+      isOpen: true,
+      title: checked ? "Enable Macro Model Gating" : "Disable Macro Model Gating",
+      body: checked 
+        ? "Enable Macro Model signal gating veto to dynamically adjust buy/sell thresholds?" 
+        : "Disable Macro Model signal gating veto? The macro model will remain active in background as informational regime.",
+      onConfirm: async () => {
+        try {
+          await fetch(`${API_BASE_URL}/configurations/thresholds`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ use_macro_model: checked })
+          });
+        } catch (err) {
+          console.error("Failed to toggle macro model", err);
+        }
+        setModalConfig(prev => ({ ...prev, isOpen: false }));
+      }
+    });
+  };
+
   const MetricToggle = ({ label, toggled, onToggle, icon: Icon, id }: any) => (
     <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0px 0.5rem', height: '14px' }}>
       <Icon size={12} color={toggled ? "#24a148" : "#fa4d56"} style={{ flexShrink: 0 }} />
@@ -98,7 +120,13 @@ export default function HeaderMetrics({ idPrefix = "" }: { idPrefix?: string }) 
 
   return (
     <>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0px', justifyContent: 'center' }}>
+      <div style={{ 
+        display: 'grid', 
+        gridTemplateColumns: 'repeat(2, auto)', 
+        gap: '2px 0.25rem', 
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
         <MetricToggle 
           id={`${idPrefix}engine-nav-toggle`}
           label="Engine" 
@@ -112,6 +140,13 @@ export default function HeaderMetrics({ idPrefix = "" }: { idPrefix?: string }) 
           toggled={state.auto_execution} 
           onToggle={handleToggleAuto}
           icon={MachineLearningModel}
+        />
+        <MetricToggle 
+          id={`${idPrefix}macro-nav-toggle`}
+          label="Macro" 
+          toggled={state.use_macro_model !== undefined ? state.use_macro_model : true} 
+          onToggle={handleToggleMacro}
+          icon={Globe}
         />
       </div>
 

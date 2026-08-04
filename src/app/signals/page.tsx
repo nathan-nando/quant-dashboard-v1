@@ -100,7 +100,7 @@ export default function SignalsPage() {
     if (col.includes("remarks")) {
       if (!value) return <span style={{ color: '#525252' }}>-</span>;
       const isError = String(value).toLowerCase().includes("error") || String(value).toLowerCase().includes("rejected") || String(value).toLowerCase().includes("blocked") || String(value).toLowerCase().includes("exceeded");
-      return <span style={{ color: isError ? '#fa4d56' : '#f1c21b', fontSize: '12px' }}>{value}</span>;
+      return <span style={{ color: isError ? '#fa4d56' : '#f1c21b', fontSize: '0.65rem', lineHeight: '1.25', display: 'inline-block' }}>{value}</span>;
     }
     if (col.includes("direction")) {
       const readable = value ? value.charAt(0).toUpperCase() + value.slice(1).toLowerCase() : '';

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { ChartLine, Lightning, Scale } from '@carbon/icons-react';
+import { ChartLine, Lightning, Scale, Globe } from '@carbon/icons-react';
 import { API_BASE_URL } from '@/config/env';
 import { useGlobalState } from '@/contexts/GlobalStateContext';
 
@@ -30,7 +30,7 @@ const RadialGauge: React.FC<RadialGaugeProps> = ({ pct, label, valueStr, color, 
       alignItems: 'center', 
       justifyContent: 'center',
       background: 'transparent',
-      padding: '0.4rem 0.2rem',
+      padding: '0.4rem 0.1rem',
       height: '100%',
       transition: 'all 0.4s ease'
     }}>
@@ -94,6 +94,7 @@ export default function HMMRegimeGauges() {
   const weight = data.macro_weight !== undefined ? data.macro_weight : 0.0;
   const buyThresh = data.buy_threshold !== undefined ? data.buy_threshold : 0.50;
   const sellThresh = data.sell_threshold !== undefined ? data.sell_threshold : 0.50;
+  const isMacroActive = state?.use_macro_model !== undefined ? Boolean(state.use_macro_model) : true;
 
   const getBiasColor = (b: string) => {
     if (b.includes("BULLISH")) return "#24a148";
@@ -115,9 +116,19 @@ export default function HMMRegimeGauges() {
       justifyContent: 'space-between', 
       width: '100%', 
       height: '100%', 
-      padding: '0.3rem 0.4rem',
-      gap: '0.5rem'
+      padding: '0.3rem 0.2rem',
+      gap: '0.25rem'
     }}>
+      {/* Gauge 0: Macro Gating Status */}
+      <RadialGauge 
+        pct={isMacroActive ? 100 : 0} 
+        label="Macro Gating" 
+        valueStr={isMacroActive ? "ACTIVE" : "OFF"} 
+        sublabel={isMacroActive ? "Engine Veto Active" : "Informational Only"} 
+        color={isMacroActive ? "#24a148" : "#8d8d8d"} 
+        icon={Globe} 
+      />
+
       {/* Gauge 1: Macro Bias */}
       <RadialGauge 
         pct={100} 
@@ -142,9 +153,9 @@ export default function HMMRegimeGauges() {
         pct={buyThresh * 100} 
         label="BUY Threshold" 
         valueStr={`${(buyThresh * 100).toFixed(1)}%`} 
-        sublabel={isBullish ? "Favored (Easier)" : (isBearish ? "Hurdle Raised" : "Standard 50%")} 
-        color={isBullish ? "#24a148" : "#8d8d8d"} 
-        isHighlighted={isBullish}
+        sublabel={!isMacroActive ? "Disabled (Fixed 50%)" : (isBullish ? "Favored (Easier)" : (isBearish ? "Hurdle Raised" : "Standard 50%"))} 
+        color={!isMacroActive ? "#6f6f6f" : (isBullish ? "#24a148" : "#8d8d8d")} 
+        isHighlighted={isMacroActive && isBullish}
       />
 
       {/* Gauge 4: SELL Threshold */}
@@ -152,9 +163,9 @@ export default function HMMRegimeGauges() {
         pct={sellThresh * 100} 
         label="SELL Threshold" 
         valueStr={`${(sellThresh * 100).toFixed(1)}%`} 
-        sublabel={isBearish ? "Favored (Easier)" : (isBullish ? "Hurdle Raised" : "Standard 50%")} 
-        color={isBearish ? "#da1e28" : "#8d8d8d"} 
-        isHighlighted={isBearish}
+        sublabel={!isMacroActive ? "Disabled (Fixed 50%)" : (isBearish ? "Favored (Easier)" : (isBullish ? "Hurdle Raised" : "Standard 50%"))} 
+        color={!isMacroActive ? "#6f6f6f" : (isBearish ? "#da1e28" : "#8d8d8d")} 
+        isHighlighted={isMacroActive && isBearish}
       />
     </div>
   );

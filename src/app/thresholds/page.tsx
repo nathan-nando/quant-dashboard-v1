@@ -26,6 +26,7 @@ export default function ThresholdsPage() {
     scalping_max_spread_pips: 3.0,
     scalping_min_atr_pips: 1.0,
     scalping_max_consecutive_losses: 3,
+    use_macro_model: true,
     scalping_base_confidence: 0.50,
     macro_soft_switch_sensitivity: 0.20,
     macro_refresh_interval_minutes: 15,
@@ -107,7 +108,7 @@ export default function ThresholdsPage() {
   };
 
   const riskKeys = ["auto_execution_enabled", "use_equity_kill_switch", "max_drawdown_equity_pct", "use_daily_kill_switch", "max_daily_drawdown_pct", "risk_control_mode", "risk_per_trade_pct", "max_open_positions"];
-  const macroKeys = ["scalping_base_confidence", "macro_soft_switch_sensitivity", "macro_refresh_interval_minutes", "macro_news_buffer_minutes", "macro_vix_pause_threshold"];
+  const macroKeys = ["use_macro_model", "scalping_base_confidence", "macro_soft_switch_sensitivity", "macro_refresh_interval_minutes", "macro_news_buffer_minutes", "macro_vix_pause_threshold"];
   const scalpingKeys = ["engine_active", "scalping_timeframe", "scalping_tp_pips", "scalping_sl_pips", "scalping_max_holding_minutes", "scalping_max_trades_per_day", "scalping_max_trades_per_hour", "scalping_max_spread_pips", "scalping_min_atr_pips", "scalping_max_consecutive_losses"];
 
   if (loading) return <div>Loading threshold configuration...</div>;
@@ -238,6 +239,16 @@ export default function ThresholdsPage() {
             </div>
             {visibleCategories["macro-soft-switch"] && (
               <div style={{ marginTop: "0.75rem" }}>
+                <div style={{ display: "flex", gap: "2.5rem", marginBottom: "1rem", flexWrap: "wrap" }}>
+                  <Toggle
+                    id="use_macro_model"
+                    labelText="Macro Model Signal Gating Veto"
+                    labelA="Disabled (Informational Only)"
+                    labelB="Active (Engine Veto)"
+                    toggled={config.use_macro_model !== undefined ? config.use_macro_model : true}
+                    onToggle={(val) => updateConfig("use_macro_model", val)}
+                  />
+                </div>
                 <div style={{ display: "flex", gap: "0.1rem", marginBottom: "0.1rem", flexWrap: "wrap" }}>
                   <div style={{ width: "190px" }}>
                     <NumberInput

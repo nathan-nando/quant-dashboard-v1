@@ -176,10 +176,16 @@ export default function GlobalDetailTable({ id, type = 'signal', dataObj, onClos
       
       {data && !loading && !error && type === 'signal' && (
         <div style={{ maxHeight: "65vh", overflowY: "auto", paddingRight: "0.5rem" }}>
-          {data.status === 'FAILED' && data.remarks && (
+          {data.remarks && (
             <div style={{
-              background: 'rgba(250, 77, 86, 0.1)',
-              border: '1px solid #fa4d56',
+              background: String(data.remarks).toLowerCase().includes("error") || String(data.remarks).toLowerCase().includes("rejected") || String(data.remarks).toLowerCase().includes("blocked") || String(data.remarks).toLowerCase().includes("exceeded") || data.status === 'FAILED' || data.status === 'RISK_BLOCKED'
+                ? 'rgba(250, 77, 86, 0.1)'
+                : 'rgba(241, 194, 27, 0.1)',
+              border: `1px solid ${
+                String(data.remarks).toLowerCase().includes("error") || String(data.remarks).toLowerCase().includes("rejected") || String(data.remarks).toLowerCase().includes("blocked") || String(data.remarks).toLowerCase().includes("exceeded") || data.status === 'FAILED' || data.status === 'RISK_BLOCKED'
+                  ? '#fa4d56'
+                  : '#f1c21b'
+              }`,
               borderRadius: '4px',
               padding: '0.75rem',
               marginBottom: '1rem',
@@ -187,7 +193,15 @@ export default function GlobalDetailTable({ id, type = 'signal', dataObj, onClos
               flexDirection: 'column',
               gap: '0.25rem'
             }}>
-              <span style={{ color: '#fa4d56', fontWeight: 'bold', fontSize: '0.75rem' }}>⚠️ EXECUTION FAILURE REMARKS</span>
+              <span style={{
+                color: String(data.remarks).toLowerCase().includes("error") || String(data.remarks).toLowerCase().includes("rejected") || String(data.remarks).toLowerCase().includes("blocked") || String(data.remarks).toLowerCase().includes("exceeded") || data.status === 'FAILED' || data.status === 'RISK_BLOCKED'
+                  ? '#fa4d56'
+                  : '#f1c21b',
+                fontWeight: 'bold',
+                fontSize: '0.75rem'
+              }}>
+                📌 REMARKS ({data.status ? data.status.split('_').join(' ') : 'INFO'})
+              </span>
               <span style={{ fontSize: '0.875rem', color: '#f4f4f4' }}>{data.remarks}</span>
             </div>
           )}
@@ -214,6 +228,17 @@ export default function GlobalDetailTable({ id, type = 'signal', dataObj, onClos
                     {data.direction ? data.direction.charAt(0).toUpperCase() + data.direction.slice(1).toLowerCase() : ''}
                   </span>
                 </div>
+              </div>
+            </div>
+            <div>
+              <p style={{ color: '#a8a8a8', fontSize: '0.75rem', marginBottom: '4px' }}>Status</p>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 'bold', fontSize: '11px' }}>
+                <svg width="10" height="10" viewBox="0 0 32 32" style={{ fill: data.status === 'EXECUTED' ? '#24a148' : data.status === 'PENDING_EXECUTION' ? '#11a3c6' : data.status === 'RISK_BLOCKED' ? '#f1c21b' : '#fa4d56', flexShrink: 0 }}>
+                  <circle cx="16" cy="16" r="8" />
+                </svg>
+                <span style={{ color: data.status === 'EXECUTED' ? '#24a148' : data.status === 'PENDING_EXECUTION' ? '#11a3c6' : data.status === 'RISK_BLOCKED' ? '#f1c21b' : '#fa4d56', whiteSpace: 'nowrap' }}>
+                  {data.status ? data.status.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ') : '-'}
+                </span>
               </div>
             </div>
             <div>
@@ -249,6 +274,12 @@ export default function GlobalDetailTable({ id, type = 'signal', dataObj, onClos
             <div>
               <p style={{ color: '#a8a8a8', fontSize: '0.75rem', marginBottom: '4px' }}>Timestamp</p>
               <p style={{ fontSize: '0.875rem' }}>{data.timestamp ? new Date(data.timestamp).toLocaleString() : '-'}</p>
+            </div>
+            <div>
+              <p style={{ color: '#a8a8a8', fontSize: '0.75rem', marginBottom: '4px' }}>Remarks</p>
+              <p style={{ fontSize: '0.875rem', color: data.remarks ? (String(data.remarks).toLowerCase().includes("error") || String(data.remarks).toLowerCase().includes("rejected") || String(data.remarks).toLowerCase().includes("blocked") || String(data.remarks).toLowerCase().includes("exceeded") || data.status === 'FAILED' || data.status === 'RISK_BLOCKED' ? '#fa4d56' : '#f1c21b') : '#a8a8a8' }}>
+                {data.remarks || '-'}
+              </p>
             </div>
           </div>
           <h4 style={{ marginBottom: "1rem", fontSize: "1rem", borderTop: "1px solid #393939", paddingTop: "1rem" }}>Associated Trades</h4>
