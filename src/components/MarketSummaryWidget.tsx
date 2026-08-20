@@ -47,9 +47,9 @@ export default function MarketSummaryWidget() {
   const dailyRange = (stats?.today_high && stats?.today_low) ? stats.today_high - stats.today_low : 0;
 
   const Metric = ({ label, value, color = '#f4f4f4', subValue = null, subColor = '' }: any) => (
-    <div style={{ display: 'flex', flexDirection: 'column', minWidth: 'auto' }}>
-      <span style={{ fontSize: '0.58rem', color: '#a8a8a8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.1rem' }}>{label}</span>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.05rem' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', minWidth: 'auto', padding: '0 2px' }}>
+      <span style={{ fontSize: '0.58rem', color: '#a8a8a8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.12rem', whiteSpace: 'nowrap' }}>{label}</span>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.2rem' }}>
         <span style={{ fontSize: '0.75rem', color, fontFamily: 'monospace', fontWeight: 600 }}>{value}</span>
         {subValue && <span style={{ fontSize: '0.55rem', color: subColor, fontFamily: 'monospace', fontWeight: 600 }}>{subValue}</span>}
       </div>
@@ -62,7 +62,7 @@ export default function MarketSummaryWidget() {
       {/* Price Details */}
       <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', paddingTop: '0', width: '100%', flexShrink: 0 }}>
         
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', rowGap: '0.35rem', columnGap: '0.5rem', width: '100%' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, auto)', rowGap: '0.45rem', columnGap: '1.1rem', width: 'fit-content' }}>
           <Metric 
             label="Daily Change" 
             value={`${dailyChange >= 0 ? '+' : ''}${dailyChange.toFixed(2)}`} 

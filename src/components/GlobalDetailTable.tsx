@@ -9,6 +9,7 @@ import {
 } from '@carbon/react';
 import { ChevronDown, ChevronUp, Copy } from '@carbon/icons-react';
 import { API_BASE_URL } from '@/config/env';
+import { formatJakartaDateTime } from '../utils/date';
 
 const CollapsibleJSON = ({ 
   displayValue, 
@@ -274,7 +275,7 @@ export default function GlobalDetailTable({ id, type = 'signal', dataObj, onClos
             </div>
             <div>
               <p style={{ color: '#a8a8a8', fontSize: '0.75rem', marginBottom: '4px' }}>Timestamp</p>
-              <p style={{ fontSize: '0.875rem' }}>{data.timestamp ? new Date(data.timestamp).toLocaleString() : '-'}</p>
+              <p style={{ fontSize: '0.875rem' }}>{data.timestamp ? formatJakartaDateTime(data.timestamp).full : '-'}</p>
             </div>
             <div>
               <p style={{ color: '#a8a8a8', fontSize: '0.75rem', marginBottom: '4px' }}>Remarks</p>
@@ -568,7 +569,7 @@ export default function GlobalDetailTable({ id, type = 'signal', dataObj, onClos
                 <svg width="10" height="10" viewBox="0 0 32 32" style={{ fill: '#24a148', flexShrink: 0 }}>
                   <path d="M18 6l-1.43 1.39L22.47 13H4v2h18.47l-5.9 5.61L18 22l8-8z" />
                 </svg>
-                <span style={{ fontSize: '0.875rem' }}>{data.entry_time ? new Date(data.entry_time).toLocaleString() : '-'}</span>
+                <span style={{ fontSize: '0.875rem' }}>{data.entry_time ? formatJakartaDateTime(data.entry_time).full : '-'}</span>
               </div>
             </div>
             <div>
@@ -577,7 +578,7 @@ export default function GlobalDetailTable({ id, type = 'signal', dataObj, onClos
                 <svg width="10" height="10" viewBox="0 0 32 32" style={{ fill: '#fa4d56', flexShrink: 0 }}>
                   <path d="M14 22l1.43-1.39L9.53 15H28v-2H9.53l5.9-5.61L14 6l-8 8z" />
                 </svg>
-                <span style={{ fontSize: '0.875rem', color: '#e0e0e0' }}>{data.exit_time ? new Date(data.exit_time).toLocaleString() : '-'}</span>
+                <span style={{ fontSize: '0.875rem', color: '#e0e0e0' }}>{data.exit_time ? formatJakartaDateTime(data.exit_time).full : '-'}</span>
               </div>
             </div>
             <div>
@@ -678,7 +679,7 @@ export default function GlobalDetailTable({ id, type = 'signal', dataObj, onClos
                   <p style={{ fontSize: '0.875rem' }}>
                     <strong style={{ color: '#8a3ffc' }}>#{associatedSignal.id}</strong>
                     <span style={{ color: '#c6c6c6', margin: '0 6px' }}>|</span>
-                    <span style={{ fontSize: '0.8rem' }}>{associatedSignal.timestamp ? new Date(associatedSignal.timestamp).toLocaleString() : '-'}</span>
+                    <span style={{ fontSize: '0.8rem' }}>{associatedSignal.timestamp ? formatJakartaDateTime(associatedSignal.timestamp).full : '-'}</span>
                   </p>
                 </div>
                 <div>

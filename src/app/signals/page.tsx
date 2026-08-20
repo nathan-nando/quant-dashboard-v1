@@ -9,6 +9,7 @@ import { useGlobalState } from "../../contexts/GlobalStateContext";
 import DashboardPanel from "../../components/DashboardPanel";
 import RangeBarPyramidVisualizer from "../../components/RangeBarPyramidVisualizer";
 import { API_BASE_URL } from '@/config/env';
+import { formatJakartaDateTime } from "../../utils/date";
 
 const CandlestickChart = dynamic(() => import("../../components/CandlestickChart"), { ssr: false });
 
@@ -44,15 +45,10 @@ export default function SignalsPage() {
   const formatCell = (cellId: string, value: any, row?: any) => {
     const col = cellId.split('__')[1] || cellId.split(':').pop() || '';
     if (col.includes("timestamp") && value) {
-      const d = new Date(value);
-      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-      const day = d.getDate().toString().padStart(2, '0');
-      const month = months[d.getMonth()];
-      const year = d.getFullYear().toString().slice(-2);
-      const time = d.toTimeString().split(' ')[0];
+      const { date, time } = formatJakartaDateTime(value);
       return (
         <div style={{ display: 'flex', flexDirection: 'column', lineHeight: '1.2' }}>
-          <span>{`${day} ${month} ${year}`}</span>
+          <span>{date}</span>
           <span style={{ color: '#a8a8a8', fontSize: '0.9em' }}>{time}</span>
         </div>
       );
@@ -245,7 +241,7 @@ export default function SignalsPage() {
               onExportCsv={() => {
                 const headers = ["Time", "Signal", "Price", "SL", "TP", "R:R", "Conf", "Regime", "Model", "Status", "Remarks"];
                 const rows = signals.map(s => [
-                  new Date(s.timestamp).toLocaleString(),
+                  formatJakartaDateTime(s.timestamp).full,
                   s.direction,
                   s.entry_price || '',
                   s.sl_price || '',

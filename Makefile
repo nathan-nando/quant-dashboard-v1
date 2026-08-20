@@ -31,6 +31,8 @@ build:
 start:
 	npm run start
 
+rebuild: docker-build docker-up
+
 # Docker Targets
 docker-build:
 	docker compose build
@@ -49,5 +51,3 @@ docker-restart:
 
 docker-clean:
 	docker compose down --rmi local --volumes --remove-orphans
-
-rebuild:docker-build docker-up

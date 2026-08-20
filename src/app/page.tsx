@@ -22,6 +22,7 @@ import MoEEnsembleGauges from '../components/MoEEnsembleGauges';
 import RangeBarPyramidVisualizer from '../components/RangeBarPyramidVisualizer';
 import { useGlobalState } from '../contexts/GlobalStateContext';
 import { API_BASE_URL } from '@/config/env';
+import { formatJakartaDateTime } from '../utils/date';
 
 const getRegimeFormat = (regime: string) => {
   if (!regime) return { text: 'UNKNOWN', color: '#f4f4f4' };
@@ -204,7 +205,7 @@ export default function Home() {
       </div>
 
       {/* --- LIVE RANGE BAR & PYRAMIDING VISUALIZER --- */}
-      <div style={{ marginBottom: '0.1rem', marginTop: '0.1rem' }}>
+      <div style={{ marginBottom: '0.2rem', marginTop: '0.2rem' }}>
         <RangeBarPyramidVisualizer />
       </div>
 
@@ -230,7 +231,7 @@ export default function Home() {
               if (!chartHistoryRef.current || chartHistoryRef.current.length === 0) return;
               const headers = ["Time", "Open", "High", "Low", "Close"];
               const rows = chartHistoryRef.current.map((c: any) => [
-                new Date(c.time * 1000).toLocaleString(),
+                formatJakartaDateTime(c.time).full,
                 c.open,
                 c.high,
                 c.low,
@@ -250,7 +251,7 @@ export default function Home() {
              <div style={{ height: "100%", overflow: "hidden", position: "absolute", top: 0, left: 0, right: 0, bottom: 0, background: '#262626' }}>
                {/* Legend */}
                <div style={{
-                 position: 'absolute', top: 10, right: 16, zIndex: 20,
+                 position: 'absolute', top: 8, right: 14, zIndex: 20,
                  display: 'flex', gap: '10px', alignItems: 'center', fontSize: '9px', color: '#a8a8a8'
                }}>
                  <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
@@ -273,8 +274,8 @@ export default function Home() {
                  style={{
                    position: 'absolute',
                    top: '5px',
-                   left: '100px',
-                   right: '185px',
+                   left: '110px',
+                   right: '175px',
                    zIndex: 5,
                    background: 'none',
                    padding: '0',
@@ -298,7 +299,7 @@ export default function Home() {
             onExportCsv={() => {
               const headers = ["Time", "Signal", "Price", "SL", "TP", "R:R", "Conf", "Regime", "Model", "Status"];
               const rows = nonShadowSignals.map(s => [
-                new Date(s.timestamp).toLocaleString(),
+                formatJakartaDateTime(s.timestamp).full,
                 s.direction,
                 s.entry_price || '',
                 s.sl_price || '',
@@ -332,15 +333,10 @@ export default function Home() {
                 formatCell={(cellId, value, row) => {
                   const col = cellId.split('__')[1] || cellId.split(':').pop() || '';
                   if (col.includes("timestamp") && value) {
-                    const d = new Date(value);
-                    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-                    const day = d.getDate().toString().padStart(2, '0');
-                    const month = months[d.getMonth()];
-                    const year = d.getFullYear().toString().slice(-2);
-                    const time = d.toTimeString().split(' ')[0];
+                    const { date, time } = formatJakartaDateTime(value);
                     return (
                       <div style={{ display: 'flex', flexDirection: 'column', lineHeight: '1.2', fontSize: '9.5px' }}>
-                        <span>{`${day} ${month} ${year}`}</span>
+                        <span>{date}</span>
                         <span style={{ color: '#a8a8a8', fontSize: '8.5px' }}>{time}</span>
                       </div>
                     );
@@ -480,7 +476,7 @@ export default function Home() {
               const headers = ["Direction", "Entry Time", "Entry", "Current Price", "Lots", "Regime", "Model", "Conf", "PnL"];
               const rows = liveTrades.map(t => [
                 t.direction,
-                t.entry_time ? new Date(t.entry_time).toLocaleString() : '',
+                t.entry_time ? formatJakartaDateTime(t.entry_time).full : '',
                 t.entry_price || '',
                 t.exit_price || '',
                 t.volume || '',
@@ -538,7 +534,7 @@ export default function Home() {
             onExportCsv={() => {
               const headers = ["Date", "Event", "Impact", "Currency"];
               const rows = (state?.calendar || []).map((e: any) => [
-                e.date ? new Date(e.date).toLocaleString() : '',
+                e.date ? formatJakartaDateTime(e.date).full : '',
                 e.event || '',
                 e.impact || '',
                 e.currency || ''

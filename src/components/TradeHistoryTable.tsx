@@ -16,6 +16,7 @@ import {
 } from "@carbon/react";
 import GlobalTable from "./GlobalTable";
 import GlobalDetailTable from "./GlobalDetailTable";
+import { formatJakartaDateTime } from "../utils/date";
 
 interface Trade {
   trade_id: string;
@@ -170,19 +171,13 @@ export default function TradeHistoryTable({
       
       const formatTime = (isoString: string) => {
         if (!isoString) return "-";
-        const d = new Date(isoString);
-        if (isNaN(d.getTime())) return isoString;
-        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        const day = d.getDate().toString().padStart(2, '0');
-        const month = months[d.getMonth()];
-        const year = d.getFullYear().toString().slice(-2);
-        const timeParts = d.toTimeString().split(' ')[0].split(':');
-        const time = `${timeParts[0]}:${timeParts[1]}`; // HH:MM
+        const { date, time, short } = formatJakartaDateTime(isoString);
+        if (date === '-') return isoString;
         
         if (compact) {
-          return `${day} ${month} ${time}`; // e.g. "23 Jun 13:00"
+          return short; // e.g. "23 Jun 13:00"
         }
-        return `${day} ${month} ${year} ${timeParts.join(':')}`;
+        return `${date} ${time}`;
       };
       
       if (isLiveTrades) {

@@ -4,17 +4,33 @@ import { useEffect, useRef, useState } from "react";
 import { createChart, ColorType, IChartApi, ISeriesApi, Time, CandlestickSeries, HistogramSeries, createSeriesMarkers } from "lightweight-charts";
 import { useGlobalState } from '../contexts/GlobalStateContext';
 import { API_BASE_URL } from '@/config/env';
+import { JAKARTA_OFFSET_SECONDS } from '../utils/date';
 
 const TIMEFRAME_CONFIGS: Record<string, { seconds: number; label: string; isRange?: boolean }> = {
-  "RANGE_1.5": { seconds: 30, label: "RANGE ($1.50)", isRange: true },
-  "M1": { seconds: 60, label: "M1 (Micro)" },
-  "M5": { seconds: 300, label: "M5 (Intraday)" },
+  "RANGE_1.5": { seconds: 30, label: "RANGE", isRange: true },
+  "M1": { seconds: 60, label: "M1" },
+  "M5": { seconds: 300, label: "M5" },
   "M15": { seconds: 900, label: "M15" },
   "M30": { seconds: 1800, label: "M30" },
-  "H1": { seconds: 3600, label: "H1 (Macro Context)" },
+  "H1": { seconds: 3600, label: "H1" },
   "H4": { seconds: 14400, label: "H4" },
   "D1": { seconds: 86400, label: "D1" }
 };
+
+interface HoverCandleInfo {
+  x: number;
+  y: number;
+  dateStr: string;
+  timeStr: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  change: number;
+  changePct: number;
+  range: number;
+  volume?: number;
+}
 
 export default function CandlestickChart({ 
   symbol = "XAUUSD", 
@@ -43,6 +59,7 @@ export default function CandlestickChart({
   const [timeframe, setTimeframe] = useState<string>(initialTimeframe);
   const [marketStatus, setMarketStatus] = useState<string>("OPEN");
   const [showMarkers, setShowMarkers] = useState<boolean>(true);
+  const [hoverInfo, setHoverInfo] = useState<HoverCandleInfo | null>(null);
 
   // Reset chart and markers when timeframe changes
   useEffect(() => {
@@ -51,6 +68,7 @@ export default function CandlestickChart({
           volumeSeriesRef.current.setData([]);
           lastCandleRef.current = null;
           dataRef.current = [];
+          setHoverInfo(null);
           if (markersRef.current) {
               try { markersRef.current.setMarkers([]); } catch (_) {}
           }
@@ -85,6 +103,18 @@ export default function CandlestickChart({
           bottom: 0.2,
         },
       },
+      crosshair: {
+        vertLine: {
+          color: '#6f6f6f',
+          width: 1,
+          style: 3,
+        },
+        horzLine: {
+          color: '#6f6f6f',
+          width: 1,
+          style: 3,
+        },
+      },
     });
     
     chartRef.current = chart;
@@ -115,6 +145,64 @@ export default function CandlestickChart({
         },
     });
     volumeSeriesRef.current = volumeSeries;
+
+    // Subscribe to crosshair movement for candlestick popover
+    chart.subscribeCrosshairMove((param) => {
+      if (
+        !param.point ||
+        !param.time ||
+        param.point.x < 0 ||
+        param.point.x > (chartContainerRef.current?.clientWidth || 0) ||
+        param.point.y < 0 ||
+        param.point.y > (chartContainerRef.current?.clientHeight || 0)
+      ) {
+        setHoverInfo(null);
+        return;
+      }
+
+      const candleData = param.seriesData.get(candlestickSeries) as any;
+      if (!candleData || candleData.open === undefined) {
+        setHoverInfo(null);
+        return;
+      }
+
+      const volData = param.seriesData.get(volumeSeries) as any;
+
+      // The time in param.time is the Jakarta-shifted unix seconds timestamp
+      const tSec = Number(param.time);
+      const d = new Date(tSec * 1000);
+      
+      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      const day = d.getUTCDate().toString().padStart(2, '0');
+      const month = months[d.getUTCMonth()];
+      const year = d.getUTCFullYear();
+      const hours = d.getUTCHours().toString().padStart(2, '0');
+      const mins = d.getUTCMinutes().toString().padStart(2, '0');
+      const secs = d.getUTCSeconds().toString().padStart(2, '0');
+
+      const open = Number(candleData.open);
+      const high = Number(candleData.high);
+      const low = Number(candleData.low);
+      const close = Number(candleData.close);
+      const change = close - open;
+      const changePct = open > 0 ? (change / open) * 100 : 0;
+      const range = high - low;
+
+      setHoverInfo({
+        x: param.point.x,
+        y: param.point.y,
+        dateStr: `${day} ${month} ${year}`,
+        timeStr: `${hours}:${mins}:${secs}`,
+        open,
+        high,
+        low,
+        close,
+        change,
+        changePct,
+        range,
+        volume: volData?.value !== undefined ? Number(volData.value) : undefined
+      });
+    });
 
     const resizeObserver = new ResizeObserver((entries) => {
       if (entries.length === 0 || entries[0].target !== chartContainerRef.current) return;
@@ -157,15 +245,13 @@ export default function CandlestickChart({
               const data = await res.json();
               
               if (isMounted && data.length > 0 && seriesRef.current && volumeSeriesRef.current) {
-                  const tzOffsetSeconds = new Date().getTimezoneOffset() * 60;
-                  
                   const history: any[] = [];
                   const volumeHistory: any[] = [];
                   
-                  // Ensure strictly ascending unique timestamps for Lightweight Charts
+                  // Ensure strictly ascending unique timestamps shifted to Jakarta Time (WIB, UTC+7)
                   let lastT = 0;
                   for (const row of data) {
-                      let t = Number(row.time) - (tfConfig.isRange ? 0 : tzOffsetSeconds);
+                      let t = Number(row.time) + JAKARTA_OFFSET_SECONDS;
                       if (t <= lastT) {
                           t = lastT + 1;
                       }
@@ -176,7 +262,9 @@ export default function CandlestickChart({
                         open: Number(row.open), 
                         high: Number(row.high), 
                         low: Number(row.low), 
-                        close: Number(row.close) 
+                        close: Number(row.close),
+                        rawTime: Number(row.time),
+                        volume: Number(row.volume || 1)
                       });
 
                       volumeHistory.push({ 
@@ -218,7 +306,7 @@ export default function CandlestickChart({
       return () => { isMounted = false; };
   }, [timeframe, symbol]);
 
-  // Handle Signals & Pyramiding Event Markers (Item 5 from ChatGPT)
+  // Handle Signals & Pyramiding Event Markers
   useEffect(() => {
     if (!seriesRef.current || !isInitialized) return;
 
@@ -233,13 +321,13 @@ export default function CandlestickChart({
 
     const tfConfig = TIMEFRAME_CONFIGS[timeframe] || { seconds: 300, isRange: false };
     const tfSeconds = tfConfig.seconds;
-    const tzOffsetSeconds = new Date().getTimezoneOffset() * 60;
 
     const markerData = signals
         .map(s => {
-            const timeRaw = new Date(s.timestamp).getTime() / 1000;
-            const currentCandleTimeRaw = Math.floor(timeRaw / tfSeconds) * tfSeconds;
-            let markerTime = tfConfig.isRange ? Math.floor(timeRaw) : Math.floor(currentCandleTimeRaw - tzOffsetSeconds);
+            const timeRawUtc = new Date(s.timestamp).getTime() / 1000;
+            const timeRawJkt = timeRawUtc + JAKARTA_OFFSET_SECONDS;
+            const currentCandleTimeJkt = Math.floor(timeRawJkt / tfSeconds) * tfSeconds;
+            let markerTime = tfConfig.isRange ? Math.floor(timeRawJkt) : Math.floor(currentCandleTimeJkt);
             
             // Snap to nearest existing candle time in chart data
             let closest = dataRef.current[0];
@@ -321,7 +409,9 @@ export default function CandlestickChart({
                      open: Number(rb.open || candle.open),
                      high: Number(rb.high || candle.high),
                      low: Number(rb.low || candle.low),
-                     close: Number(rb.close || currentPrice)
+                     close: Number(rb.close || currentPrice),
+                     rawTime: candle.rawTime,
+                     volume: Number(rb.tick_volume || candle.volume || 1)
                  };
                  seriesRef.current.update(candle);
                  lastCandleRef.current = candle;
@@ -330,10 +420,9 @@ export default function CandlestickChart({
          }
 
          // 2. If in Time-based mode (M1, M5, H1):
-         const rawTick = data.timestamp ? Number(data.timestamp) : Math.floor(Date.now() / 1000);
-         const tzOffsetSeconds = new Date().getTimezoneOffset() * 60;
-         const alignedTickTime = rawTick - tzOffsetSeconds;
-         const currentCandleTime = alignedTickTime - (alignedTickTime % tfConfig.seconds);
+         const rawTickUtc = data.timestamp ? Number(data.timestamp) : Math.floor(Date.now() / 1000);
+         const alignedTickTimeJkt = rawTickUtc + JAKARTA_OFFSET_SECONDS;
+         const currentCandleTime = alignedTickTimeJkt - (alignedTickTimeJkt % tfConfig.seconds);
          
          let candle = lastCandleRef.current;
          
@@ -343,7 +432,9 @@ export default function CandlestickChart({
                open: currentPrice,
                high: currentPrice,
                low: currentPrice,
-               close: currentPrice
+               close: currentPrice,
+               rawTime: rawTickUtc,
+               volume: currentVolume
             };
             dataRef.current.push(candle);
          } else {
@@ -368,98 +459,173 @@ export default function CandlestickChart({
     }
   }, [state, timeframe, isInitialized]);
 
+  const containerW = chartContainerRef.current?.clientWidth || 400;
+  const containerH = chartContainerRef.current?.clientHeight || 300;
+
   return (
     <div style={{ width: "100%", height: "100%", minHeight: "300px", position: "relative" }}>
-      <h4 style={{ position: "absolute", top: 10, left: 20, zIndex: 10, color: "#f4f4f4", display: "flex", alignItems: "center", gap: "15px" }}>
-          {!isInitialized && <span style={{ fontSize: "11px", color: "#a8a8a8" }}>(Connecting chart stream...)</span>}
-          
-          {marketStatus !== "OPEN" && (
-              <span style={{ 
-                  background: marketStatus === "CLOSED" ? "rgba(250, 77, 86, 0.2)" : "rgba(241, 194, 27, 0.2)", 
-                  color: marketStatus === "CLOSED" ? "#fa4d56" : "#f1c21b", 
-                  padding: "2px 8px", 
-                  borderRadius: "4px", 
-                  fontSize: "11px", 
-                  fontWeight: "bold",
-                  border: `1px solid ${marketStatus === "CLOSED" ? "#fa4d56" : "#f1c21b"}`
-              }}>
-                  {marketStatus === "CLOSED" ? "MARKET CLOSED" : "MAINTENANCE"}
-              </span>
-          )}
-          
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>
-            <select 
-               value={timeframe} 
-               onChange={(e) => setTimeframe(e.target.value)}
-               style={{
-                  background: "#353535",
-                  color: "#f4f4f4",
-                  fontWeight: 500,
-                  border: "1px solid #474747",
-                  padding: "2px 6px",
-                  borderRadius: 0,
-                  fontSize: "10px",
-                  cursor: "pointer",
-                  outline: "none"
-               }}
-            >
-                {Object.entries(TIMEFRAME_CONFIGS).map(([tfKey, cfg]) => (
-                    <option key={tfKey} value={tfKey} style={{ background: '#262626', color: '#fff' }}>
-                      {cfg.label}
-                    </option>
-                ))}
-            </select>
+      
+      {/* Sleek, Compact Controls Overlay (Timeframe & Signals Switch) */}
+      <div style={{ 
+        position: "absolute", 
+        top: 6, 
+        left: 10, 
+        zIndex: 15, 
+        display: "flex", 
+        alignItems: "center", 
+        gap: "6px",
+        background: "rgba(24, 24, 24, 0.85)",
+        backdropFilter: "blur(4px)",
+        padding: "2px 6px",
+        borderRadius: "3px"
+      }}>
+        {!isInitialized && <span style={{ fontSize: "8.5px", color: "#a8a8a8" }}>Connecting...</span>}
+        
+        {marketStatus !== "OPEN" && (
+          <span style={{ 
+            background: marketStatus === "CLOSED" ? "rgba(250, 77, 86, 0.2)" : "rgba(241, 194, 27, 0.2)", 
+            color: marketStatus === "CLOSED" ? "#fa4d56" : "#f1c21b", 
+            padding: "1px 4px", 
+            borderRadius: "2px", 
+            fontSize: "8px", 
+            fontWeight: "bold"
+          }}>
+            {marketStatus === "CLOSED" ? "CLOSED" : "MAINT"}
+          </span>
+        )}
 
-            {/* Toggle for Signal Markers */}
-            <label style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '6px', 
-              cursor: 'pointer', 
-              fontSize: '10px', 
-              color: '#a8a8a8', 
-              userSelect: 'none',
-              marginTop: '2px'
-            }}>
-              <span style={{ 
-                position: 'relative', 
-                display: 'inline-block', 
-                width: '22px', 
-                height: '12px' 
-              }}>
-                <input 
-                  type="checkbox" 
-                  checked={showMarkers} 
-                  onChange={(e) => setShowMarkers(e.target.checked)}
-                  style={{ opacity: 0, width: 0, height: 0, position: 'absolute' }} 
-                />
-                <span style={{
-                  position: 'absolute', 
-                  cursor: 'pointer', 
-                  top: 0, 
-                  left: 0, 
-                  right: 0, 
-                  bottom: 0,
-                  backgroundColor: showMarkers ? '#24a148' : '#525252',
-                  transition: '0.2s', 
-                  borderRadius: '0'
-                }} />
-                <span style={{
-                  position: 'absolute', 
-                  content: '""', 
-                  height: '8px', 
-                  width: '8px', 
-                  left: showMarkers ? '11px' : '3px', 
-                  bottom: '2px',
-                  backgroundColor: '#ffffff', 
-                  transition: '0.2s', 
-                  borderRadius: '0'
-                }} />
-              </span>
-              <span>Signals</span>
-            </label>
+        <select 
+          value={timeframe} 
+          onChange={(e) => setTimeframe(e.target.value)}
+          style={{
+            background: "transparent",
+            color: "#f4f4f4",
+            fontWeight: 600,
+            border: "none",
+            padding: "0 2px",
+            fontSize: "9px",
+            cursor: "pointer",
+            outline: "none",
+            letterSpacing: "0.3px"
+          }}
+        >
+          {Object.entries(TIMEFRAME_CONFIGS).map(([tfKey, cfg]) => (
+            <option key={tfKey} value={tfKey} style={{ background: '#262626', color: '#fff' }}>
+              {cfg.label}
+            </option>
+          ))}
+        </select>
+
+        <div style={{ width: '1px', height: '10px', background: '#393939' }} />
+
+        {/* Compact Toggle for Signal Markers */}
+        <label style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '3px', 
+          cursor: 'pointer', 
+          fontSize: '8.5px', 
+          color: showMarkers ? '#f4f4f4' : '#8d8d8d', 
+          userSelect: 'none'
+        }}>
+          <span style={{ 
+            position: 'relative', 
+            display: 'inline-block', 
+            width: '15px', 
+            height: '8px' 
+          }}>
+            <input 
+              type="checkbox" 
+              checked={showMarkers} 
+              onChange={(e) => setShowMarkers(e.target.checked)}
+              style={{ opacity: 0, width: 0, height: 0, position: 'absolute' }} 
+            />
+            <span style={{
+              position: 'absolute', 
+              top: 0, left: 0, right: 0, bottom: 0,
+              backgroundColor: showMarkers ? '#24a148' : '#525252',
+              borderRadius: '8px',
+              transition: '0.15s'
+            }} />
+            <span style={{
+              position: 'absolute', 
+              top: '1px', 
+              left: showMarkers ? '8px' : '1px', 
+              height: '6px', 
+              width: '6px', 
+              backgroundColor: '#ffffff', 
+              borderRadius: '50%',
+              transition: '0.15s'
+            }} />
+          </span>
+          <span>Sig</span>
+        </label>
+      </div>
+
+      {/* Candlestick Hover Popover / Tooltip */}
+      {hoverInfo && (
+        <div
+          style={{
+            position: "absolute",
+            left: Math.min(
+              Math.max(10, hoverInfo.x + 14),
+              Math.max(10, containerW - 165)
+            ),
+            top: Math.min(
+              Math.max(10, hoverInfo.y - 30),
+              Math.max(10, containerH - 145)
+            ),
+            zIndex: 35,
+            pointerEvents: "none",
+            backgroundColor: "rgba(20, 20, 20, 0.94)",
+            backdropFilter: "blur(6px)",
+            border: "1px solid #3d3d3d",
+            borderRadius: "4px",
+            padding: "5px 8px",
+            boxShadow: "0 4px 14px rgba(0, 0, 0, 0.65)",
+            width: "148px",
+            fontSize: "9.5px",
+            fontFamily: "monospace",
+            color: "#f4f4f4"
+          }}
+        >
+          <div style={{ borderBottom: "1px solid #333", paddingBottom: "2px", marginBottom: "3px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ color: "#a8a8a8", fontSize: "8.5px" }}>{hoverInfo.dateStr}</span>
+            <span style={{ color: "#4589ff", fontWeight: 600, fontSize: "9px" }}>
+              {hoverInfo.timeStr} <span style={{ fontSize: "7px", color: "#8d8d8d" }}>WIB</span>
+            </span>
           </div>
-      </h4>
+          <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", columnGap: "6px", rowGap: "1.5px", fontSize: "9px", lineHeight: "1.2" }}>
+            <span style={{ color: "#8d8d8d" }}>O:</span>
+            <span style={{ textAlign: "right", color: "#e0e0e0" }}>{hoverInfo.open.toFixed(2)}</span>
+
+            <span style={{ color: "#8d8d8d" }}>H:</span>
+            <span style={{ textAlign: "right", color: "#24a148" }}>{hoverInfo.high.toFixed(2)}</span>
+
+            <span style={{ color: "#8d8d8d" }}>L:</span>
+            <span style={{ textAlign: "right", color: "#fa4d56" }}>{hoverInfo.low.toFixed(2)}</span>
+
+            <span style={{ color: "#8d8d8d" }}>C:</span>
+            <span style={{ textAlign: "right", color: "#ffffff", fontWeight: "bold" }}>{hoverInfo.close.toFixed(2)}</span>
+
+            <span style={{ color: "#8d8d8d" }}>Chg:</span>
+            <span style={{ textAlign: "right", color: hoverInfo.change >= 0 ? "#24a148" : "#fa4d56", fontWeight: "bold" }}>
+              {hoverInfo.change >= 0 ? "+" : ""}{hoverInfo.change.toFixed(2)} ({hoverInfo.change >= 0 ? "+" : ""}{hoverInfo.changePct.toFixed(2)}%)
+            </span>
+
+            <span style={{ color: "#8d8d8d" }}>Range:</span>
+            <span style={{ textAlign: "right", color: "#f1c21b" }}>{hoverInfo.range.toFixed(2)}</span>
+
+            {hoverInfo.volume !== undefined && (
+              <>
+                <span style={{ color: "#8d8d8d" }}>Vol:</span>
+                <span style={{ textAlign: "right", color: "#c6c6c6" }}>{hoverInfo.volume.toLocaleString()}</span>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       <div ref={chartContainerRef} style={{ width: "100%", height: "100%" }} />
     </div>
   );
