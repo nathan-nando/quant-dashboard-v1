@@ -1,11 +1,12 @@
 "use client";
 
 import { Grid, Column, Tabs, TabList, Tab, TabPanels, TabPanel, Tile, Form, FormGroup, TextInput, Select, SelectItem, Button, Toggle, Modal, ToastNotification, Loading } from "@carbon/react";
-import { Add, Edit, TrashCan, Settings, Tools } from "@carbon/icons-react";
+import { Add, Edit, TrashCan, Settings, Tools, ConnectionSignal } from "@carbon/icons-react";
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import GlobalTable from "../../components/GlobalTable";
 import SubPageSidebar from "@/components/SubPageSidebar";
+import BrokerSettings from "@/components/BrokerSettings";
 import { API_BASE_URL } from '@/config/env';
 
 function SettingsContent() {
@@ -13,8 +14,9 @@ function SettingsContent() {
   const router = useRouter();
   const pathname = usePathname();
 
-  const currentTab = searchParams.get("tab") || "general";
+  const currentTab = searchParams.get("tab") || "broker";
   const navItems = [
+    { id: 'broker', label: 'Broker & Account', icon: ConnectionSignal },
     { id: 'general', label: 'General', icon: Settings },
     { id: 'configuration', label: 'Configuration', icon: Tools }
   ];
@@ -24,13 +26,12 @@ function SettingsContent() {
   };
 
   const [configs, setConfigs] = useState<any[]>([]);
-      const [isLoadingData, setIsLoadingData] = useState(true);
+  const [isLoadingData, setIsLoadingData] = useState(true);
   
   // Modal states
   const [isConfigModalOpen, setConfigModalOpen] = useState(false);
   const [editingConfig, setEditingConfig] = useState<any>(null);
 
-    
   // Form states
   const [configForm, setConfigForm] = useState({ key: "", value: "", category: "", description: "" });
 
@@ -60,7 +61,7 @@ function SettingsContent() {
     }
   };
   
-    const fetchData = async () => {
+  const fetchData = async () => {
     setIsLoadingData(true);
     try {
       const confRes = await fetch(`${API_BASE_URL}/configurations`);
@@ -74,8 +75,10 @@ function SettingsContent() {
   };
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (currentTab === 'configuration') {
+      fetchData();
+    }
+  }, [currentTab]);
 
   // --- CONFIG HANDLERS ---
   const openConfigModal = (config: any = null) => {
@@ -127,8 +130,6 @@ function SettingsContent() {
     { key: "actions", header: "Actions" },
   ];
 
-  
-
   const formatConfigCell = (cellId: string, value: any) => {
     if (cellId.endsWith(':actions')) {
       const rowId = cellId.split(':')[0];
@@ -174,10 +175,14 @@ function SettingsContent() {
 
             {/* Tab Content Panel */}
             <div className="page-content">
+              {currentTab === 'broker' && (
+                <BrokerSettings />
+              )}
+
               {currentTab === 'general' && (
                 <Tile style={{ backgroundColor: '#353535', border: 'none' }}>
                   <h4 style={{ marginBottom: '0.5rem', fontWeight: 600 }}>General Settings</h4>
-                  <p style={{ color: '#c6c6c6' }}>Placeholder for general system settings.</p>
+                  <p style={{ color: '#c6c6c6' }}>System environment configurations and telemetry.</p>
                 </Tile>
               )}
 
@@ -250,7 +255,6 @@ function SettingsContent() {
       </Grid>
     </>
   );
-
 }
 
 export default function SettingsPage() {

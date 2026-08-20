@@ -184,82 +184,72 @@ export default function HMMRegimeGauges() {
   const weightPct = Math.abs(weight) * 100; // Ring fills according to absolute strength 0-100%
 
   return (
-    <div style={{ 
-      display: 'flex', 
-      alignItems: 'center', 
-      justifyContent: 'space-around', 
-      width: '100%', 
-      height: '100%', 
-      padding: '0.3rem',
-      gap: '0.3rem',
-      overflowX: 'hidden'
-    }}>
-      {/* Compact Macro Gating Toggle Switch */}
-      <div style={{ 
-        display: 'flex', 
-        flexDirection: 'column', 
-        alignItems: 'center', 
-        justifyContent: 'center', 
-        padding: '0.4rem 0.2rem',
-        minWidth: '90px'
-      }}>
-        <div style={{ fontSize: '0.68rem', fontWeight: 600, color: '#f4f4f4', marginBottom: '0.35rem', textAlign: 'center', whiteSpace: 'nowrap' }}>
-          Macro Gating
+    <div className="regime-gauges-container">
+      {/* Top Group for Mobile: Gating Toggle & Vertical Bias Stepper */}
+      <div className="regime-top-group">
+        {/* Compact Macro Gating Toggle Switch */}
+        <div className="regime-gating-box">
+          <div style={{ fontSize: '0.68rem', fontWeight: 600, color: '#f4f4f4', marginBottom: '0.35rem', textAlign: 'center', whiteSpace: 'nowrap' }}>
+            Macro Gating
+          </div>
+          <Toggle 
+            id="macro-gating-toggle-widget"
+            size="sm"
+            labelA="OFF"
+            labelB="ON"
+            toggled={isMacroActive}
+            onToggle={async (checked) => {
+              try {
+                await fetch(`${API_BASE_URL}/configurations/system`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ key: 'use_macro_model', value: checked, category: 'thresholds' })
+                });
+              } catch (err) {
+                console.error("Error toggling macro gating:", err);
+              }
+            }}
+          />
+          <div style={{ fontSize: '0.62rem', color: isMacroActive ? '#24a148' : '#8d8d8d', fontWeight: 500, textAlign: 'center', marginTop: '0.3rem', whiteSpace: 'nowrap' }}>
+            {isMacroActive ? "Veto Active" : "Disabled"}
+          </div>
         </div>
-        <Toggle 
-          id="macro-gating-toggle-widget"
-          size="sm"
-          labelA="OFF"
-          labelB="ON"
-          toggled={isMacroActive}
-          onToggle={async (checked) => {
-            try {
-              await fetch(`${API_BASE_URL}/configurations/system`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ key: 'use_macro_model', value: checked, category: 'thresholds' })
-              });
-            } catch (err) {
-              console.error("Error toggling macro gating:", err);
-            }
-          }}
-        />
-        <div style={{ fontSize: '0.62rem', color: isMacroActive ? '#24a148' : '#8d8d8d', fontWeight: 500, textAlign: 'center', marginTop: '0.3rem', whiteSpace: 'nowrap' }}>
-          {isMacroActive ? "Veto Active" : "Disabled"}
-        </div>
+
+        {/* Gauge 1: Vertical Macro Bias Stepper Line */}
+        <VerticalMacroStepper currentBias={bias} />
       </div>
 
-      {/* Gauge 1: Vertical Macro Bias Stepper Line */}
-      <VerticalMacroStepper currentBias={bias} />
+      {/* Radial Gauges Group: Macro Weight, BUY Threshold, SELL Threshold */}
+      <div className="regime-radial-group">
+        {/* Gauge 2: Macro Weight */}
+        <RadialGauge 
+          pct={weightPct} 
+          label="Macro Weight" 
+          valueStr={`${Math.abs(Math.round(weight * 100))}%`} 
+          sublabel={isBullish ? "Bullish Alignment" : (isBearish ? "Bearish Alignment" : "Neutral Alignment")} 
+          color={weightColor} 
+        />
 
-      {/* Gauge 2: Macro Weight */}
-      <RadialGauge 
-        pct={weightPct} 
-        label="Macro Weight" 
-        valueStr={`${Math.abs(Math.round(weight * 100))}%`} 
-        sublabel={isBullish ? "Bullish Alignment" : (isBearish ? "Bearish Alignment" : "Neutral Alignment")} 
-        color={weightColor} 
-      />
+        {/* Gauge 3: BUY Threshold */}
+        <RadialGauge 
+          pct={buyThresh * 100} 
+          label="BUY Threshold" 
+          valueStr={`${(buyThresh * 100).toFixed(1)}%`} 
+          sublabel={!isMacroActive ? "Disabled (Fixed 50%)" : (isBullish ? "Favored (Easier)" : (isBearish ? "Hurdle Raised" : "Standard 50%"))} 
+          color={!isMacroActive ? "#6f6f6f" : (isBullish ? "#24a148" : "#8d8d8d")} 
+          isHighlighted={isMacroActive && isBullish}
+        />
 
-      {/* Gauge 3: BUY Threshold */}
-      <RadialGauge 
-        pct={buyThresh * 100} 
-        label="BUY Threshold" 
-        valueStr={`${(buyThresh * 100).toFixed(1)}%`} 
-        sublabel={!isMacroActive ? "Disabled (Fixed 50%)" : (isBullish ? "Favored (Easier)" : (isBearish ? "Hurdle Raised" : "Standard 50%"))} 
-        color={!isMacroActive ? "#6f6f6f" : (isBullish ? "#24a148" : "#8d8d8d")} 
-        isHighlighted={isMacroActive && isBullish}
-      />
-
-      {/* Gauge 4: SELL Threshold */}
-      <RadialGauge 
-        pct={sellThresh * 100} 
-        label="SELL Threshold" 
-        valueStr={`${(sellThresh * 100).toFixed(1)}%`} 
-        sublabel={!isMacroActive ? "Disabled (Fixed 50%)" : (isBearish ? "Favored (Easier)" : (isBullish ? "Hurdle Raised" : "Standard 50%"))} 
-        color={!isMacroActive ? "#6f6f6f" : (isBearish ? "#da1e28" : "#8d8d8d")} 
-        isHighlighted={isMacroActive && isBearish}
-      />
+        {/* Gauge 4: SELL Threshold */}
+        <RadialGauge 
+          pct={sellThresh * 100} 
+          label="SELL Threshold" 
+          valueStr={`${(sellThresh * 100).toFixed(1)}%`} 
+          sublabel={!isMacroActive ? "Disabled (Fixed 50%)" : (isBearish ? "Favored (Easier)" : (isBullish ? "Hurdle Raised" : "Standard 50%"))} 
+          color={!isMacroActive ? "#6f6f6f" : (isBearish ? "#da1e28" : "#8d8d8d")} 
+          isHighlighted={isMacroActive && isBearish}
+        />
+      </div>
     </div>
   );
 }
