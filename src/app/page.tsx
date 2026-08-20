@@ -33,6 +33,7 @@ const getRegimeFormat = (regime: string) => {
   if (regime === 'TREND_BEAR') return { text: 'Bear Trend', color: '#fa4d56' }; 
   if (regime === 'VOLATILE_CHOP') return { text: 'Volatile Chop', color: '#f1c21b' }; 
   if (regime === 'MEAN_REVERTING') return { text: 'Mean Reverting', color: '#4589ff' }; 
+  if (regime === 'RANGE_SCALPER') return { text: '⚡ Range Scalper', color: '#11a3c6' };
   return { text: regime.replace('_EXPERT', ' Expert'), color: '#f4f4f4' };
 };
 
