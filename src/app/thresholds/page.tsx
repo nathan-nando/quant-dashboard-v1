@@ -194,7 +194,7 @@ export default function ThresholdsPage() {
                       id="max_drawdown_equity_pct"
                       label="Max Equity DD (%)"
                       value={config.max_drawdown_equity_pct}
-                      min={1} max={60} step={0.5}
+                      min={1} step={0.5}
                       onChange={(e: any, { value }: any) => updateConfig("max_drawdown_equity_pct", value)}
                     />
                   </div>
@@ -203,7 +203,7 @@ export default function ThresholdsPage() {
                       id="max_daily_drawdown_pct"
                       label="Max Daily DD (%)"
                       value={config.max_daily_drawdown_pct}
-                      min={1} max={60} step={0.5}
+                      min={1} step={0.5}
                       onChange={(e: any, { value }: any) => updateConfig("max_daily_drawdown_pct", value)}
                     />
                   </div>
@@ -356,7 +356,7 @@ export default function ThresholdsPage() {
                 <div style={{ display: "flex", gap: "0.1rem", marginBottom: "0.1rem", flexWrap: "wrap" }}>
                   <div style={{ width: "190px" }}><NumberInput id="scalping_sl_pips" label="Stop Loss (Pips)" value={config.scalping_sl_pips} min={1} max={50} step={0.5} onChange={(e: any, { value }: any) => updateConfig("scalping_sl_pips", value)} /></div>
                   <div style={{ width: "190px" }}><NumberInput id="scalping_tp_pips" label="Take Profit (Pips)" value={config.scalping_tp_pips} min={1} max={100} step={0.5} onChange={(e: any, { value }: any) => updateConfig("scalping_tp_pips", value)} /></div>
-                  <div style={{ width: "190px" }}><NumberInput id="scalping_max_trades_per_hour" label="Max Trades / Hour" value={config.scalping_max_trades_per_hour} min={1} max={100} onChange={(e: any, { value }: any) => updateConfig("scalping_max_trades_per_hour", value)} /></div>
+                  <div style={{ width: "190px" }}><NumberInput id="scalping_max_trades_per_hour" label="Max Trades / Hour" value={config.scalping_max_trades_per_hour} min={1} onChange={(e: any, { value }: any) => updateConfig("scalping_max_trades_per_hour", value)} /></div>
                   <div style={{ width: "190px" }}><NumberInput id="scalping_max_trades_per_day" label="Max Trades / Day" value={config.scalping_max_trades_per_day} min={1} max={500} onChange={(e: any, { value }: any) => updateConfig("scalping_max_trades_per_day", value)} /></div>
                 </div>
                 <div style={{ display: "flex", gap: "0.1rem", marginBottom: "0.1rem", flexWrap: "wrap" }}>
