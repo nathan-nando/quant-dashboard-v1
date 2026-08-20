@@ -1,8 +1,7 @@
 "use client";
 
 import React from 'react';
-import { Tile, ProgressBar } from '@carbon/react';
-import { Flash, Security } from '@carbon/icons-react';
+import { Security } from '@carbon/icons-react';
 import { useGlobalState } from '../contexts/GlobalStateContext';
 
 export default function RangeBarPyramidVisualizer() {
@@ -47,85 +46,103 @@ export default function RangeBarPyramidVisualizer() {
     isAccelerating = lastV >= prevV;
   }
 
+  const gaugeRadius = 20;
+  const gaugeCirc = 2 * Math.PI * gaugeRadius;
+  const clampedProgress = Math.min(100, Math.max(0, progressPct));
+  const strokeOffset = gaugeCirc - (clampedProgress / 100) * gaugeCirc;
+  const progressColor = clampedProgress >= 80 ? '#24a148' : '#f1c21b';
+
+  const CARD_BG = '#282828';
+
   return (
-    <div style={{ padding: '0.4rem 0.6rem', height: '100%', display: 'flex', flexDirection: 'column', gap: '0.25rem', overflow: 'hidden' }}>
+    <div style={{ padding: '0.3rem 0.5rem', height: '100%', display: 'flex', flexDirection: 'column', gap: '0.1rem', boxSizing: 'border-box' }}>
       
-      {/* HEADER STATUS BADGES */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: '0.1rem' }}>
-        <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
-          <span style={{ fontSize: '0.62rem', padding: '1px 5px', background: '#393939', color: '#f4f4f4', fontWeight: 600, borderRadius: 0 }}>
-            RANGE BUILDER (ΔP = ${rangeSize.toFixed(2)})
-          </span>
-          {clusterActive ? (
-            <span style={{ fontSize: '0.62rem', padding: '1px 5px', background: clusterSide === 'BUY' ? '#24a148' : '#fa4d56', color: '#fff', fontWeight: 700, borderRadius: 0 }}>
-              {clusterSide} CLUSTER ({layerCount}/{maxLayers})
-            </span>
-          ) : (
-            <span style={{ fontSize: '0.62rem', padding: '1px 5px', background: '#353535', color: '#c6c6c6', fontWeight: 500, borderRadius: 0 }}>
-              STANDBY
-            </span>
-          )}
-        </div>
-      </div>
-
-      {/* 2-COLUMN FLAT GRID (NO INNER BLACK PANELS, NO ROUNDED EDGES, NO INNER BORDERS) */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.4rem', alignItems: 'stretch', flex: 1 }}>
+      {/* 2-COLUMN MAIN GRID WITH 0.1rem GAP */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '0.1rem', alignItems: 'stretch', flex: 1 }}>
         
-        {/* COLUMN 1: LIVE RANGE BUILDER */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.65rem', color: '#8d8d8d', textTransform: 'uppercase', fontWeight: 600 }}>
-              Current Range Progress
+        {/* ================= SISI KIRI: LIVE RANGE BUILDER & VELOCITY ================= */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem', justifyContent: 'space-between', paddingRight: '0.2rem' }}>
+          
+          {/* Header strip Sisi Kiri - 1 line compact */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', whiteSpace: 'nowrap', overflow: 'hidden' }}>
+            <span style={{ fontSize: '0.68rem', color: '#a8a8a8', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.3px' }}>
+              Range Builder
             </span>
-            <span style={{ fontSize: '0.72rem', color: progressPct >= 80 ? '#42be65' : '#f1c21b', fontFamily: 'monospace', fontWeight: 600 }}>
-              ${currentSpread.toFixed(2)} / ${rangeSize.toFixed(2)} ({progressPct.toFixed(0)}%)
+            <span style={{ fontSize: '0.62rem', padding: '1px 5px', background: CARD_BG, color: '#f1c21b', fontWeight: 600, fontFamily: 'monospace' }}>
+              ΔP = ${rangeSize.toFixed(2)}
             </span>
           </div>
 
-          <div>
-            <ProgressBar 
-              label="" 
-              hideLabel 
-              value={progressPct} 
-              max={100} 
-              size="small" 
-              status={progressPct >= 90 ? 'finished' : 'active'}
-            />
+          {/* Top Row: Circular Gauge + 2x2 Metrics Grid */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            
+            {/* 1. Circular Gauge */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '65px', flexShrink: 0 }}>
+              <div style={{ position: 'relative', width: 48, height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="48" height="48" style={{ transform: 'rotate(-90deg)' }}>
+                  <circle cx="24" cy="24" r={gaugeRadius} fill="none" stroke="#383838" strokeWidth={4.5} />
+                  <circle
+                    cx="24"
+                    cy="24"
+                    r={gaugeRadius}
+                    fill="none"
+                    stroke={progressColor}
+                    strokeWidth={4.5}
+                    strokeDasharray={gaugeCirc}
+                    strokeDashoffset={strokeOffset}
+                    strokeLinecap="round"
+                    style={{ transition: 'stroke-dashoffset 0.5s ease-out' }}
+                  />
+                </svg>
+                <span style={{ position: 'absolute', fontSize: '0.75rem', fontWeight: 700, color: '#f4f4f4', fontFamily: 'monospace' }}>
+                  {progressPct.toFixed(0)}%
+                </span>
+              </div>
+              <div style={{ fontSize: '0.62rem', color: progressColor, fontFamily: 'monospace', fontWeight: 600, marginTop: '2px' }}>
+                ${currentSpread.toFixed(2)} / ${rangeSize.toFixed(2)}
+              </div>
+            </div>
+
+            {/* 2. Metrics 2x2 Grid with CARD_BG (No Border) */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.1rem', flex: 1 }}>
+              <div style={{ background: CARD_BG, padding: '0.2rem 0.35rem', borderRadius: 0 }}>
+                <div style={{ color: '#8d8d8d', fontSize: '0.6rem', textTransform: 'uppercase' }}>Velocity</div>
+                <strong style={{ color: isHighVelocity ? '#42be65' : '#f4f4f4', fontFamily: 'monospace', fontSize: '0.76rem' }}>
+                  ${priceVelocity.toFixed(3)}/s {isHighVelocity ? '🔥' : ''}
+                </strong>
+              </div>
+              <div style={{ background: CARD_BG, padding: '0.2rem 0.35rem', borderRadius: 0 }}>
+                <div style={{ color: '#8d8d8d', fontSize: '0.6rem', textTransform: 'uppercase' }}>Duration</div>
+                <strong style={{ color: '#f4f4f4', fontFamily: 'monospace', fontSize: '0.76rem' }}>
+                  {barDuration.toFixed(1)}s
+                </strong>
+              </div>
+              <div style={{ background: CARD_BG, padding: '0.2rem 0.35rem', borderRadius: 0 }}>
+                <div style={{ color: '#8d8d8d', fontSize: '0.6rem', textTransform: 'uppercase' }}>Direction</div>
+                <span style={{ color: isBullish ? '#24a148' : (lastDirection === 'BEARISH' ? '#fa4d56' : '#8d8d8d'), fontWeight: 700, fontSize: '0.76rem' }}>
+                  {consecutiveBars > 0 ? `${consecutiveBars}x ${lastDirection === 'BULLISH' ? 'UP' : 'DN'}` : 'FLAT'}
+                </span>
+              </div>
+              <div style={{ background: CARD_BG, padding: '0.2rem 0.35rem', borderRadius: 0 }}>
+                <div style={{ color: '#8d8d8d', fontSize: '0.6rem', textTransform: 'uppercase' }}>Bar / Ticks</div>
+                <strong style={{ color: '#f4f4f4', fontFamily: 'monospace', fontSize: '0.76rem' }}>
+                  #{currentBarIndex} ({tickVolume}t)
+                </strong>
+              </div>
+            </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.1rem', fontSize: '0.7rem' }}>
-            <div style={{ background: '#333333', padding: '0.2rem 0.35rem', textAlign: 'center', borderRadius: 0 }}>
-              <div style={{ color: '#8d8d8d', fontSize: '0.58rem' }}>Velocity</div>
-              <strong style={{ color: isHighVelocity ? '#42be65' : '#f4f4f4', fontFamily: 'monospace', fontSize: '0.68rem' }}>
-                ${priceVelocity.toFixed(3)}/s {isHighVelocity ? '🔥' : ''}
-              </strong>
-            </div>
-            <div style={{ background: '#333333', padding: '0.2rem 0.35rem', textAlign: 'center', borderRadius: 0 }}>
-              <div style={{ color: '#8d8d8d', fontSize: '0.58rem' }}>Duration</div>
-              <strong style={{ color: '#f4f4f4', fontFamily: 'monospace', fontSize: '0.68rem' }}>
-                {barDuration.toFixed(1)}s
-              </strong>
-            </div>
-            <div style={{ background: '#333333', padding: '0.2rem 0.35rem', textAlign: 'center', borderRadius: 0 }}>
-              <div style={{ color: '#8d8d8d', fontSize: '0.58rem' }}>Direction</div>
-              <span style={{ color: isBullish ? '#24a148' : (lastDirection === 'BEARISH' ? '#fa4d56' : '#8d8d8d'), fontWeight: 600, fontSize: '0.68rem' }}>
-                {consecutiveBars > 0 ? `${consecutiveBars}x ${lastDirection === 'BULLISH' ? 'UP' : 'DN'}` : 'FLAT'}
+          {/* 3 & 4. Velocity Momentum with CARD_BG (No Border) */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '0.62rem', color: '#8d8d8d', textTransform: 'uppercase', fontWeight: 600 }}>
+                Velocity Momentum:
+              </span>
+              <span style={{ fontSize: '0.62rem', color: isAccelerating ? '#42be65' : '#ff8389', fontWeight: 600 }}>
+                {isAccelerating ? '▲ Accel' : '▼ Decel'}
               </span>
             </div>
-            <div style={{ background: '#333333', padding: '0.2rem 0.35rem', textAlign: 'center', borderRadius: 0 }}>
-              <div style={{ color: '#8d8d8d', fontSize: '0.58rem' }}>Bar / Ticks</div>
-              <strong style={{ color: '#f4f4f4', fontFamily: 'monospace', fontSize: '0.68rem' }}>
-                #{currentBarIndex} ({tickVolume}t)
-              </strong>
-            </div>
-          </div>
-
-          {/* SPARKLINE STRIP */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.35rem', marginTop: '0.1rem' }}>
-            <span style={{ fontSize: '0.58rem', color: '#8d8d8d', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
-              Velocity Momentum ({isAccelerating ? '▲ Accel' : '▼ Decel'}):
-            </span>
-            <div style={{ display: 'flex', alignItems: 'flex-end', gap: '2px', height: '14px', flex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: '2px', height: '18px', width: '100%', background: CARD_BG, padding: '2px 4px', boxSizing: 'border-box' }}>
               {recentVelocities.length > 0 ? (
                 recentVelocities.map((item, idx) => {
                   const v = Number(item.velocity || 0.05);
@@ -145,50 +162,57 @@ export default function RangeBarPyramidVisualizer() {
                   );
                 })
               ) : (
-                <span style={{ color: '#6f6f6f', fontSize: '0.58rem' }}>Awaiting initial range bars...</span>
+                <span style={{ color: '#6f6f6f', fontSize: '0.58rem' }}>Awaiting range bars...</span>
               )}
             </div>
           </div>
         </div>
 
-        {/* COLUMN 2: PYRAMIDING SCALE-IN ENGINE */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.65rem', color: '#8d8d8d', textTransform: 'uppercase', fontWeight: 600 }}>
-              Pyramiding Scale-In State
+        {/* ================= SISI KANAN: PYRAMIDING SCALE-IN (VERTICAL L1-L4) ================= */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem', justifyContent: 'space-between', paddingLeft: '0.2rem' }}>
+          
+          {/* Header Strip Sisi Kanan - 1 line compact */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', whiteSpace: 'nowrap', overflow: 'hidden' }}>
+            <span style={{ fontSize: '0.68rem', color: '#a8a8a8', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.3px' }}>
+              Pyramiding
             </span>
             {clusterActive ? (
-              <span style={{ fontSize: '0.72rem', color: netProfitPips >= 0 ? '#24a148' : '#fa4d56', fontWeight: 600, fontFamily: 'monospace' }}>
-                Net: {netProfitPips > 0 ? '+' : ''}{netProfitPips.toFixed(1)}p ({totalVolume.toFixed(2)}L)
+              <span style={{ fontSize: '0.62rem', padding: '1px 5px', background: clusterSide === 'BUY' ? '#24a148' : '#fa4d56', color: '#fff', fontWeight: 700 }}>
+                {clusterSide} ({layerCount}/{maxLayers})
               </span>
             ) : (
-              <span style={{ fontSize: '0.65rem', color: '#6f6f6f' }}>Cluster Idle</span>
+              <span style={{ fontSize: '0.62rem', padding: '1px 5px', background: CARD_BG, color: '#8d8d8d', fontWeight: 600 }}>
+                STANDBY
+              </span>
             )}
           </div>
 
-          {/* 4-LAYER STRIP (NO BORDER, FLAT CARBON BOXES, RADIUS 0) */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.1rem' }}>
+          {/* Vertical Stack L1 to L4 with CARD_BG (No Border) */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem', flex: 1, justifyContent: 'center' }}>
             {[1, 2, 3, 4].map((layerNum) => {
               const layerData = clusterLayers.find((l: any) => l.layer_index === layerNum);
               const isActive = !!layerData;
               const isWaiting = !isActive && clusterActive && layerNum === (layerCount + 1);
               const pipsVal = layerData ? Number(layerData.profit_pips || 0) : 0;
               
-              let bgColor = '#333333';
+              let rowBg = CARD_BG;
+              let badgeBg = '#3c3c3c';
               let statusLabel = 'Standby';
               let subText = layerNum === 1 ? 'Ready L1' : `Wait L${layerNum - 1}`;
 
               if (clusterActive) {
                 if (isWaiting) {
-                  bgColor = '#3d3822';
+                  rowBg = '#3d3822';
+                  badgeBg = '#665714';
                   statusLabel = 'Waiting';
                   subText = '+$1.50 step';
                 }
               }
 
               if (isActive) {
-                bgColor = clusterSide === 'BUY' ? '#198038' : '#da1e28';
-                statusLabel = layerNum === 1 ? '✓ Base' : '✓ Add';
+                rowBg = clusterSide === 'BUY' ? 'rgba(36, 161, 72, 0.25)' : 'rgba(218, 30, 40, 0.25)';
+                badgeBg = clusterSide === 'BUY' ? '#198038' : '#da1e28';
+                statusLabel = layerNum === 1 ? '✓ Base' : `✓ Add-on`;
                 subText = `${pipsVal > 0 ? '+' : ''}${pipsVal.toFixed(1)}p`;
               }
 
@@ -196,39 +220,54 @@ export default function RangeBarPyramidVisualizer() {
                 <div 
                   key={layerNum} 
                   style={{ 
-                    padding: '0.25rem 0.2rem', 
-                    textAlign: 'center', 
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '2px 6px',
                     borderRadius: 0,
-                    background: bgColor,
-                    border: 'none'
+                    background: rowBg,
+                    border: 'none',
+                    fontSize: '0.68rem',
+                    height: '20px'
                   }}
                 >
-                  <div style={{ fontSize: '0.65rem', fontWeight: 700, color: isActive ? '#fff' : (isWaiting ? '#f1c21b' : '#8d8d8d') }}>
-                    L{layerNum} {isActive ? '✓' : ''}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ 
+                      fontSize: '0.62rem', 
+                      fontWeight: 700, 
+                      padding: '0 4px', 
+                      background: badgeBg, 
+                      color: '#fff', 
+                      lineHeight: '14px',
+                      height: '14px' 
+                    }}>
+                      L{layerNum}
+                    </span>
+                    <span style={{ fontSize: '0.65rem', color: isActive ? '#f4f4f4' : (isWaiting ? '#f1c21b' : '#8d8d8d'), fontWeight: isActive ? 600 : 400 }}>
+                      {statusLabel}
+                    </span>
                   </div>
-                  <div style={{ fontSize: '0.58rem', color: isActive ? '#f4f4f4' : (isWaiting ? '#f1c21b' : '#a8a8a8'), fontWeight: 500 }}>
-                    {statusLabel}
-                  </div>
-                  <div style={{ fontSize: '0.55rem', color: isActive ? '#f4f4f4' : '#6f6f6f', fontFamily: 'monospace' }}>
-                    {isActive ? `@${Number(layerData.open_price || 0).toFixed(2)}` : subText}
-                  </div>
+
+                  <span style={{ fontSize: '0.65rem', color: isActive ? (pipsVal >= 0 ? '#42be65' : '#ff8389') : '#8d8d8d', fontFamily: 'monospace', fontWeight: isActive ? 600 : 400 }}>
+                    {isActive ? `@${Number(layerData.open_price || 0).toFixed(2)} (${subText})` : subText}
+                  </span>
                 </div>
               );
             })}
           </div>
 
-          {/* SUMMARY STRIP */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.65rem', background: '#333333', padding: '0.2rem 0.4rem', borderRadius: 0, marginTop: '0.1rem' }}>
+          {/* Bottom Summary Strip with CARD_BG (No Border) */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.65rem', background: CARD_BG, padding: '3px 6px', marginTop: '1px', border: 'none' }}>
             <div>
-              <span style={{ color: '#8d8d8d', fontSize: '0.58rem' }}>Avg Pos: </span>
-              <strong style={{ color: '#f4f4f4', fontFamily: 'monospace' }}>
+              <span style={{ color: '#8d8d8d', fontSize: '0.62rem' }}>Avg: </span>
+              <strong style={{ color: '#f4f4f4', fontFamily: 'monospace', fontSize: '0.68rem' }}>
                 {avgPrice > 0 ? `$${avgPrice.toFixed(2)} (${totalVolume.toFixed(2)}L)` : '---'}
               </strong>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
               <Security size={11} style={{ color: trailingStopLevel != null ? '#f1c21b' : '#6f6f6f' }} />
-              <span style={{ color: '#8d8d8d', fontSize: '0.58rem' }}>Trailing: </span>
-              <strong style={{ color: trailingStopLevel != null ? '#f1c21b' : '#6f6f6f', fontFamily: 'monospace' }}>
+              <span style={{ color: '#8d8d8d', fontSize: '0.62rem' }}>Trail: </span>
+              <strong style={{ color: trailingStopLevel != null ? '#f1c21b' : '#6f6f6f', fontFamily: 'monospace', fontSize: '0.68rem' }}>
                 {trailingStopLevel != null ? `$${trailingStopLevel.toFixed(2)}` : 'OFF'}
               </strong>
             </div>
