@@ -469,15 +469,13 @@ export default function CandlestickChart({
       <div style={{ 
         position: "absolute", 
         top: 6, 
-        left: 10, 
+        left: 4, 
         zIndex: 15, 
         display: "flex", 
         alignItems: "center", 
-        gap: "6px",
-        background: "rgba(24, 24, 24, 0.85)",
-        backdropFilter: "blur(4px)",
-        padding: "2px 6px",
-        borderRadius: "3px"
+        gap: "4px",
+        background: "none",
+        padding: "0"
       }}>
         {!isInitialized && <span style={{ fontSize: "8.5px", color: "#a8a8a8" }}>Connecting...</span>}
         

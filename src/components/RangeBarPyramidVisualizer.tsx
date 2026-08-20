@@ -48,26 +48,20 @@ export default function RangeBarPyramidVisualizer() {
   }
 
   return (
-    <Tile style={{ padding: '0.4rem 0.6rem', background: '#262626', border: 'none', borderRadius: 0, height: '100%', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+    <div style={{ padding: '0.4rem 0.6rem', height: '100%', display: 'flex', flexDirection: 'column', gap: '0.25rem', overflow: 'hidden' }}>
       
-      {/* HEADER STRIP */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-          <Flash size={14} style={{ color: '#a8a8a8' }} />
-          <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#f4f4f4', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            Event-Driven Price Engine
-          </span>
-        </div>
+      {/* HEADER STATUS BADGES */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: '0.1rem' }}>
         <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
-          <span style={{ fontSize: '0.65rem', padding: '1px 5px', background: '#393939', color: '#f4f4f4', fontWeight: 600, borderRadius: 0 }}>
+          <span style={{ fontSize: '0.62rem', padding: '1px 5px', background: '#393939', color: '#f4f4f4', fontWeight: 600, borderRadius: 0 }}>
             RANGE BUILDER (ΔP = ${rangeSize.toFixed(2)})
           </span>
           {clusterActive ? (
-            <span style={{ fontSize: '0.65rem', padding: '1px 5px', background: clusterSide === 'BUY' ? '#24a148' : '#fa4d56', color: '#fff', fontWeight: 700, borderRadius: 0 }}>
+            <span style={{ fontSize: '0.62rem', padding: '1px 5px', background: clusterSide === 'BUY' ? '#24a148' : '#fa4d56', color: '#fff', fontWeight: 700, borderRadius: 0 }}>
               {clusterSide} CLUSTER ({layerCount}/{maxLayers})
             </span>
           ) : (
-            <span style={{ fontSize: '0.65rem', padding: '1px 5px', background: '#353535', color: '#c6c6c6', fontWeight: 500, borderRadius: 0 }}>
+            <span style={{ fontSize: '0.62rem', padding: '1px 5px', background: '#353535', color: '#c6c6c6', fontWeight: 500, borderRadius: 0 }}>
               STANDBY
             </span>
           )}
@@ -75,7 +69,7 @@ export default function RangeBarPyramidVisualizer() {
       </div>
 
       {/* 2-COLUMN FLAT GRID (NO INNER BLACK PANELS, NO ROUNDED EDGES, NO INNER BORDERS) */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '0.5rem', alignItems: 'stretch' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.4rem', alignItems: 'stretch', flex: 1 }}>
         
         {/* COLUMN 1: LIVE RANGE BUILDER */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
@@ -242,6 +236,6 @@ export default function RangeBarPyramidVisualizer() {
         </div>
 
       </div>
-    </Tile>
+    </div>
   );
 }

@@ -290,7 +290,17 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               >
                 {/* Brand title inside sidebar - visible on mobile only */}
                 <div className="show-on-mobile" style={{ padding: '1rem 1.5rem', marginBottom: '0.5rem', flexShrink: 0 }}>
-                  <h2 style={{ fontSize: '1.25rem', fontWeight: 600, color: '#fff' }}>QuantV1</h2>
+                  <a
+                    href="/"
+                    onClick={(e: React.MouseEvent) => {
+                      e.preventDefault();
+                      router.push('/');
+                      if (onClickSideNavExpand) onClickSideNavExpand();
+                    }}
+                    style={{ textDecoration: 'none', display: 'inline-block', cursor: 'pointer' }}
+                  >
+                    <h2 style={{ fontSize: '1.25rem', fontWeight: 600, color: '#fff' }}>QuantV1</h2>
+                  </a>
                 </div>
 
                 <SideNavItems>

@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Toggle } from '@carbon/react';
 import { ChartLine, Lightning, Scale, Globe } from '@carbon/icons-react';
 import { API_BASE_URL } from '@/config/env';
 import { useGlobalState } from '@/contexts/GlobalStateContext';
@@ -175,7 +174,6 @@ export default function HMMRegimeGauges() {
   const weight = data.macro_weight !== undefined ? data.macro_weight : 0.0;
   const buyThresh = data.buy_threshold !== undefined ? data.buy_threshold : 0.50;
   const sellThresh = data.sell_threshold !== undefined ? data.sell_threshold : 0.50;
-  const isMacroActive = state?.use_macro_model !== undefined ? Boolean(state.use_macro_model) : true;
 
   const isBearish = weight < -0.10;
   const isBullish = weight > 0.10;
@@ -185,37 +183,8 @@ export default function HMMRegimeGauges() {
 
   return (
     <div className="regime-gauges-container">
-      {/* Top Group for Mobile: Gating Toggle & Vertical Bias Stepper */}
+      {/* Gauge 1: Vertical Macro Bias Stepper Line */}
       <div className="regime-top-group">
-        {/* Compact Macro Gating Toggle Switch */}
-        <div className="regime-gating-box">
-          <div style={{ fontSize: '0.68rem', fontWeight: 600, color: '#f4f4f4', marginBottom: '0.35rem', textAlign: 'center', whiteSpace: 'nowrap' }}>
-            Macro Gating
-          </div>
-          <Toggle 
-            id="macro-gating-toggle-widget"
-            size="sm"
-            labelA="OFF"
-            labelB="ON"
-            toggled={isMacroActive}
-            onToggle={async (checked) => {
-              try {
-                await fetch(`${API_BASE_URL}/configurations/system`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ key: 'use_macro_model', value: checked, category: 'thresholds' })
-                });
-              } catch (err) {
-                console.error("Error toggling macro gating:", err);
-              }
-            }}
-          />
-          <div style={{ fontSize: '0.62rem', color: isMacroActive ? '#24a148' : '#8d8d8d', fontWeight: 500, textAlign: 'center', marginTop: '0.3rem', whiteSpace: 'nowrap' }}>
-            {isMacroActive ? "Veto Active" : "Disabled"}
-          </div>
-        </div>
-
-        {/* Gauge 1: Vertical Macro Bias Stepper Line */}
         <VerticalMacroStepper currentBias={bias} />
       </div>
 
@@ -235,9 +204,9 @@ export default function HMMRegimeGauges() {
           pct={buyThresh * 100} 
           label="BUY Threshold" 
           valueStr={`${(buyThresh * 100).toFixed(1)}%`} 
-          sublabel={!isMacroActive ? "Disabled (Fixed 50%)" : (isBullish ? "Favored (Easier)" : (isBearish ? "Hurdle Raised" : "Standard 50%"))} 
-          color={!isMacroActive ? "#6f6f6f" : (isBullish ? "#24a148" : "#8d8d8d")} 
-          isHighlighted={isMacroActive && isBullish}
+          sublabel={isBullish ? "Favored (Easier)" : (isBearish ? "Hurdle Raised" : "Standard 50%")} 
+          color={isBullish ? "#24a148" : "#8d8d8d"} 
+          isHighlighted={isBullish}
         />
 
         {/* Gauge 4: SELL Threshold */}
@@ -245,9 +214,9 @@ export default function HMMRegimeGauges() {
           pct={sellThresh * 100} 
           label="SELL Threshold" 
           valueStr={`${(sellThresh * 100).toFixed(1)}%`} 
-          sublabel={!isMacroActive ? "Disabled (Fixed 50%)" : (isBearish ? "Favored (Easier)" : (isBullish ? "Hurdle Raised" : "Standard 50%"))} 
-          color={!isMacroActive ? "#6f6f6f" : (isBearish ? "#da1e28" : "#8d8d8d")} 
-          isHighlighted={isMacroActive && isBearish}
+          sublabel={isBearish ? "Favored (Easier)" : (isBullish ? "Hurdle Raised" : "Standard 50%")} 
+          color={isBearish ? "#da1e28" : "#8d8d8d"} 
+          isHighlighted={isBearish}
         />
       </div>
     </div>

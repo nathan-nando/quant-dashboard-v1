@@ -13,7 +13,6 @@ import { Responsive, WidthProvider } from 'react-grid-layout/legacy';
 const ResponsiveGridLayout = WidthProvider(Responsive);
 const CandlestickChart = dynamic(() => import('../components/CandlestickChart'), { ssr: false });
 import MarketSummaryWidget from '../components/MarketSummaryWidget';
-import ShapPanel from '../components/ShapPanel';
 import AttributionPanel from '../components/AttributionPanel';
 import MacroSnapshot from '../components/MacroSnapshot';
 import MacroCalendar from '../components/MacroCalendar';
@@ -132,8 +131,8 @@ export default function Home() {
       { i: 'chart', x: 0, y: 0, w: 4, h: 4, minW: 3, minH: 2 },
       { i: 'hmm_gauges', x: 4, y: 0, w: 3.6, h: 2, minW: 2, minH: 2 },
       { i: 'macro_calendar', x: 7.6, y: 0, w: 2.4, h: 2, minW: 2, minH: 2 },
-      { i: 'attribution', x: 4, y: 2, w: 3.6, h: 2, minW: 2, minH: 2 },
-      { i: 'shap', x: 7.6, y: 2, w: 2.4, h: 2, minW: 2, minH: 2 },
+      { i: 'range_pyramid', x: 4, y: 2, w: 3.6, h: 2, minW: 2, minH: 2 },
+      { i: 'attribution', x: 7.6, y: 2, w: 2.4, h: 2, minW: 2, minH: 2 },
       { i: 'trades', x: 0, y: 4, w: 5, h: 5, minW: 3, minH: 2 },
       { i: 'signals', x: 5, y: 4, w: 5, h: 5, minW: 3, minH: 2 }
     ],
@@ -141,26 +140,28 @@ export default function Home() {
       { i: 'chart', x: 0, y: 0, w: 4, h: 4 },
       { i: 'hmm_gauges', x: 4, y: 0, w: 4, h: 2 },
       { i: 'macro_calendar', x: 4, y: 2, w: 4, h: 2 },
-      { i: 'attribution', x: 0, y: 4, w: 4, h: 2 },
-      { i: 'shap', x: 4, y: 4, w: 4, h: 2 },
+      { i: 'range_pyramid', x: 0, y: 4, w: 4, h: 2 },
+      { i: 'attribution', x: 4, y: 4, w: 4, h: 2 },
       { i: 'trades', x: 0, y: 6, w: 4, h: 5 },
       { i: 'signals', x: 4, y: 6, w: 4, h: 5 }
     ],
     sm: [
       { i: 'trades', x: 0, y: 0, w: 4, h: 4 },
       { i: 'chart', x: 0, y: 4, w: 4, h: 4 },
-      { i: 'hmm_gauges', x: 0, y: 8, w: 4, h: 3 },
-      { i: 'macro_calendar', x: 0, y: 11, w: 4, h: 3 },
-      { i: 'signals', x: 0, y: 14, w: 4, h: 5 },
-      { i: 'attribution', x: 0, y: 19, w: 4, h: 3 }
+      { i: 'range_pyramid', x: 0, y: 8, w: 4, h: 3 },
+      { i: 'hmm_gauges', x: 0, y: 11, w: 4, h: 3 },
+      { i: 'attribution', x: 0, y: 14, w: 4, h: 3 },
+      { i: 'macro_calendar', x: 0, y: 17, w: 4, h: 3 },
+      { i: 'signals', x: 0, y: 20, w: 4, h: 5 }
     ],
     xs: [
       { i: 'trades', x: 0, y: 0, w: 2, h: 4 },
       { i: 'chart', x: 0, y: 4, w: 2, h: 3 },
-      { i: 'hmm_gauges', x: 0, y: 7, w: 2, h: 3 },
-      { i: 'signals', x: 0, y: 10, w: 2, h: 5 },
-      { i: 'attribution', x: 0, y: 15, w: 2, h: 3 },
-      { i: 'macro_calendar', x: 0, y: 18, w: 2, h: 3 }
+      { i: 'range_pyramid', x: 0, y: 7, w: 2, h: 3 },
+      { i: 'hmm_gauges', x: 0, y: 10, w: 2, h: 3 },
+      { i: 'attribution', x: 0, y: 13, w: 2, h: 3 },
+      { i: 'macro_calendar', x: 0, y: 16, w: 2, h: 3 },
+      { i: 'signals', x: 0, y: 19, w: 2, h: 5 }
     ]
   };
   const [layouts, setLayouts] = useState<any>(defaultLayouts);
@@ -171,14 +172,14 @@ export default function Home() {
       const keysToRemove: string[] = [];
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        if (key && (key.startsWith("quantDashboardLayout_") || key === "dashboard-layouts") && key !== "quantDashboardLayout_v47") {
+        if (key && (key.startsWith("quantDashboardLayout_") || key === "dashboard-layouts") && key !== "quantDashboardLayout_v48") {
           keysToRemove.push(key);
         }
       }
       keysToRemove.forEach(k => localStorage.removeItem(k));
     } catch (e) {}
  
-    const saved = localStorage.getItem('quantDashboardLayout_v47');
+    const saved = localStorage.getItem('quantDashboardLayout_v48');
     if (saved) {
       try {
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -189,7 +190,7 @@ export default function Home() {
  
   const handleLayoutChange = (layout: any, allLayouts: any) => {
     setLayouts(allLayouts);
-    localStorage.setItem("quantDashboardLayout_v47", JSON.stringify(allLayouts));
+    localStorage.setItem("quantDashboardLayout_v48", JSON.stringify(allLayouts));
   };
   return (
     <div style={{ maxWidth: '100%', padding: '0 2rem', position: 'relative' }}>
@@ -202,11 +203,6 @@ export default function Home() {
         <div className="macro-snapshot-wrapper">
           <MacroSnapshot />
         </div>
-      </div>
-
-      {/* --- LIVE RANGE BAR & PYRAMIDING VISUALIZER --- */}
-      <div style={{ marginBottom: '0.2rem', marginTop: '0.2rem' }}>
-        <RangeBarPyramidVisualizer />
       </div>
 
       {/* --- ROW 2: DYNAMIC CHARTS AND SIGNALS --- */}
@@ -274,8 +270,8 @@ export default function Home() {
                  style={{
                    position: 'absolute',
                    top: '5px',
-                   left: '110px',
-                   right: '175px',
+                   left: '140px',
+                   right: '160px',
                    zIndex: 5,
                    background: 'none',
                    padding: '0',
@@ -502,14 +498,12 @@ export default function Home() {
           </DashboardPanel>
         </div>
 
-        <div key="shap">
-          <DashboardPanel title="Latest Signal Explainability" tooltipInfo="Top 5 features contributing to the latest signal (Pseudo-SHAP)">
-            <ShapPanel 
-              shapValues={nonShadowSignals[0]?.signal_metadata?.model_output?.shap_values || nonShadowSignals[0]?.shap_values || []} 
-              explainability={nonShadowSignals[0]?.signal_metadata?.model_output?.explainability || nonShadowSignals[0]?.explainability || null}
-              direction={nonShadowSignals[0]?.direction || "NEUTRAL"} 
-              probabilities={nonShadowSignals[0]?.signal_metadata?.model_output?.probabilities || {}}
-            />
+        <div key="range_pyramid">
+          <DashboardPanel 
+            title="Event-Driven Price Engine" 
+            tooltipInfo="Live range bar builder and pyramiding scale-in state."
+          >
+            <RangeBarPyramidVisualizer />
           </DashboardPanel>
         </div>
 
