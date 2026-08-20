@@ -5,19 +5,20 @@ import { createChart, ColorType, IChartApi, ISeriesApi, Time, CandlestickSeries,
 import { useGlobalState } from '../contexts/GlobalStateContext';
 import { API_BASE_URL } from '@/config/env';
 
-const TIMEFRAMES: Record<string, number> = {
-  "M1": 60,
-  "M5": 300,
-  "M15": 900,
-  "M30": 1800,
-  "H1": 3600,
-  "H4": 14400,
-  "D1": 86400
+const TIMEFRAME_CONFIGS: Record<string, { seconds: number; label: string; isRange?: boolean }> = {
+  "RANGE_1.5": { seconds: 30, label: "RANGE ($1.50)", isRange: true },
+  "M1": { seconds: 60, label: "M1 (Micro)" },
+  "M5": { seconds: 300, label: "M5 (Intraday)" },
+  "M15": { seconds: 900, label: "M15" },
+  "M30": { seconds: 1800, label: "M30" },
+  "H1": { seconds: 3600, label: "H1 (Macro Context)" },
+  "H4": { seconds: 14400, label: "H4" },
+  "D1": { seconds: 86400, label: "D1" }
 };
 
 export default function CandlestickChart({ 
   symbol = "XAUUSD", 
-  initialTimeframe = "M5",
+  initialTimeframe = "RANGE_1.5",
   onHistoryUpdate, 
   signals = [],
   maxHistoryLimit,
@@ -50,7 +51,6 @@ export default function CandlestickChart({
           volumeSeriesRef.current.setData([]);
           lastCandleRef.current = null;
           dataRef.current = [];
-          // Clear markers by setting empty array on existing instance
           if (markersRef.current) {
               try { markersRef.current.setMarkers([]); } catch (_) {}
           }
@@ -81,8 +81,8 @@ export default function CandlestickChart({
       },
       rightPriceScale: {
         scaleMargins: {
-          top: 0.1, // Leave space for price
-          bottom: 0.2, // Leave space for volume
+          top: 0.1,
+          bottom: 0.2,
         },
       },
     });
@@ -103,21 +103,19 @@ export default function CandlestickChart({
     const volumeSeries = chart.addSeries(HistogramSeries, {
       color: '#26a69a',
       priceFormat: { type: 'volume' },
-      priceScaleId: '', // set as an overlay
+      priceScaleId: '',
       lastValueVisible: false,
       priceLineVisible: false,
     });
     
-    // Apply margins to the volume series price scale so it stays at the bottom
     volumeSeries.priceScale().applyOptions({
         scaleMargins: {
-            top: 0.8, // highest point of the series will be at 80% of the chart height
+            top: 0.8,
             bottom: 0,
         },
     });
     volumeSeriesRef.current = volumeSeries;
 
-    // Handle Resize perfectly with ResizeObserver
     const resizeObserver = new ResizeObserver((entries) => {
       if (entries.length === 0 || entries[0].target !== chartContainerRef.current) return;
       const newRect = entries[0].contentRect;
@@ -138,20 +136,20 @@ export default function CandlestickChart({
       const fetchHistory = async () => {
           setIsInitialized(false);
           try {
-              const tfSeconds = TIMEFRAMES[timeframe] || 3600;
-              let limit = maxHistoryLimit || 150; // Default minimum 150 candles if no limit
+              const tfConfig = TIMEFRAME_CONFIGS[timeframe] || { seconds: 300, isRange: false };
+              const tfSeconds = tfConfig.seconds;
+              let limit = maxHistoryLimit || 120;
               
               if (!maxHistoryLimit && signals && signals.length > 0) {
                   const minTimestamp = Math.min(...signals.map(s => new Date(s.timestamp).getTime()));
                   const timeSinceEarliestSignal = Math.floor(Date.now() / 1000) - Math.floor(minTimestamp / 1000);
-                  const candlesNeeded = Math.ceil(timeSinceEarliestSignal / tfSeconds) + 20; // + 20 candles padding
+                  const candlesNeeded = Math.ceil(timeSinceEarliestSignal / tfSeconds) + 20;
                   
                   if (candlesNeeded > limit) {
                       limit = candlesNeeded;
                   }
               }
 
-              // Use 'limit' instead of time range to automatically skip weekend gaps in MT5
               const url = `${API_BASE_URL}/dashboard/history?symbol=${symbol}&timeframe=${timeframe}&limit=${limit}`;
               
               const res = await fetch(url);
@@ -161,17 +159,30 @@ export default function CandlestickChart({
               if (isMounted && data.length > 0 && seriesRef.current && volumeSeriesRef.current) {
                   const tzOffsetSeconds = new Date().getTimezoneOffset() * 60;
                   
-                  const history = [];
-                  const volumeHistory = [];
+                  const history: any[] = [];
+                  const volumeHistory: any[] = [];
                   
+                  // Ensure strictly ascending unique timestamps for Lightweight Charts
+                  let lastT = 0;
                   for (const row of data) {
-                      // Subtract timezone offset so Lightweight Charts displays the local browser time
-                      const t = row.time - tzOffsetSeconds;
-                      history.push({ time: t as Time, open: row.open, high: row.high, low: row.low, close: row.close });
+                      let t = Number(row.time) - (tfConfig.isRange ? 0 : tzOffsetSeconds);
+                      if (t <= lastT) {
+                          t = lastT + 1;
+                      }
+                      lastT = t;
+
+                      history.push({ 
+                        time: t as Time, 
+                        open: Number(row.open), 
+                        high: Number(row.high), 
+                        low: Number(row.low), 
+                        close: Number(row.close) 
+                      });
+
                       volumeHistory.push({ 
                           time: t as Time, 
-                          value: row.volume, 
-                          color: row.close >= row.open ? "rgba(36, 161, 72, 0.4)" : "rgba(250, 77, 86, 0.4)" 
+                          value: Number(row.volume || 1), 
+                          color: Number(row.close) >= Number(row.open) ? "rgba(36, 161, 72, 0.4)" : "rgba(250, 77, 86, 0.4)" 
                       });
                   }
                   
@@ -182,14 +193,14 @@ export default function CandlestickChart({
                   setIsInitialized(true);
                   if (onHistoryUpdate) onHistoryUpdate(history);
                    
-                   if (visibleBarsCount && history.length > 0) {
-                       setTimeout(() => {
-                           chartRef.current?.timeScale().setVisibleLogicalRange({
-                               from: history.length - visibleBarsCount - 0.5,
-                               to: history.length + 1.5
-                           });
-                       }, 50);
-                   }
+                  if (visibleBarsCount && history.length > 0) {
+                      setTimeout(() => {
+                          chartRef.current?.timeScale().setVisibleLogicalRange({
+                              from: history.length - visibleBarsCount - 0.5,
+                              to: history.length + 1.5
+                          });
+                      }, 50);
+                  }
               }
           } catch (e) {
               console.error("Error fetching history:", e);
@@ -207,11 +218,10 @@ export default function CandlestickChart({
       return () => { isMounted = false; };
   }, [timeframe, symbol]);
 
-  // Handle Signals Markers (lightweight-charts v5 API)
+  // Handle Signals & Pyramiding Event Markers (Item 5 from ChatGPT)
   useEffect(() => {
     if (!seriesRef.current || !isInitialized) return;
 
-    // Ensure we have a single persistent markers instance
     if (!markersRef.current) {
         markersRef.current = createSeriesMarkers(seriesRef.current, []);
     }
@@ -221,14 +231,15 @@ export default function CandlestickChart({
         return;
     }
 
-    const tfSeconds = TIMEFRAMES[timeframe] || 3600;
+    const tfConfig = TIMEFRAME_CONFIGS[timeframe] || { seconds: 300, isRange: false };
+    const tfSeconds = tfConfig.seconds;
     const tzOffsetSeconds = new Date().getTimezoneOffset() * 60;
 
     const markerData = signals
         .map(s => {
             const timeRaw = new Date(s.timestamp).getTime() / 1000;
             const currentCandleTimeRaw = Math.floor(timeRaw / tfSeconds) * tfSeconds;
-            let markerTime = Math.floor(currentCandleTimeRaw - tzOffsetSeconds);
+            let markerTime = tfConfig.isRange ? Math.floor(timeRaw) : Math.floor(currentCandleTimeRaw - tzOffsetSeconds);
             
             // Snap to nearest existing candle time in chart data
             let closest = dataRef.current[0];
@@ -245,24 +256,24 @@ export default function CandlestickChart({
             let shape: any = isShadow ? 'square' : 'circle';
             let position: any = 'aboveBar';
             let text = 'N';
-            
+            const meta = s.signal_metadata || {};
+            const layerIdx = Number(meta.layer_index || 1);
+
             if (s.direction === 'BUY') {
-                color = isShadow ? '#8d8d8d' : '#24a148'; 
+                color = isShadow ? '#8d8d8d' : (layerIdx > 1 ? '#42be65' : '#24a148'); 
                 shape = isShadow ? 'square' : 'arrowUp'; 
                 position = 'belowBar'; 
-                text = 'B';
+                text = layerIdx > 1 ? `+P${layerIdx}` : 'ENTRY';
             } else if (s.direction === 'SELL') {
-                color = isShadow ? '#8d8d8d' : '#fa4d56'; 
+                color = isShadow ? '#8d8d8d' : (layerIdx > 1 ? '#ff8389' : '#fa4d56'); 
                 shape = isShadow ? 'square' : 'arrowDown'; 
                 position = 'aboveBar'; 
-                text = 'S';
+                text = layerIdx > 1 ? `+P${layerIdx}` : 'ENTRY';
             }
 
-            // Using smaller size (0.5) to reduce the marker and text size.
-            return { time: markerTime as Time, position, color, shape, text, size: 0.5, isShadow };
+            return { time: markerTime as Time, position, color, shape, text, size: 0.6, isShadow };
         });
 
-    // Deduplicate — keep only one of each type of signal per candle
     const seen = new Map<string, any>();
     for (const m of markerData) {
         const key = `${m.time}-${m.text}-${m.isShadow}`;
@@ -271,7 +282,6 @@ export default function CandlestickChart({
     
     const uniqueMarkers = Array.from(seen.values()).sort((a, b) => {
         if (a.time !== b.time) return (a.time as number) - (b.time as number);
-        // Sort shadow signals to be rendered after main signals
         if (a.isShadow && !b.isShadow) return 1;
         if (!a.isShadow && b.isShadow) return -1;
         return 0;
@@ -295,24 +305,39 @@ export default function CandlestickChart({
          setMarketStatus(data.market_status);
       }
       
-      const currentPrice = data.price?.last > 0 ? data.price.last : data.price?.ask;
-      const currentVolume = data.price?.volume || Math.floor(Math.random() * 50) + 10; 
+      const currentPrice = data.price?.last > 0 ? Number(data.price.last) : Number(data.price?.ask || 0);
+      const currentVolume = Number(data.price?.volume || 1);
       
-      // Only update if history has been initialized
-      if (isInitialized && currentPrice && seriesRef.current && volumeSeriesRef.current && lastCandleRef.current) {
-         const rawTick = data.timestamp ? data.timestamp : Math.floor(Date.now() / 1000);
+      if (isInitialized && currentPrice > 0 && seriesRef.current && volumeSeriesRef.current && lastCandleRef.current) {
+         const tfConfig = TIMEFRAME_CONFIGS[timeframe] || { seconds: 300, isRange: false };
+         
+         // 1. If in RANGE BAR mode: Update running bar from state.range_bar_state
+         if (tfConfig.isRange) {
+             const rb = data.range_bar_state;
+             let candle = lastCandleRef.current;
+             if (rb && rb.active) {
+                 candle = {
+                     time: candle.time,
+                     open: Number(rb.open || candle.open),
+                     high: Number(rb.high || candle.high),
+                     low: Number(rb.low || candle.low),
+                     close: Number(rb.close || currentPrice)
+                 };
+                 seriesRef.current.update(candle);
+                 lastCandleRef.current = candle;
+             }
+             return;
+         }
+
+         // 2. If in Time-based mode (M1, M5, H1):
+         const rawTick = data.timestamp ? Number(data.timestamp) : Math.floor(Date.now() / 1000);
          const tzOffsetSeconds = new Date().getTimezoneOffset() * 60;
-         
-         // Align MT5 Broker time with Local History time
          const alignedTickTime = rawTick - tzOffsetSeconds;
-         
-         const tfSeconds = TIMEFRAMES[timeframe] || 3600;
-         const currentCandleTime = alignedTickTime - (alignedTickTime % tfSeconds);
+         const currentCandleTime = alignedTickTime - (alignedTickTime % tfConfig.seconds);
          
          let candle = lastCandleRef.current;
          
          if (currentCandleTime > candle.time) {
-            // New candle
             candle = {
                time: currentCandleTime as Time,
                open: currentPrice,
@@ -322,11 +347,9 @@ export default function CandlestickChart({
             };
             dataRef.current.push(candle);
          } else {
-            // Update current candle
             candle.close = currentPrice;
             if (currentPrice > candle.high) candle.high = currentPrice;
             if (currentPrice < candle.low) candle.low = currentPrice;
-            
             if (dataRef.current.length > 0) {
                dataRef.current[dataRef.current.length - 1] = candle;
             }
@@ -335,20 +358,20 @@ export default function CandlestickChart({
          seriesRef.current.update(candle);
          volumeSeriesRef.current.update({
              time: candle.time,
-             value: currentVolume, // note: live ticks don't accumulate volume perfectly here yet, but it's okay for live indicator
+             value: currentVolume,
              color: candle.close >= candle.open ? "rgba(36, 161, 72, 0.8)" : "rgba(250, 77, 86, 0.8)"
          });
          lastCandleRef.current = candle;
       }
     } catch (e) {
-      console.error("Failed to parse live price from global state", e);
+      console.error("Failed to parse live price in chart", e);
     }
   }, [state, timeframe, isInitialized]);
 
   return (
     <div style={{ width: "100%", height: "100%", minHeight: "300px", position: "relative" }}>
       <h4 style={{ position: "absolute", top: 10, left: 20, zIndex: 10, color: "#f4f4f4", display: "flex", alignItems: "center", gap: "15px" }}>
-          {!isInitialized && <span style={{ fontSize: "12px", color: "#a8a8a8" }}>(Waiting for market tick...)</span>}
+          {!isInitialized && <span style={{ fontSize: "11px", color: "#a8a8a8" }}>(Connecting chart stream...)</span>}
           
           {marketStatus !== "OPEN" && (
               <span style={{ 
@@ -356,7 +379,7 @@ export default function CandlestickChart({
                   color: marketStatus === "CLOSED" ? "#fa4d56" : "#f1c21b", 
                   padding: "2px 8px", 
                   borderRadius: "4px", 
-                  fontSize: "12px", 
+                  fontSize: "11px", 
                   fontWeight: "bold",
                   border: `1px solid ${marketStatus === "CLOSED" ? "#fa4d56" : "#f1c21b"}`
               }}>
@@ -371,16 +394,19 @@ export default function CandlestickChart({
                style={{
                   background: "#353535",
                   color: "#f4f4f4",
-                  border: "1px solid #393939",
-                  padding: "1px 4px",
-                  borderRadius: "0",
+                  fontWeight: 500,
+                  border: "1px solid #474747",
+                  padding: "2px 6px",
+                  borderRadius: 0,
                   fontSize: "10px",
                   cursor: "pointer",
                   outline: "none"
                }}
             >
-                {Object.keys(TIMEFRAMES).map(tf => (
-                    <option key={tf} value={tf}>{tf}</option>
+                {Object.entries(TIMEFRAME_CONFIGS).map(([tfKey, cfg]) => (
+                    <option key={tfKey} value={tfKey} style={{ background: '#262626', color: '#fff' }}>
+                      {cfg.label}
+                    </option>
                 ))}
             </select>
 

@@ -19,6 +19,7 @@ import MacroSnapshot from '../components/MacroSnapshot';
 import MacroCalendar from '../components/MacroCalendar';
 import HMMRegimeGauges from '../components/HMMRegimeGauges';
 import MoEEnsembleGauges from '../components/MoEEnsembleGauges';
+import RangeBarPyramidVisualizer from '../components/RangeBarPyramidVisualizer';
 import { useGlobalState } from '../contexts/GlobalStateContext';
 import { API_BASE_URL } from '@/config/env';
 
@@ -201,6 +202,11 @@ export default function Home() {
         </div>
       </div>
 
+      {/* --- LIVE RANGE BAR & PYRAMIDING VISUALIZER --- */}
+      <div style={{ marginBottom: '0.1rem', marginTop: '0.1rem' }}>
+        <RangeBarPyramidVisualizer />
+      </div>
+
       {/* --- ROW 2: DYNAMIC CHARTS AND SIGNALS --- */}
       <ResponsiveGridLayout
         className="layout"
@@ -279,7 +285,7 @@ export default function Home() {
                  <MarketSummaryWidget />
                </div>
 
-                 <CandlestickChart symbol="XAUUSD" onHistoryUpdate={(data) => chartHistoryRef.current = data} signals={nonShadowSignals} maxHistoryLimit={50} visibleBarsCount={12} />
+                 <CandlestickChart symbol="XAUUSD" onHistoryUpdate={(data) => chartHistoryRef.current = data} signals={nonShadowSignals} />
              </div>
           </DashboardPanel>
         </div>

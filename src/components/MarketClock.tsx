@@ -46,7 +46,7 @@ export default function MarketClock() {
             </span>
           </div>
           <span style={{ fontWeight: 600, fontFamily: 'monospace', fontSize: '1rem', color: '#ffffff', marginTop: '0.15rem', lineHeight: 1 }}>
-            {state.price.last > 0 ? state.price.last.toFixed(2) : state.price.ask?.toFixed(2)}
+            {state?.price?.last > 0 ? Number(state.price.last).toFixed(2) : (state?.price?.ask ? Number(state.price.ask).toFixed(2) : '---')}
           </span>
         </div>
       )}

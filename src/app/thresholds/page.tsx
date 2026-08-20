@@ -17,7 +17,7 @@ export default function ThresholdsPage() {
     risk_per_trade_pct: 1.0,
     max_open_positions: 1,
     trading_mode: "SCALPING",
-    scalping_timeframe: "M5",
+    scalping_timeframe: "RANGE_1.5",
     scalping_tp_pips: 15.0,
     scalping_sl_pips: 5.0,
     scalping_max_holding_minutes: 15,
@@ -31,7 +31,13 @@ export default function ThresholdsPage() {
     macro_soft_switch_sensitivity: 0.15,
     macro_refresh_interval_minutes: 15,
     macro_news_buffer_minutes: 15,
-    macro_vix_pause_threshold: 25.0
+    macro_vix_pause_threshold: 25.0,
+    range_bar_size_usd: 1.50,
+    pyramiding_enabled: true,
+    pyramiding_max_layers: 4,
+    pyramiding_step_pips: 15.0,
+    trailing_stop_pips: 20.0,
+    close_on_opposite_range_bar: false
   });
 
   const [originalConfig, setOriginalConfig] = useState<any>(null);
@@ -39,7 +45,8 @@ export default function ThresholdsPage() {
   const [visibleCategories, setVisibleCategories] = useState({
     "risk-execution": true,
     "macro-soft-switch": true,
-    "scalping-limits": true
+    "scalping-limits": true,
+    "range-pyramiding": true
   });
 
   const [loading, setLoading] = useState(true);
@@ -110,6 +117,7 @@ export default function ThresholdsPage() {
   const riskKeys = ["auto_execution_enabled", "use_equity_kill_switch", "max_drawdown_equity_pct", "use_daily_kill_switch", "max_daily_drawdown_pct", "risk_control_mode", "risk_per_trade_pct", "max_open_positions"];
   const macroKeys = ["use_macro_model", "scalping_base_confidence", "macro_soft_switch_sensitivity", "macro_refresh_interval_minutes", "macro_news_buffer_minutes", "macro_vix_pause_threshold"];
   const scalpingKeys = ["engine_active", "scalping_timeframe", "scalping_tp_pips", "scalping_sl_pips", "scalping_max_holding_minutes", "scalping_max_trades_per_day", "scalping_max_trades_per_hour", "scalping_max_spread_pips", "scalping_min_atr_pips", "scalping_max_consecutive_losses"];
+  const rangePyramidKeys = ["range_bar_size_usd", "pyramiding_enabled", "pyramiding_max_layers", "pyramiding_step_pips", "trailing_stop_pips", "close_on_opposite_range_bar"];
 
   if (loading) return <div>Loading threshold configuration...</div>;
 
@@ -303,11 +311,11 @@ export default function ThresholdsPage() {
           </Tile>
         </Column>
 
-        {/* PANEL 3: M5 SCALPING EXECUTION & TARGET LIMITS */}
+        {/* PANEL 3: SCALPING EXECUTION & TARGET LIMITS */}
         <Column sm={4} md={8} lg={16} style={{ marginBottom: "0.1rem" }}>
           <Tile style={{ borderLeft: hasChanges(scalpingKeys) ? "4px solid #f1c21b" : "none", padding: "1.25rem" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <h5 style={{ fontWeight: 600, color: "#f4f4f4" }}>⚡ M5 Scalping Execution & Micro Limits</h5>
+              <h5 style={{ fontWeight: 600, color: "#f4f4f4" }}>⚡ Scalping Execution & Micro Limits</h5>
               <Button 
                 kind="ghost" 
                 hasIconOnly 
@@ -328,18 +336,18 @@ export default function ThresholdsPage() {
                     toggled={config.engine_active}
                     onToggle={(val) => updateConfig("engine_active", val)}
                   />
-                  <div style={{ width: "240px" }}>
+                  <div style={{ width: "260px" }}>
                     <Select
                       id="scalping_timeframe"
-                      labelText="Signal Trigger Timeframe"
-                      value={config.scalping_timeframe || "M5"}
+                      labelText="Signal Trigger Mechanism"
+                      value={config.scalping_timeframe || "RANGE_1.5"}
                       onChange={(e: any) => updateConfig("scalping_timeframe", e.target.value)}
                       size="md"
                     >
-                      <SelectItem value="M5" text="5 Minutes (M5 - Default)" />
+                      <SelectItem value="RANGE_1.5" text="⚡ Range Bar $1.50 (Event-Driven - Default)" />
                       <SelectItem value="M1" text="1 Minute (M1)" />
+                      <SelectItem value="M5" text="5 Minutes (M5)" />
                       <SelectItem value="M15" text="15 Minutes (M15)" />
-                      <SelectItem value="M30" text="30 Minutes (M30)" />
                       <SelectItem value="H1" text="1 Hour (H1)" />
                     </Select>
                   </div>
@@ -356,6 +364,84 @@ export default function ThresholdsPage() {
                   <div style={{ width: "190px" }}><NumberInput id="scalping_min_atr_pips" label="Min Volatility ATR (Pips)" value={config.scalping_min_atr_pips} min={0.1} max={10.0} step={0.1} onChange={(e: any, { value }: any) => updateConfig("scalping_min_atr_pips", value)} /></div>
                   <div style={{ width: "190px" }}><NumberInput id="scalping_max_holding_minutes" label="Max Position Hold (Mins)" value={config.scalping_max_holding_minutes} min={1} max={120} onChange={(e: any, { value }: any) => updateConfig("scalping_max_holding_minutes", value)} /></div>
                   <div style={{ width: "190px" }}><NumberInput id="scalping_max_consecutive_losses" label="Max Consec. Losses" value={config.scalping_max_consecutive_losses} min={1} max={10} onChange={(e: any, { value }: any) => updateConfig("scalping_max_consecutive_losses", value)} /></div>
+                </div>
+              </div>
+            )}
+          </Tile>
+        </Column>
+
+        {/* PANEL 4: EVENT-DRIVEN RANGE BAR & PYRAMIDING CONTROLS */}
+        <Column sm={4} md={8} lg={16} style={{ marginBottom: "0.1rem" }}>
+          <Tile style={{ borderLeft: hasChanges(rangePyramidKeys) ? "4px solid #f1c21b" : "none", padding: "1.25rem" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <h5 style={{ fontWeight: 600, color: "#f4f4f4" }}>📈 Event-Driven Range Bar & Pyramiding Controls</h5>
+              <Button 
+                kind="ghost" 
+                hasIconOnly 
+                size="sm"
+                iconDescription={visibleCategories["range-pyramiding"] ? "Hide" : "Show"}
+                renderIcon={visibleCategories["range-pyramiding"] ? ViewOff : View}
+                onClick={() => toggleCategory("range-pyramiding")}
+              />
+            </div>
+            {visibleCategories["range-pyramiding"] && (
+              <div style={{ marginTop: "0.75rem" }}>
+                <div style={{ display: "flex", gap: "2.5rem", alignItems: "center", marginBottom: "1rem", flexWrap: "wrap" }}>
+                  <Toggle
+                    id="pyramiding_enabled"
+                    labelText="Pyramiding Scale-In Engine"
+                    labelA="Disabled"
+                    labelB="Active (House Money)"
+                    toggled={config.pyramiding_enabled !== undefined ? config.pyramiding_enabled : true}
+                    onToggle={(val) => updateConfig("pyramiding_enabled", val)}
+                  />
+                  <Toggle
+                    id="close_on_opposite_range_bar"
+                    labelText="Close Cluster on Opposite Bar"
+                    labelA="Disabled"
+                    labelB="Active (Auto-Reversal)"
+                    toggled={config.close_on_opposite_range_bar || false}
+                    onToggle={(val) => updateConfig("close_on_opposite_range_bar", val)}
+                  />
+                </div>
+
+                <div style={{ display: "flex", gap: "0.1rem", marginBottom: "0.1rem", flexWrap: "wrap" }}>
+                  <div style={{ width: "190px" }}>
+                    <NumberInput
+                      id="range_bar_size_usd"
+                      label="Range Bar Size (USD)"
+                      value={config.range_bar_size_usd || 1.50}
+                      min={0.5} max={10.0} step={0.1}
+                      onChange={(e: any, { value }: any) => updateConfig("range_bar_size_usd", value)}
+                    />
+                  </div>
+                  <div style={{ width: "190px" }}>
+                    <NumberInput
+                      id="pyramiding_max_layers"
+                      label="Max Pyramiding Layers"
+                      value={config.pyramiding_max_layers || 4}
+                      min={1} max={10}
+                      onChange={(e: any, { value }: any) => updateConfig("pyramiding_max_layers", value)}
+                    />
+                  </div>
+                  <div style={{ width: "190px" }}>
+                    <NumberInput
+                      id="pyramiding_step_pips"
+                      label="Scale-In Step (Pips)"
+                      value={config.pyramiding_step_pips || 15.0}
+                      min={5.0} max={50.0} step={1.0}
+                      onChange={(e: any, { value }: any) => updateConfig("pyramiding_step_pips", value)}
+                    />
+                  </div>
+                  <div style={{ width: "190px" }}>
+                    <NumberInput
+                      id="trailing_stop_pips"
+                      label="Cluster Trailing Stop (Pips)"
+                      value={config.trailing_stop_pips || 20.0}
+                      min={5.0} max={100.0} step={1.0}
+                      onChange={(e: any, { value }: any) => updateConfig("trailing_stop_pips", value)}
+                    />
+                  </div>
                 </div>
               </div>
             )}

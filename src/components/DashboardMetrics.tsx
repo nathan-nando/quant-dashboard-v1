@@ -49,7 +49,7 @@ export default function DashboardMetrics() {
           <p style={{ fontSize: "10px", color: "#a8a8a8", margin: 0 }}>Total Trades</p>
         </div>
         <h4 style={{ margin: 0, color: "#f4f4f4", fontWeight: 600, lineHeight: "1.1" }}>
-          {analytics ? analytics.total_trades : "..."}
+          {analytics?.total_trades !== undefined ? analytics.total_trades : "0"}
         </h4>
       </Tile>
 
@@ -58,8 +58,8 @@ export default function DashboardMetrics() {
           <Wallet size={14} color="#a8a8a8" />
           <p style={{ fontSize: "10px", color: "#a8a8a8", margin: 0 }}>Total PnL</p>
         </div>
-        <h4 style={{ margin: 0, fontWeight: 600, color: analytics?.total_pnl >= 0 ? "#24a148" : "#fa4d56", lineHeight: "1.1" }}>
-          {analytics ? `$${analytics.total_pnl.toFixed(2)}` : "..."}
+        <h4 style={{ margin: 0, fontWeight: 600, color: (analytics?.total_pnl || 0) >= 0 ? "#24a148" : "#fa4d56", lineHeight: "1.1" }}>
+          {analytics?.total_pnl !== undefined && analytics?.total_pnl !== null ? `$${Number(analytics.total_pnl).toFixed(2)}` : "$0.00"}
         </h4>
       </Tile>
     </div>

@@ -7,6 +7,7 @@ import GlobalTable from "../../components/GlobalTable";
 import GlobalDetailTable from "../../components/GlobalDetailTable";
 import { useGlobalState } from "../../contexts/GlobalStateContext";
 import DashboardPanel from "../../components/DashboardPanel";
+import RangeBarPyramidVisualizer from "../../components/RangeBarPyramidVisualizer";
 import { API_BASE_URL } from '@/config/env';
 
 const CandlestickChart = dynamic(() => import("../../components/CandlestickChart"), { ssr: false });
@@ -21,6 +22,7 @@ const getRegimeFormat = (regime: string) => {
   if (regime === 'TREND_BEAR') return { text: 'Bear Trend', color: '#fa4d56' };
   if (regime === 'VOLATILE_CHOP') return { text: 'Volatile Chop', color: '#f1c21b' };
   if (regime === 'MEAN_REVERTING') return { text: 'Mean Reverting', color: '#4589ff' };
+  if (regime === 'RANGE_SCALPER') return { text: '⚡ Range Scalper', color: '#11a3c6' };
   return { text: regime.replace('_EXPERT', ' Expert'), color: '#f4f4f4' };
 };
 
@@ -56,6 +58,16 @@ export default function SignalsPage() {
       );
     }
     if (col.includes("status")) {
+      if (value === "PYRAMID_HOLD") {
+        return (
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 'bold', fontSize: '11px' }}>
+            <svg width="12" height="12" viewBox="0 0 32 32" style={{ fill: '#f1c21b', flexShrink: 0 }}>
+              <path d="M16 4C9.383 4 4 9.383 4 16s5.383 12 12 12 12-5.383 12-12S22.617 4 16 4zm0 2c5.523 0 10 4.477 10 10s-4.477 10-10 10S6 21.523 6 16 10.477 6 16 6zm-1 3v8h6v-2h-4v-6h-2z" />
+            </svg>
+            <span style={{ color: '#f1c21b', whiteSpace: 'nowrap' }}>Pyramid Hold</span>
+          </div>
+        );
+      }
       if (value === "PENDING_EXECUTION") {
         return (
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 'bold', fontSize: '11px' }}>
@@ -182,8 +194,13 @@ export default function SignalsPage() {
 
   return (
     <Grid fullWidth>
-      <Column lg={16} md={8} sm={4} className="landing-page__banner">
-        <h3 style={{ marginBottom: "1rem", fontWeight: 400 }}>Signals</h3>
+      <Column lg={16} md={8} sm={4} className="landing-page__banner" style={{ marginBottom: "0.2rem" }}>
+        <h3 style={{ fontWeight: 400 }}>Signals</h3>
+      </Column>
+
+      {/* Range Bar & Pyramiding Monitor */}
+      <Column lg={16} md={8} sm={4} style={{ marginBottom: "0.1rem" }}>
+        <RangeBarPyramidVisualizer />
       </Column>
 
       {/* Chart + Table — stack on mobile, row on desktop */}

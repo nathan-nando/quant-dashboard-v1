@@ -183,6 +183,7 @@ function AccountContent() {
           <div className="account-header-actions">
             <div className="account-dropdown-wrapper">
               <Dropdown
+                key={activeAccountItem ? `${activeAccountItem.id}-${accountDropdownItems.length}` : 'loading'}
                 id="account-page-switcher"
                 titleText="Switch Account"
                 label="Switch Account"

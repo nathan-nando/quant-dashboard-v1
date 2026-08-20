@@ -13,7 +13,7 @@ import { API_BASE_URL } from '@/config/env';
 
 const getRegimeFormat = (regime: string) => {
   if (!regime) return { text: 'UNKNOWN', color: '#f4f4f4' };
-  if (regime === 'SCALPER_M1' || regime === 'SCALPING' || regime === 'SCALPER') return { text: '⚡ M1 Scalping LightGBM', color: '#0f62fe' };
+  if (regime === 'RANGE_SCALPER' || regime === 'SCALPING' || regime === 'SCALPER' || regime === 'SCALPER_M5' || regime === 'SCALPER_M1') return { text: '⚡ Range Scalper ($1.50)', color: '#11a3c6' };
   if (regime === 'MACRO_EVALUATOR' || regime === 'MACRO') return { text: '🌐 Macro Trend Evaluator', color: '#24a148' };
   return { text: regime, color: '#f4f4f4' };
 };
@@ -42,7 +42,7 @@ function ModelsContent() {
   const [datasets, setDatasets] = useState<any[]>([]);
   const [initialModelRouting, setInitialModelRouting] = useState<any>(null);
   const [modelRouting, setModelRouting] = useState<any>({
-    SCALPER_M5: { champion: "scalper_buy_v2 / scalper_sell_v2", challenger: "NONE" },
+    RANGE_SCALPER: { champion: "range_scalper_buy_v1 / range_scalper_sell_v1", challenger: "NONE" },
     MACRO_EVALUATOR: { champion: "macro_evaluator_v1", challenger: "NONE" }
   });
   const [isLoadingData, setIsLoadingData] = useState(true);
@@ -57,12 +57,12 @@ function ModelsContent() {
   const [isDatasetModalOpen, setDatasetModalOpen] = useState(false);
   const [isEditDatasetModalOpen, setEditDatasetModalOpen] = useState(false);
   const [editingDataset, setEditingDataset] = useState<any>(null);
-  const [datasetForm, setDatasetForm] = useState({ id: "", name: "", description: "", timeframe: "H1", count: 10000, start_date: "", end_date: "", file_name: "", source_type: "technical" });
+  const [datasetForm, setDatasetForm] = useState({ id: "", name: "", description: "", timeframe: "RANGE_1.5", count: 10000, start_date: "", end_date: "", file_name: "", source_type: "technical" });
   const [datasetMode, setDatasetMode] = useState("date"); // count or date
 
   // Train states
   const initEnd = new Date().toISOString().split('T')[0];
-  const d = new Date(); d.setFullYear(d.getFullYear() - 3);
+  const d = new Date(); d.setFullYear(d.getFullYear() - 1);
   const initStart = d.toISOString().split('T')[0];
 
   const [isTrainModalOpen, setTrainModalOpen] = useState(false);
@@ -113,7 +113,7 @@ function ModelsContent() {
       const dsData = await dsRes.json();
       
       const formattedRouting: Record<string, { champion: string; challenger: string }> = {
-        SCALPER_M5: { champion: "scalper_buy_v2 / scalper_sell_v2", challenger: "NONE" },
+        RANGE_SCALPER: { champion: "range_scalper_buy_v1 / range_scalper_sell_v1", challenger: "NONE" },
         MACRO_EVALUATOR: { champion: "macro_evaluator_v1", challenger: "NONE" }
       };
       for(const k in routeData) {
@@ -242,7 +242,7 @@ function ModelsContent() {
   };
 
   const openDatasetModal = () => {
-    setDatasetForm({ id: "", name: "", description: "", timeframe: "H1", count: 10000, start_date: initStart, end_date: initEnd, file_name: "", source_type: "technical" });
+    setDatasetForm({ id: "", name: "", description: "", timeframe: "RANGE_1.5", count: 10000, start_date: initStart, end_date: initEnd, file_name: "", source_type: "technical" });
     setDatasetMode("date");
     setDatasetModalOpen(true);
   };
@@ -359,9 +359,20 @@ function ModelsContent() {
     setTrainRegime(regime);
     const techDs = datasets.find(ds => ds.source_type === "technical") || datasets[0];
     const macroDs = datasets.find(ds => ds.source_type === "macro") || datasets.find(ds => ds !== techDs) || datasets[0];
+    
+    let algo = "Dual Binary LightGBM + Isotonic Calibration";
+    let mName = "scalper_v2_dual";
+    if (regime === "MACRO") {
+      algo = "Macro Weight Evaluator";
+      mName = "macro_evaluator_v1";
+    } else if (regime === "RANGE_SCALPER") {
+      algo = "Dual Binary LightGBM (Range Bar $1.50)";
+      mName = "range_scalper_v1";
+    }
+    
     setTrainForm({ 
-      algorithm: regime === "MACRO" ? "Macro Weight Evaluator" : "Dual Binary LightGBM + Isotonic Calibration", 
-      model_name: regime === "MACRO" ? "macro_evaluator_v1" : "scalper_v2_dual", 
+      algorithm: algo, 
+      model_name: mName, 
       optuna_trials: 50, 
       skip_ingestion: true, 
       dataset_id: techDs ? techDs.id : "", 
@@ -588,22 +599,22 @@ function ModelsContent() {
             {currentTab === 'train' && (
               <>
                 <div className="models-train-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '0.2rem', marginBottom: '0.2rem' }}>
-                    {/* Card 1: M5 Scalping Model */}
-                    <Tile style={{ padding: '1.5rem', background: 'var(--cds-layer-01, #262626)', borderLeft: '4px solid #0f62fe' }}>
+                    {/* Card 1: Range Bar Scalping Model */}
+                    <Tile style={{ padding: '1.5rem', background: 'var(--cds-layer-01, #262626)', borderLeft: '4px solid #11a3c6' }}>
                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                           <MachineLearningModel size={28} style={{ color: '#0f62fe' }} />
+                           <MachineLearningModel size={28} style={{ color: '#11a3c6' }} />
                            <div>
-                             <h4 style={{ fontWeight: 600, margin: 0, color: '#f4f4f4' }}>M5 Dual Binary Scalping Model</h4>
-                             <p style={{ fontSize: '0.75rem', color: '#a8a8a8', margin: 0, marginTop: '0.25rem' }}>Dual LightGBM (BUY/SELL) + Isotonic Calibration</p>
+                             <h4 style={{ fontWeight: 600, margin: 0, color: '#f4f4f4' }}>Range Bar Scalping Model</h4>
+                             <p style={{ fontSize: '0.75rem', color: '#a8a8a8', margin: 0, marginTop: '0.25rem' }}>Dual LightGBM on Event-Driven Range Bars ($1.50)</p>
                            </div>
                          </div>
                        </div>
                        <p style={{ fontSize: '0.8rem', color: '#c6c6c6', marginBottom: '1.25rem', lineHeight: '1.4' }}>
-                         Latih ulang model M5 Scalping berbasis Dual Binary Classifiers (BUY-vs-rest & SELL-vs-rest) dengan Fair Intra-Bar Resolution, Purged CV, & Isotonic Probability Calibration.
+                         Latih model Range Bar ($1.50) dengan fitur Price Velocity, Bar Duration, dan Consecutive Bars untuk momentum scalping berkecepatan tinggi.
                        </p>
-                       <Button kind="primary" size="sm" renderIcon={Play} onClick={() => openTrainModal("SCALPING")}>
-                          Train Scalping Model
+                       <Button kind="primary" size="sm" renderIcon={Play} onClick={() => openTrainModal("RANGE_SCALPER")}>
+                          Train Range Scalper
                        </Button>
                     </Tile>
 
@@ -673,10 +684,11 @@ function ModelsContent() {
                     // Filter models based on scalper vs macro routing key
                     const filteredModels = models.filter((m: any) => {
                       if (m.name === champ || m.name === chall) return true;
-                      
                       const k = key.toLowerCase();
                       let keyword = '';
-                      if (k.includes('scalper')) {
+                      if (k.includes('range')) {
+                        keyword = 'range';
+                      } else if (k.includes('scalper')) {
                         keyword = 'scalper';
                       } else if (k.includes('macro')) {
                         keyword = 'macro';
@@ -698,35 +710,39 @@ function ModelsContent() {
                           <span style={{ fontSize: '0.7rem', color: '#6f6f6f', marginLeft: 'auto' }}>{key}</span>
                         </div>
 
-                        <FormGroup legendText="" style={{ marginBottom: '1rem' }}>
-                          <Select
-                            id={`champion-${key}`}
-                            labelText="Champion (Active Live Model)"
-                            value={champ}
-                            onChange={(e) => handleRouteChange(key, 'champion', e.target.value)}
-                            size="md"
-                          >
-                            <SelectItem value="NONE" text="NONE (Disabled)" />
-                            {filteredModels.map((m: any) => (
-                              <SelectItem key={m.id || m.name} value={m.name} text={`${m.name} (${m.algorithm_type || m.regime || 'Model'})`} />
-                            ))}
-                          </Select>
-                        </FormGroup>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                          <div>
+                            <span style={{ fontSize: '0.75rem', color: '#a8a8a8', display: 'block', marginBottom: '0.25rem' }}>🏆 Champion (Active Live Model)</span>
+                            <Select
+                              id={`route-champ-${key}`}
+                              labelText=""
+                              value={champ}
+                              onChange={(e: any) => handleRouteChange(key, 'champion', e.target.value)}
+                              size="sm"
+                            >
+                              <SelectItem value="NONE" text="None (Fallback Default)" />
+                              {filteredModels.map((m: any) => (
+                                <SelectItem key={m.id || m.name} value={m.name} text={`${m.name} (${m.algorithm_type || 'Custom'})`} />
+                              ))}
+                            </Select>
+                          </div>
 
-                        <FormGroup legendText="" style={{ margin: 0 }}>
-                          <Select
-                            id={`challenger-${key}`}
-                            labelText="Challenger (Shadow Test Model)"
-                            value={chall}
-                            onChange={(e) => handleRouteChange(key, 'challenger', e.target.value)}
-                            size="md"
-                          >
-                            <SelectItem value="NONE" text="NONE (Disabled)" />
-                            {filteredModels.map((m: any) => (
-                              <SelectItem key={m.id || m.name} value={m.name} text={`${m.name} (${m.algorithm_type || m.regime || 'Model'})`} />
-                            ))}
-                          </Select>
-                        </FormGroup>
+                          <div>
+                            <span style={{ fontSize: '0.75rem', color: '#a8a8a8', display: 'block', marginBottom: '0.25rem' }}>⚔️ Challenger (Shadow Testing)</span>
+                            <Select
+                              id={`route-chall-${key}`}
+                              labelText=""
+                              value={chall}
+                              onChange={(e: any) => handleRouteChange(key, 'challenger', e.target.value)}
+                              size="sm"
+                            >
+                              <SelectItem value="NONE" text="None (Disabled)" />
+                              {filteredModels.map((m: any) => (
+                                <SelectItem key={m.id || m.name} value={m.name} text={`${m.name} (${m.algorithm_type || 'Custom'})`} />
+                              ))}
+                            </Select>
+                          </div>
+                        </div>
                       </Tile>
                     );
                   })}
@@ -740,7 +756,7 @@ function ModelsContent() {
                 <GlobalTable 
                   headers={datasetHeaders} 
                   initialData={datasets} 
-                  title="Datasets" 
+                  title="Datasets Catalog" 
                   formatCell={formatDatasetCell}
                   onReload={fetchData}
                   toolbarActions={
@@ -784,6 +800,7 @@ function ModelsContent() {
             <SelectItem value="macro" text="🏛️ Macro Indicators Only (FRED Series)" />
           </Select>
           <Select id="ds-tf" labelText="Timeframe" value={datasetForm.timeframe} onChange={e => setDatasetForm({...datasetForm, timeframe: e.target.value})} style={{ marginBottom: "1rem" }}>
+            <SelectItem value="RANGE_1.5" text="⚡ Range Bar $1.50 (Event-Driven)" />
             <SelectItem value="M1" text="1 Minute (M1 Scalping)" />
             <SelectItem value="M5" text="5 Minutes (M5 Scalping)" />
             <SelectItem value="M15" text="15 Minutes" />
@@ -825,11 +842,13 @@ function ModelsContent() {
       </Modal>
 
       {/* TRAIN SETTINGS MODAL */}
-      <Modal open={isTrainModalOpen} onRequestClose={() => setTrainModalOpen(false)} onRequestSubmit={startTraining} modalHeading={`Train settings for ${trainRegime === 'MACRO' ? 'Macro & Trend Evaluator' : 'M5 Scalping Model'}`} primaryButtonText="Start Training" secondaryButtonText="Cancel">
+      <Modal open={isTrainModalOpen} onRequestClose={() => setTrainModalOpen(false)} onRequestSubmit={startTraining} modalHeading={`Train settings for ${trainRegime === 'MACRO' ? 'Macro & Trend Evaluator' : (trainRegime === 'RANGE_SCALPER' ? 'Range Bar Scalping Model' : 'M5 Scalping Model')}`} primaryButtonText="Start Training" secondaryButtonText="Cancel">
         <FormGroup legendText="">
           <Select id="train-algo" labelText="Algorithm" value={trainForm.algorithm} onChange={e => setTrainForm({...trainForm, algorithm: e.target.value})} style={{ marginBottom: "1rem" }}>
              {trainRegime === "MACRO" ? (
                <SelectItem value="Macro Weight Evaluator" text="Macro Weight Evaluator (H1/M15 + DXY Alignment)" />
+             ) : trainRegime === "RANGE_SCALPER" ? (
+               <SelectItem value="Dual Binary LightGBM (Range Bar $1.50)" text="Dual Binary LightGBM (Range Bar $1.50)" />
              ) : (
                <SelectItem value="LightGBM Triple Barrier ONNX" text="LightGBM Triple Barrier ONNX" />
              )}
