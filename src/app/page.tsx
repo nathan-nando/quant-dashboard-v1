@@ -17,25 +17,11 @@ import AttributionPanel from '../components/AttributionPanel';
 import MacroSnapshot from '../components/MacroSnapshot';
 import MacroCalendar from '../components/MacroCalendar';
 import HMMRegimeGauges from '../components/HMMRegimeGauges';
-import MoEEnsembleGauges from '../components/MoEEnsembleGauges';
 import RangeBarPyramidVisualizer from '../components/RangeBarPyramidVisualizer';
 import { useGlobalState } from '../contexts/GlobalStateContext';
 import { API_BASE_URL } from '@/config/env';
 import { formatJakartaDateTime } from '../utils/date';
-
-const getRegimeFormat = (regime: string) => {
-  if (!regime) return { text: 'UNKNOWN', color: '#f4f4f4' };
-  if (regime === 'MoE' || regime === 'MOE_ENSEMBLE') return { text: 'MoE Ensemble', color: '#8a3ffc' };
-  if (regime === 'TREND_EXPERT' || regime === 'trend') return { text: 'Trend Expert', color: '#24a148' };
-  if (regime === 'MEANREV_EXPERT' || regime === 'meanrev') return { text: 'MeanRev Expert', color: '#4589ff' };
-  if (regime === 'MACRO_EXPERT' || regime === 'macro') return { text: 'Macro Expert', color: '#d12771' };
-  if (regime === 'TREND_BULL') return { text: 'Bull Trend', color: '#24a148' }; 
-  if (regime === 'TREND_BEAR') return { text: 'Bear Trend', color: '#fa4d56' }; 
-  if (regime === 'VOLATILE_CHOP') return { text: 'Volatile Chop', color: '#f1c21b' }; 
-  if (regime === 'MEAN_REVERTING') return { text: 'Mean Reverting', color: '#4589ff' }; 
-  if (regime === 'RANGE_SCALPER') return { text: '⚡ Range Scalper', color: '#11a3c6' };
-  return { text: regime.replace('_EXPERT', ' Expert'), color: '#f4f4f4' };
-};
+import { getMarketRegimeFormat as getRegimeFormat, getEngineSourceFormat } from '../utils/formatters';
 
 export default function Home() {
   const { state, signals, totalTrades, positions } = useGlobalState();
@@ -140,19 +126,19 @@ export default function Home() {
   const defaultLayouts = {
     lg: [
       { i: 'chart', x: 0, y: 0, w: 4, h: 4, minW: 3, minH: 2 },
-      { i: 'hmm_gauges', x: 4, y: 0, w: 3.6, h: 2, minW: 2, minH: 2 },
-      { i: 'macro_calendar', x: 7.6, y: 0, w: 2.4, h: 2, minW: 2, minH: 2 },
-      { i: 'range_pyramid', x: 4, y: 2, w: 3.6, h: 2, minW: 2, minH: 2 },
-      { i: 'attribution', x: 7.6, y: 2, w: 2.4, h: 2, minW: 2, minH: 2 },
+      { i: 'range_pyramid', x: 4, y: 0, w: 3.8, h: 2.2, minW: 3, minH: 2 },
+      { i: 'macro_calendar', x: 7.8, y: 0, w: 2.2, h: 2.2, minW: 1.5, minH: 2 },
+      { i: 'hmm_gauges', x: 4, y: 2.2, w: 3.6, h: 1.8, minW: 2, minH: 1.8 },
+      { i: 'attribution', x: 7.6, y: 2.2, w: 2.4, h: 1.8, minW: 2, minH: 1.8 },
       { i: 'live_trades', x: 0, y: 4, w: 5, h: 1.5, minW: 3, minH: 1.2 },
       { i: 'recent_trades', x: 0, y: 5.5, w: 5, h: 5.6, minW: 3, minH: 2 },
       { i: 'signals', x: 5, y: 4, w: 5, h: 7.1, minW: 3, minH: 2 }
     ],
     md: [
       { i: 'chart', x: 0, y: 0, w: 4, h: 4 },
-      { i: 'hmm_gauges', x: 4, y: 0, w: 4, h: 2 },
-      { i: 'macro_calendar', x: 4, y: 2, w: 4, h: 2 },
-      { i: 'range_pyramid', x: 0, y: 4, w: 4, h: 2 },
+      { i: 'range_pyramid', x: 4, y: 0, w: 4, h: 2.2 },
+      { i: 'macro_calendar', x: 4, y: 2.2, w: 4, h: 1.8 },
+      { i: 'hmm_gauges', x: 0, y: 4, w: 4, h: 2 },
       { i: 'attribution', x: 4, y: 4, w: 4, h: 2 },
       { i: 'live_trades', x: 0, y: 6, w: 4, h: 1.5 },
       { i: 'recent_trades', x: 0, y: 7.5, w: 4, h: 5.6 },
@@ -161,22 +147,22 @@ export default function Home() {
     sm: [
       { i: 'live_trades', x: 0, y: 0, w: 4, h: 1.5 },
       { i: 'recent_trades', x: 0, y: 1.5, w: 4, h: 5.6 },
-      { i: 'chart', x: 0, y: 7.1, w: 4, h: 4 },
-      { i: 'range_pyramid', x: 0, y: 11.1, w: 4, h: 3 },
-      { i: 'hmm_gauges', x: 0, y: 14.1, w: 4, h: 3 },
-      { i: 'attribution', x: 0, y: 17.1, w: 4, h: 3 },
-      { i: 'macro_calendar', x: 0, y: 20.1, w: 4, h: 3 },
-      { i: 'signals', x: 0, y: 23.1, w: 4, h: 7.1 }
+      { i: 'range_pyramid', x: 0, y: 7.1, w: 4, h: 2.2 },
+      { i: 'chart', x: 0, y: 9.3, w: 4, h: 4 },
+      { i: 'signals', x: 0, y: 13.3, w: 4, h: 7.1 },
+      { i: 'hmm_gauges', x: 0, y: 20.4, w: 4, h: 2 },
+      { i: 'macro_calendar', x: 0, y: 22.4, w: 4, h: 2 },
+      { i: 'attribution', x: 0, y: 24.4, w: 4, h: 2 }
     ],
     xs: [
       { i: 'live_trades', x: 0, y: 0, w: 2, h: 1.5 },
       { i: 'recent_trades', x: 0, y: 1.5, w: 2, h: 5.6 },
-      { i: 'chart', x: 0, y: 7.1, w: 2, h: 3 },
-      { i: 'range_pyramid', x: 0, y: 10.1, w: 2, h: 3 },
-      { i: 'hmm_gauges', x: 0, y: 13.1, w: 2, h: 3 },
-      { i: 'attribution', x: 0, y: 16.1, w: 2, h: 3 },
-      { i: 'macro_calendar', x: 0, y: 19.1, w: 2, h: 3 },
-      { i: 'signals', x: 0, y: 22.1, w: 2, h: 7.1 }
+      { i: 'range_pyramid', x: 0, y: 7.1, w: 2, h: 3 },
+      { i: 'chart', x: 0, y: 10.1, w: 2, h: 3 },
+      { i: 'signals', x: 0, y: 13.1, w: 2, h: 7.1 },
+      { i: 'hmm_gauges', x: 0, y: 20.2, w: 2, h: 3 },
+      { i: 'attribution', x: 0, y: 23.2, w: 2, h: 3 },
+      { i: 'macro_calendar', x: 0, y: 26.2, w: 2, h: 3 }
     ]
   };
   const [layouts, setLayouts] = useState<any>(defaultLayouts);
@@ -187,14 +173,14 @@ export default function Home() {
       const keysToRemove: string[] = [];
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        if (key && (key.startsWith("quantDashboardLayout_") || key === "dashboard-layouts") && key !== "quantDashboardLayout_v53") {
+        if (key && (key.startsWith("quantDashboardLayout_") || key === "dashboard-layouts") && key !== "quantDashboardLayout_v55") {
           keysToRemove.push(key);
         }
       }
       keysToRemove.forEach(k => localStorage.removeItem(k));
     } catch (e) {}
 
-    const saved = localStorage.getItem('quantDashboardLayout_v53');
+    const saved = localStorage.getItem('quantDashboardLayout_v55');
     if (saved) {
       try {
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -205,7 +191,7 @@ export default function Home() {
 
   const handleLayoutChange = (layout: any, allLayouts: any) => {
     setLayouts(allLayouts);
-    localStorage.setItem("quantDashboardLayout_v53", JSON.stringify(allLayouts));
+    localStorage.setItem("quantDashboardLayout_v55", JSON.stringify(allLayouts));
   };
   return (
     <div style={{ maxWidth: '100%', padding: '0 2rem', position: 'relative' }}>
@@ -345,10 +331,18 @@ export default function Home() {
                   const col = cellId.split('__')[1] || cellId.split(':').pop() || '';
                   if (col.includes("timestamp") && value) {
                     const { date, time } = formatJakartaDateTime(value);
+                    const allSigs = nonShadowSignals.slice(0, 15);
+                    const curIdx = allSigs.findIndex((s: any) => String(s.id) === String(row?.id));
+                    const prevSig = curIdx > 0 ? allSigs[curIdx - 1] : null;
+                    const prevDate = prevSig ? formatJakartaDateTime(prevSig.timestamp).date : null;
+                    const showDate = !prevDate || prevDate !== date;
+
                     return (
-                      <div style={{ display: 'flex', flexDirection: 'column', lineHeight: '1.2', fontSize: '9.5px' }}>
-                        <span>{date}</span>
-                        <span style={{ color: '#a8a8a8', fontSize: '8.5px' }}>{time}</span>
+                      <div style={{ display: 'flex', flexDirection: 'column', lineHeight: '1.2', whiteSpace: 'nowrap' }}>
+                        {showDate && (
+                          <span style={{ color: '#8d8d8d', fontSize: '8.5px', marginBottom: '1px' }}>{date}</span>
+                        )}
+                        <span style={{ color: '#ffffff', fontSize: '11px', fontWeight: 600 }}>{time}</span>
                       </div>
                     );
                   }
@@ -440,14 +434,9 @@ export default function Home() {
                     const modelName = signal?.model || signal?.model_version || value;
                     const conf = Number(signal?.confidence || 0);
                     
-                    let readableModelText = 'Scalper V2 Dual';
+                    let readableModelText = 'range_scalper_v1';
                     if (modelName) {
-                      if (modelName === "Manual Override") {
-                        readableModelText = "Manual";
-                      } else {
-                        const words = String(modelName).split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
-                        readableModelText = words.join(' ');
-                      }
+                      readableModelText = String(modelName);
                     }
                     
                     const mo = signal?.signal_metadata?.model_output || signal?.metadata?.model_output || {};

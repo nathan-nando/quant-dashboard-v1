@@ -12,20 +12,7 @@ import { API_BASE_URL } from '@/config/env';
 import { formatJakartaDateTime } from "../../utils/date";
 
 const CandlestickChart = dynamic(() => import("../../components/CandlestickChart"), { ssr: false });
-
-const getRegimeFormat = (regime: string) => {
-  if (!regime) return { text: 'UNKNOWN', color: '#f4f4f4' };
-  if (regime === 'MoE' || regime === 'MOE_ENSEMBLE') return { text: 'MoE Ensemble', color: '#8a3ffc' };
-  if (regime === 'TREND_EXPERT' || regime === 'trend') return { text: 'Trend Expert', color: '#24a148' };
-  if (regime === 'MEANREV_EXPERT' || regime === 'meanrev') return { text: 'MeanRev Expert', color: '#4589ff' };
-  if (regime === 'MACRO_EXPERT' || regime === 'macro') return { text: 'Macro Expert', color: '#d12771' };
-  if (regime === 'TREND_BULL') return { text: 'Bull Trend', color: '#24a148' };
-  if (regime === 'TREND_BEAR') return { text: 'Bear Trend', color: '#fa4d56' };
-  if (regime === 'VOLATILE_CHOP') return { text: 'Volatile Chop', color: '#f1c21b' };
-  if (regime === 'MEAN_REVERTING') return { text: 'Mean Reverting', color: '#4589ff' };
-  if (regime === 'RANGE_SCALPER') return { text: '⚡ Range Scalper', color: '#11a3c6' };
-  return { text: regime.replace('_EXPERT', ' Expert'), color: '#f4f4f4' };
-};
+import { getMarketRegimeFormat as getRegimeFormat, getEngineSourceFormat } from "../../utils/formatters";
 
 export default function SignalsPage() {
   const [selectedItem, setSelectedItem] = useState<{ id: number; type: 'signal' | 'feature_snapshot' } | null>(null);
@@ -156,10 +143,9 @@ export default function SignalsPage() {
       const modelName = signal?.model || signal?.model_version || value;
       const conf = Number(signal?.confidence || 0);
       
-      let readableModelText = 'Scalper V2 Dual';
+      let readableModelText = 'range_scalper_v1';
       if (modelName) {
-        const words = String(modelName).split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
-        readableModelText = words.join(' ');
+        readableModelText = String(modelName);
       }
       
       const mo = signal?.signal_metadata?.model_output || signal?.metadata?.model_output || {};

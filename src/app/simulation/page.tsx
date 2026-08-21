@@ -339,8 +339,8 @@ function SimulationPageContent() {
     name: "",
     mode: "BACKTEST",
     dataset_type: "latest",
-    moe_model: "BaseMoE",
-    hmm_model: "base_hmm",
+    scalper_model: "range_scalper_v1",
+    macro_model: "macro_evaluator_v1",
     start_date: "2024-01-01",
     end_date: "2024-06-01",
     initial_capital: 1000,
@@ -355,17 +355,14 @@ function SimulationPageContent() {
     use_daily_kill_switch: false,
     max_daily_drawdown_pct: 5.0,
     use_global_thresholds: true,
-    ml_conf_trend: 0.50,
-    ml_margin_trend: 0.10,
-    meta_conf_trend: 0.50,
-    ml_conf_meanrev: 0.50,
-    ml_margin_meanrev: 0.10,
-    meta_conf_meanrev: 0.50,
-    ml_conf_macro: 0.50,
-    ml_margin_macro: 0.05,
-    meta_conf_macro: 0.50,
-    ml_conf_moe: 0.50,
-    ml_margin_moe: 0.02
+    scalping_base_confidence: 0.65,
+    range_bar_size_usd: 2.00,
+    macro_soft_switch_sensitivity: 0.10,
+    macro_vix_pause_threshold: 25.0,
+    scalping_tp_pips: 40.0,
+    scalping_sl_pips: 20.0,
+    pyramiding_step_pips: 20.0,
+    trailing_stop_pips: 25.0
   });
 
   // Tab state synchronized via URL
@@ -377,16 +374,16 @@ function SimulationPageContent() {
         if (Array.isArray(data)) {
           setModels(data);
           
-          const moeOption = data.find(m => m.name.includes('_ensemble'));
-          const hmmOption = data.find(m => m.name.includes('_hmm'));
+          const scalperOption = data.find(m => m.name.includes('range_scalper') || m.name.includes('scalper'));
+          const macroOption = data.find(m => m.name.includes('macro'));
           
-          const moeBase = moeOption ? moeOption.name.replace('_ensemble', '') : "BaseMoE";
-          const hmmBase = hmmOption ? hmmOption.name : "base_hmm";
+          const scalperName = scalperOption ? scalperOption.name : "range_scalper_v1";
+          const macroName = macroOption ? macroOption.name : "macro_evaluator_v1";
 
           setConfig(prev => ({
             ...prev,
-            moe_model: moeBase,
-            hmm_model: hmmBase
+            scalper_model: scalperName,
+            macro_model: macroName
           }));
         }
       })
@@ -622,30 +619,30 @@ function SimulationPageContent() {
                       <Grid style={{ padding: 0, marginLeft: '-1rem', marginRight: '-1rem', marginBottom: '2rem' }}>
                         {/* Row 1: Left */}
                         <Column lg={8} md={4} sm={4}>
-                          <h4 style={{ margin: '0 0 1rem 0' }}>Mixture of Experts Pipeline</h4>
+                          <h4 style={{ margin: '0 0 1rem 0' }}>AI Model Selection</h4>
                           <div style={{ marginBottom: '1rem' }}>
                             <Select 
-                              id="moe-model" 
-                              labelText="MoE Base Model" 
-                              value={config.moe_model || "BaseMoE"}
-                              onChange={(e) => setConfig({...config, moe_model: e.target.value})}
+                              id="scalper-model" 
+                              labelText="Range Scalper Alpha Model" 
+                              value={config.scalper_model || "range_scalper_v1"}
+                              onChange={(e) => setConfig({...config, scalper_model: e.target.value})}
                             >
-                              <SelectItem value="BaseMoE" text="Default (BaseMoE)" />
-                              {Array.from(new Set(models.filter(m => m.name.includes('_ensemble')).map(m => m.name.replace('_ensemble', '')))).map(baseName => (
-                                <SelectItem key={`moe-${baseName}`} value={baseName as string} text={`${baseName}`} />
+                              <SelectItem value="range_scalper_v1" text="Default (range_scalper_v1)" />
+                              {models.filter(m => m.name.includes('range_scalper') || m.name.includes('scalper')).map(m => (
+                                <SelectItem key={`scalper-${m.id}`} value={m.name} text={`${m.name}`} />
                               ))}
                             </Select>
                           </div>
                           <div style={{ marginBottom: '1rem' }}>
                             <Select 
-                              id="hmm-model" 
-                              labelText="HMM Regime Detector" 
-                              value={config.hmm_model || "base_hmm"}
-                              onChange={(e) => setConfig({...config, hmm_model: e.target.value})}
+                              id="macro-model" 
+                              labelText="Macro Regime Context Provider" 
+                              value={config.macro_model || "macro_evaluator_v1"}
+                              onChange={(e) => setConfig({...config, macro_model: e.target.value})}
                             >
-                              <SelectItem value="base_hmm" text="Default (base_hmm)" />
-                              {models.filter(m => m.name.includes('_hmm')).map(m => (
-                                <SelectItem key={`hmm-${m.id}`} value={m.name} text={`${m.name}`} />
+                              <SelectItem value="macro_evaluator_v1" text="Default (macro_evaluator_v1)" />
+                              {models.filter(m => m.name.includes('macro')).map(m => (
+                                <SelectItem key={`macro-${m.id}`} value={m.name} text={`${m.name}`} />
                               ))}
                             </Select>
                           </div>
@@ -758,45 +755,34 @@ function SimulationPageContent() {
                               <div style={{ marginTop: '1.5rem', width: '100%' }}>
                                 <Grid style={{ padding: 0, margin: '0 -1rem' }}>
                                   <Column lg={4} md={2} sm={4} style={{ marginBottom: '1rem' }}>
-                                    <h5 style={{ marginBottom: '0.5rem', color: '#24a148', fontSize: '0.8rem' }}>Trend Expert</h5>
-                                    <TextInput id="ml-margin-trend" type="number" step="0.01" labelText="Margin" value={config.ml_margin_trend} onChange={(e) => setConfig({...config, ml_margin_trend: parseFloat(e.target.value)})} />
+                                    <h5 style={{ marginBottom: '0.5rem', color: '#11a3c6', fontSize: '0.8rem' }}>Alpha Scalper</h5>
+                                    <TextInput id="base-conf" type="number" step="0.05" labelText="Base Confidence" value={config.scalping_base_confidence ?? 0.65} onChange={(e) => setConfig({...config, scalping_base_confidence: parseFloat(e.target.value)})} />
                                     <div style={{marginTop: "0.5rem"}}>
-                                      <TextInput id="ml-conf-trend" type="number" step="0.05" labelText="Raw Conf" value={config.ml_conf_trend} onChange={(e) => setConfig({...config, ml_conf_trend: parseFloat(e.target.value)})} />
-                                    </div>
-                                    <div style={{marginTop: "0.5rem"}}>
-                                      <TextInput id="meta-conf-trend" type="number" step="0.05" labelText="Meta Conf" value={config.meta_conf_trend} onChange={(e) => setConfig({...config, meta_conf_trend: parseFloat(e.target.value)})} />
+                                      <TextInput id="range-size" type="number" step="0.10" labelText="Range Bar Size ($)" value={config.range_bar_size_usd ?? 2.00} onChange={(e) => setConfig({...config, range_bar_size_usd: parseFloat(e.target.value)})} />
                                     </div>
                                   </Column>
                                   
                                   <Column lg={4} md={2} sm={4} style={{ marginBottom: '1rem' }}>
-                                    <h5 style={{ marginBottom: '0.5rem', color: '#0f62fe', fontSize: '0.8rem' }}>MeanRev Expert</h5>
-                                    <TextInput id="ml-margin-meanrev" type="number" step="0.01" labelText="Margin" value={config.ml_margin_meanrev} onChange={(e) => setConfig({...config, ml_margin_meanrev: parseFloat(e.target.value)})} />
+                                    <h5 style={{ marginBottom: '0.5rem', color: '#24a148', fontSize: '0.8rem' }}>Macro Regime</h5>
+                                    <TextInput id="macro-sens" type="number" step="0.01" labelText="Sensitivity" value={config.macro_soft_switch_sensitivity ?? 0.10} onChange={(e) => setConfig({...config, macro_soft_switch_sensitivity: parseFloat(e.target.value)})} />
                                     <div style={{marginTop: "0.5rem"}}>
-                                      <TextInput id="ml-conf-meanrev" type="number" step="0.05" labelText="Raw Conf" value={config.ml_conf_meanrev} onChange={(e) => setConfig({...config, ml_conf_meanrev: parseFloat(e.target.value)})} />
-                                    </div>
-                                    <div style={{marginTop: "0.5rem"}}>
-                                      <TextInput id="meta-conf-meanrev" type="number" step="0.05" labelText="Meta Conf" value={config.meta_conf_meanrev} onChange={(e) => setConfig({...config, meta_conf_meanrev: parseFloat(e.target.value)})} />
+                                      <TextInput id="vix-thresh" type="number" step="1.0" labelText="VIX Pause" value={config.macro_vix_pause_threshold ?? 25.0} onChange={(e) => setConfig({...config, macro_vix_pause_threshold: parseFloat(e.target.value)})} />
                                     </div>
                                   </Column>
 
                                   <Column lg={4} md={2} sm={4} style={{ marginBottom: '1rem' }}>
-                                    <h5 style={{ marginBottom: '0.5rem', color: '#f1c21b', fontSize: '0.8rem' }}>Macro Expert</h5>
-                                    <TextInput id="ml-margin-macro" type="number" step="0.01" labelText="Margin" value={config.ml_margin_macro} onChange={(e) => setConfig({...config, ml_margin_macro: parseFloat(e.target.value)})} />
+                                    <h5 style={{ marginBottom: '0.5rem', color: '#0f62fe', fontSize: '0.8rem' }}>SL / TP Targets</h5>
+                                    <TextInput id="tp-pips" type="number" step="5.0" labelText="Take Profit (pips)" value={config.scalping_tp_pips ?? 40.0} onChange={(e) => setConfig({...config, scalping_tp_pips: parseFloat(e.target.value)})} />
                                     <div style={{marginTop: "0.5rem"}}>
-                                      <TextInput id="ml-conf-macro" type="number" step="0.05" labelText="Raw Conf" value={config.ml_conf_macro} onChange={(e) => setConfig({...config, ml_conf_macro: parseFloat(e.target.value)})} />
-                                    </div>
-                                    <div style={{marginTop: "0.5rem"}}>
-                                      <TextInput id="meta-conf-macro" type="number" step="0.05" labelText="Meta Conf" value={config.meta_conf_macro} onChange={(e) => setConfig({...config, meta_conf_macro: parseFloat(e.target.value)})} />
+                                      <TextInput id="sl-pips" type="number" step="5.0" labelText="Stop Loss (pips)" value={config.scalping_sl_pips ?? 20.0} onChange={(e) => setConfig({...config, scalping_sl_pips: parseFloat(e.target.value)})} />
                                     </div>
                                   </Column>
 
                                   <Column lg={4} md={2} sm={4} style={{ marginBottom: '1rem' }}>
-                                    <h5 style={{ marginBottom: '0.5rem', color: '#8a3ffc', fontSize: '0.8rem' }}>Global MoE</h5>
-                                    <div>
-                                      <TextInput id="ml-margin-moe" type="number" step="0.01" labelText="Meta Learner Margin" value={config.ml_margin_moe ?? 0.02} onChange={(e) => setConfig({...config, ml_margin_moe: parseFloat(e.target.value)})} />
-                                    </div>
+                                    <h5 style={{ marginBottom: '0.5rem', color: '#8a3ffc', fontSize: '0.8rem' }}>Pyramiding</h5>
+                                    <TextInput id="pyramid-step" type="number" step="5.0" labelText="Add-on Step (pips)" value={config.pyramiding_step_pips ?? 20.0} onChange={(e) => setConfig({...config, pyramiding_step_pips: parseFloat(e.target.value)})} />
                                     <div style={{marginTop: "0.5rem"}}>
-                                      <TextInput id="ml-conf-moe" type="number" step="0.05" labelText="Meta Learner Conf" value={config.ml_conf_moe} onChange={(e) => setConfig({...config, ml_conf_moe: parseFloat(e.target.value)})} />
+                                      <TextInput id="trailing-pips" type="number" step="5.0" labelText="Trailing Stop (pips)" value={config.trailing_stop_pips ?? 25.0} onChange={(e) => setConfig({...config, trailing_stop_pips: parseFloat(e.target.value)})} />
                                     </div>
                                   </Column>
                                 </Grid>

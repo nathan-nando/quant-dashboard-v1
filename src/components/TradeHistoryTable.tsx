@@ -45,19 +45,7 @@ interface Trade {
   tp_price?: number | null;
 }
 
-const getRegimeFormat = (regime: string) => {
-  if (!regime) return { text: 'UNKNOWN', color: '#f4f4f4' };
-  if (regime === 'MoE' || regime === 'MOE_ENSEMBLE') return { text: 'MoE Ensemble', color: '#8a3ffc' };
-  if (regime === 'TREND_EXPERT' || regime === 'trend') return { text: 'Trend Expert', color: '#24a148' };
-  if (regime === 'MEANREV_EXPERT' || regime === 'meanrev') return { text: 'MeanRev Expert', color: '#4589ff' };
-  if (regime === 'MACRO_EXPERT' || regime === 'macro') return { text: 'Macro Expert', color: '#d12771' };
-  if (regime === 'TREND_BULL') return { text: 'Bull Trend', color: '#24a148' };
-  if (regime === 'TREND_BEAR') return { text: 'Bear Trend', color: '#fa4d56' };
-  if (regime === 'VOLATILE_CHOP') return { text: 'Volatile Chop', color: '#f1c21b' };
-  if (regime === 'MEAN_REVERTING') return { text: 'Mean Reverting', color: '#4589ff' };
-  if (regime === 'RANGE_SCALPER') return { text: '⚡ Range Scalper', color: '#11a3c6' };
-  return { text: regime.replace('_EXPERT', ' Expert').split('_').map(w => w.charAt(0) + w.slice(1).toLowerCase()).join(' '), color: '#f4f4f4' };
-};
+import { getMarketRegimeFormat as getRegimeFormat, getEngineSourceFormat } from '../utils/formatters';
 
 const getFriendlyRegimeText = (regime: string) => {
   if (!regime) return '';
@@ -205,10 +193,10 @@ export default function TradeHistoryTable({
 
   const headers = [
     { key: "formatted_dir_status", header: "Status", width: "60px" },
-    { key: "formatted_entry_time", header: "Time", width: "105px" },
+    { key: "formatted_entry_time", header: "Time", width: isLiveTrades ? "75px" : "120px" },
     { key: "formatted_entry_price", header: isLiveTrades ? "Price (Entry/Current) / Lots" : "Price (Entry/Exit) / Lots" },
     { key: "formatted_pnl_money", header: "PnL", width: "65px" },
-    ...(isLiveTrades ? [] : [{ key: "formatted_close_reason", header: "Reason", width: "90px" }]),
+    ...(isLiveTrades ? [] : [{ key: "formatted_close_reason", header: "Reason", width: "95px" }]),
     ...(hideRegime ? [] : [{ key: "regime", header: "Regime", width: "80px" }]),
     { key: "model_version", header: "Model" },
   ];
@@ -255,27 +243,36 @@ export default function TradeHistoryTable({
     }
     if (cellId.endsWith(":formatted_entry_time")) {
       const rowId = cellId.split(':')[0];
-      const trade = trades.find((t, idx) => (t.trade_id || `trade-${idx}`) === rowId);
+      const tradeIdx = trades.findIndex((t, idx) => (t.trade_id || `trade-${idx}`) === rowId);
+      const trade = tradeIdx !== -1 ? trades[tradeIdx] : null;
       if (!trade) return "-";
       
       const { date, time } = formatJakartaDateTime(trade.entry_time);
       const exitTimeFmt = trade.exit_time ? formatJakartaDateTime(trade.exit_time).time : '-';
       
+      const prevTrade = tradeIdx > 0 ? trades[tradeIdx - 1] : null;
+      const prevDate = prevTrade ? formatJakartaDateTime(prevTrade.entry_time).date : null;
+      const showDate = !prevDate || prevDate !== date;
+      
       if (isLiveTrades) {
         return (
-          <div style={{ display: 'flex', flexDirection: 'column', lineHeight: '1.2', fontSize: compact ? '9.5px' : 'inherit', whiteSpace: 'nowrap' }}>
-            <span style={{ fontWeight: 500 }}>{date}</span>
-            <span style={{ color: '#a8a8a8', fontSize: '8.5px' }}>{time}</span>
+          <div style={{ display: 'flex', flexDirection: 'column', lineHeight: '1.2', whiteSpace: 'nowrap' }}>
+            {showDate && (
+              <span style={{ color: '#8d8d8d', fontSize: '8.5px', marginBottom: '1px' }}>{date}</span>
+            )}
+            <span style={{ color: '#ffffff', fontSize: compact ? '11px' : '12px', fontWeight: 600 }}>{time}</span>
           </div>
         );
       }
       
       return (
-        <div style={{ display: 'flex', flexDirection: 'column', lineHeight: '1.2', fontSize: compact ? '9.5px' : 'inherit', whiteSpace: 'nowrap' }}>
-          <span style={{ fontWeight: 500 }}>{date}</span>
-          <div style={{ fontSize: '8.5px', color: '#a8a8a8', display: 'flex', gap: '3px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', lineHeight: '1.2', whiteSpace: 'nowrap' }}>
+          {showDate && (
+            <span style={{ color: '#8d8d8d', fontSize: '8.5px', marginBottom: '1px' }}>{date}</span>
+          )}
+          <div style={{ fontSize: compact ? '10.5px' : '11.5px', fontWeight: 600, display: 'flex', gap: '3px', alignItems: 'center' }}>
             <span style={{ color: '#24a148' }}>{time}</span>
-            <span>-</span>
+            <span style={{ color: '#6f6f6f', fontSize: '9px' }}>-</span>
             <span style={{ color: '#fa4d56' }}>{exitTimeFmt}</span>
           </div>
         </div>
@@ -440,8 +437,7 @@ export default function TradeHistoryTable({
       
       let readableModelText = '-';
       if (modelName && modelName !== '-') {
-        const words = modelName.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
-        readableModelText = words.join(' ');
+        readableModelText = String(modelName);
       }
       
       if (compact) {

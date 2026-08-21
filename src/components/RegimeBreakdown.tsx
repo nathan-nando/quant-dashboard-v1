@@ -9,21 +9,19 @@ interface RegimeBreakdownProps {
 export default function RegimeBreakdown({ regimeStats, models }: RegimeBreakdownProps) {
   // Define colors for each regime to match the rest of the application
   const regimeColors: Record<string, string> = {
-    'TREND_EXPERT': '#24a148',    // Green
-    'MEANREV_EXPERT': '#0f62fe',  // Blue
-    'MACRO_EXPERT': '#d12771',    // Magenta
-    'MOE_ENSEMBLE': '#8a3ffc',    // Purple
-    'TREND_BULL': '#24a148',
-    'TREND_BEAR': '#fa4d56',
-    'MEAN_REVERTING': '#0f62fe',
-    'VOLATILE_CHOP': '#f1c21b',
+    'RANGE_SCALPER': '#11a3c6',   // Cyan
+    'MACRO_EVALUATOR': '#24a148', // Green
+    'SCALPING': '#0f62fe',        // Blue
+    'MANUAL': '#8a3ffc',          // Purple
   };
 
   const formatRegimeName = (name: string) => {
-    return name.replace('_EXPERT', ' Expert').replace('_ENSEMBLE', ' Ensemble').split('_').map(word => word.charAt(0) + word.slice(1).toLowerCase()).join(' ');
+    if (name === 'RANGE_SCALPER') return 'Range Scalper ($2.00)';
+    if (name === 'MACRO_EVALUATOR') return 'Macro Regime Context';
+    return name.split('_').map(word => word.charAt(0) + word.slice(1).toLowerCase()).join(' ');
   };
 
-  const ALL_REGIMES = ['TREND_EXPERT', 'MEANREV_EXPERT', 'MACRO_EXPERT', 'MOE_ENSEMBLE'];
+  const ALL_REGIMES = ['RANGE_SCALPER', 'MACRO_EVALUATOR', 'SCALPING', 'MANUAL'];
   const safeStats = regimeStats || {};
 
   // Find max values for progress bars

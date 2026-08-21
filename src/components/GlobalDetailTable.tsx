@@ -59,20 +59,7 @@ const CollapsibleJSON = ({
   );
 };
 
-const getRegimeFormat = (regime: string) => {
-  if (!regime) return { text: 'UNKNOWN', color: '#f4f4f4' };
-  if (regime === 'TEST_MANUAL') return { text: 'Manual', color: '#8a3ffc' };
-  if (regime === 'MoE' || regime === 'MOE_ENSEMBLE') return { text: 'MoE Ensemble', color: '#8a3ffc' };
-  if (regime === 'TREND_EXPERT' || regime === 'trend') return { text: 'Trend Expert', color: '#24a148' };
-  if (regime === 'MEANREV_EXPERT' || regime === 'meanrev') return { text: 'MeanRev Expert', color: '#4589ff' };
-  if (regime === 'MACRO_EXPERT' || regime === 'macro') return { text: 'Macro Expert', color: '#d12771' };
-  if (regime === 'TREND_BULL') return { text: 'Bull Trend', color: '#24a148' };
-  if (regime === 'TREND_BEAR') return { text: 'Bear Trend', color: '#fa4d56' };
-  if (regime === 'VOLATILE_CHOP') return { text: 'Volatile Chop', color: '#f1c21b' };
-  if (regime === 'MEAN_REVERTING') return { text: 'Mean Reverting', color: '#4589ff' };
-  if (regime === 'RANGE_SCALPER') return { text: '⚡ Range Scalper', color: '#11a3c6' };
-  return { text: regime.replace('_EXPERT', ' Expert').split('_').map(w => w.charAt(0) + w.slice(1).toLowerCase()).join(' '), color: '#f4f4f4' };
-};
+import { getMarketRegimeFormat as getRegimeFormat, getEngineSourceFormat } from '../utils/formatters';
 
 interface GlobalDetailTableProps {
   id?: number | string | null;

@@ -13,7 +13,7 @@ import { API_BASE_URL } from '@/config/env';
 
 const getRegimeFormat = (regime: string) => {
   if (!regime) return { text: 'UNKNOWN', color: '#f4f4f4' };
-  if (regime === 'RANGE_SCALPER' || regime === 'SCALPING' || regime === 'SCALPER' || regime === 'SCALPER_M5' || regime === 'SCALPER_M1') return { text: '⚡ Range Scalper ($1.50)', color: '#11a3c6' };
+  if (regime === 'RANGE_SCALPER' || regime === 'SCALPING' || regime === 'SCALPER' || regime === 'SCALPER_M5' || regime === 'SCALPER_M1') return { text: '⚡ Range Scalper', color: '#11a3c6' };
   if (regime === 'MACRO_EVALUATOR' || regime === 'MACRO') return { text: '🌐 Macro Trend Evaluator', color: '#24a148' };
   return { text: regime, color: '#f4f4f4' };
 };
@@ -42,7 +42,7 @@ function ModelsContent() {
   const [datasets, setDatasets] = useState<any[]>([]);
   const [initialModelRouting, setInitialModelRouting] = useState<any>(null);
   const [modelRouting, setModelRouting] = useState<any>({
-    RANGE_SCALPER: { champion: "range_scalper_buy_v1 / range_scalper_sell_v1", challenger: "NONE" },
+    RANGE_SCALPER: { champion: "range_scalper_v1", challenger: "NONE" },
     MACRO_EVALUATOR: { champion: "macro_evaluator_v1", challenger: "NONE" }
   });
   const [isLoadingData, setIsLoadingData] = useState(true);
@@ -57,7 +57,7 @@ function ModelsContent() {
   const [isDatasetModalOpen, setDatasetModalOpen] = useState(false);
   const [isEditDatasetModalOpen, setEditDatasetModalOpen] = useState(false);
   const [editingDataset, setEditingDataset] = useState<any>(null);
-  const [datasetForm, setDatasetForm] = useState({ id: "", name: "", description: "", timeframe: "RANGE_1.5", count: 10000, start_date: "", end_date: "", file_name: "", source_type: "technical" });
+  const [datasetForm, setDatasetForm] = useState({ id: "", name: "", description: "", timeframe: "RANGE_2.0", range_size: 2.0, count: 10000, start_date: "", end_date: "", file_name: "", source_type: "technical" });
   const [datasetMode, setDatasetMode] = useState("date"); // count or date
 
   // Train states
@@ -67,7 +67,7 @@ function ModelsContent() {
 
   const [isTrainModalOpen, setTrainModalOpen] = useState(false);
   const [trainRegime, setTrainRegime] = useState<string>("");
-  const [trainForm, setTrainForm] = useState({ algorithm: "XGBoost", model_name: "", optuna_trials: 50, skip_ingestion: true, dataset_id: "", macro_dataset_id: "", use_meta_labeling: false, device: "cpu" });
+  const [trainForm, setTrainForm] = useState({ algorithm: "Dual Binary LightGBM (Range Bar)", model_name: "", range_size: 2.0, optuna_trials: 50, skip_ingestion: true, dataset_id: "", macro_dataset_id: "", use_meta_labeling: false, device: "cpu" });
   const [showDatasetInfo, setShowDatasetInfo] = useState(false);
   
   const [notification, setNotification] = useState<{kind: "success" | "error" | "info", title: string, subtitle: string} | null>(null);
@@ -113,21 +113,24 @@ function ModelsContent() {
       const dsData = await dsRes.json();
       
       const formattedRouting: Record<string, { champion: string; challenger: string }> = {
-        RANGE_SCALPER: { champion: "range_scalper_buy_v1 / range_scalper_sell_v1", challenger: "NONE" },
+        RANGE_SCALPER: { champion: "range_scalper_v1", challenger: "NONE" },
         MACRO_EVALUATOR: { champion: "macro_evaluator_v1", challenger: "NONE" }
       };
-      for(const k in routeData) {
-        if (k in formattedRouting) {
+      if (routeData && typeof routeData === 'object') {
+        for(const k in routeData) {
           if(typeof routeData[k] === 'string') {
             formattedRouting[k] = { champion: routeData[k], challenger: "NONE" };
-          } else {
-            formattedRouting[k] = { champion: routeData[k]?.champion || "NONE", challenger: routeData[k]?.challenger || "NONE" };
+          } else if (routeData[k] && typeof routeData[k] === 'object') {
+            formattedRouting[k] = { 
+              champion: routeData[k]?.champion || "NONE", 
+              challenger: routeData[k]?.challenger || "NONE" 
+            };
           }
         }
       }
       
-      setModels(modData);
-      setDatasets(dsData);
+      setModels(modData || []);
+      setDatasets(dsData || []);
       setModelRouting(formattedRouting);
       setInitialModelRouting(formattedRouting);
     } catch (err) {
@@ -152,25 +155,47 @@ function ModelsContent() {
   const openModelModal = (model: any = null) => {
     if (model) {
       setEditingModel(model);
-      setModelForm(model);
+      setModelForm({
+        id: model.id || "",
+        name: model.name || "",
+        algorithm_type: model.algorithm_type || "Dual Binary LightGBM",
+        accuracy: model.accuracy || "",
+        status: model.status || "Active"
+      });
     } else {
       setEditingModel(null);
-      setModelForm({ id: "", name: "", algorithm_type: "", accuracy: "", status: "Inactive" });
+      setModelForm({ id: "", name: "", algorithm_type: "Dual Binary LightGBM", accuracy: "", status: "Active" });
     }
     setModelModalOpen(true);
   };
 
   const saveModel = async () => {
     try {
-      const { id, ...rest } = modelForm;
-      const payload = id ? { id, ...rest } : rest;
-      await fetch(`${API_BASE_URL}/models`, {
+      const payload: any = {
+        name: modelForm.name.trim(),
+        algorithm_type: modelForm.algorithm_type,
+        accuracy: modelForm.accuracy,
+        status: modelForm.status
+      };
+      if (modelForm.id) {
+        payload.id = modelForm.id;
+      }
+      const res = await fetch(`${API_BASE_URL}/models`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       });
-      fetchData();
-    } catch(e) { console.error(e); }
+      if (res.ok) {
+        await fetchData();
+        setNotification({ kind: "success", title: "Model Saved", subtitle: `Model "${modelForm.name}" was saved successfully in registry.` });
+      } else {
+        const errText = await res.text();
+        setNotification({ kind: "error", title: "Save Failed", subtitle: errText || "Server rejected model update." });
+      }
+    } catch(e: any) { 
+      console.error("Error saving model:", e);
+      setNotification({ kind: "error", title: "Save Failed", subtitle: e.message || "Network error." });
+    }
     setModelModalOpen(false);
   };
 
@@ -242,24 +267,32 @@ function ModelsContent() {
   };
 
   const openDatasetModal = () => {
-    setDatasetForm({ id: "", name: "", description: "", timeframe: "RANGE_1.5", count: 10000, start_date: initStart, end_date: initEnd, file_name: "", source_type: "technical" });
+    setDatasetForm({ id: "", name: "", description: "", timeframe: "RANGE_2.0", range_size: 2.0, count: 10000, start_date: initStart, end_date: initEnd, file_name: "", source_type: "technical" });
     setDatasetMode("date");
     setDatasetModalOpen(true);
   };
 
   const openEditDatasetModal = (dataset: any) => {
     setEditingDataset(dataset);
-    setDatasetForm({ id: dataset.id, name: dataset.name, description: dataset.description, timeframe: dataset.timeframe, count: 10000, start_date: initStart, end_date: initEnd, file_name: dataset.file_name || "", source_type: dataset.source_type || "technical" });
+    let rSize = 2.0;
+    if (dataset.timeframe && dataset.timeframe.startsWith("RANGE_")) {
+      const parsed = parseFloat(dataset.timeframe.split("_")[1]);
+      if (!isNaN(parsed)) rSize = parsed;
+    }
+    setDatasetForm({ id: dataset.id, name: dataset.name, description: dataset.description, timeframe: dataset.timeframe, range_size: rSize, count: 10000, start_date: initStart, end_date: initEnd, file_name: dataset.file_name || "", source_type: dataset.source_type || "technical" });
     setEditDatasetModalOpen(true);
   };
 
   const startIngest = async () => {
     setDatasetModalOpen(false);
     try {
+      const isRange = datasetForm.timeframe.startsWith("RANGE");
+      const actualTf = isRange ? `RANGE_${datasetForm.range_size || 2.0}` : datasetForm.timeframe;
       const payload: any = {
         name: datasetForm.name,
         description: datasetForm.description,
-        timeframe: datasetForm.timeframe,
+        timeframe: actualTf,
+        range_size: isRange ? Number(datasetForm.range_size || 2.0) : undefined,
         file_name: datasetForm.file_name,
         source_type: datasetForm.source_type
       };
@@ -362,17 +395,20 @@ function ModelsContent() {
     
     let algo = "Dual Binary LightGBM + Isotonic Calibration";
     let mName = "scalper_v2_dual";
+    let rSize = 2.0;
     if (regime === "MACRO") {
       algo = "Macro Weight Evaluator";
       mName = "macro_evaluator_v1";
     } else if (regime === "RANGE_SCALPER") {
-      algo = "Dual Binary LightGBM (Range Bar $1.50)";
+      algo = "Dual Binary LightGBM (Range Bar)";
       mName = "range_scalper_v1";
+      rSize = 2.0;
     }
     
     setTrainForm({ 
       algorithm: algo, 
       model_name: mName, 
+      range_size: rSize,
       optuna_trials: 50, 
       skip_ingestion: true, 
       dataset_id: techDs ? techDs.id : "", 
@@ -388,10 +424,15 @@ function ModelsContent() {
     setTrainModalOpen(false);
     
     try {
+      const payload: any = {
+        regime: trainRegime,
+        ...trainForm,
+        range_size: trainRegime === "RANGE_SCALPER" ? Number(trainForm.range_size || 2.0) : undefined
+      };
       const res = await fetch(`${API_BASE_URL}/models/train`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ regime: trainRegime, ...trainForm })
+        body: JSON.stringify(payload)
       });
       if(res.ok) {
         setNotification({ kind: "info", title: "Training Started", subtitle: "Training job queued." });
@@ -606,12 +647,12 @@ function ModelsContent() {
                            <MachineLearningModel size={28} style={{ color: '#11a3c6' }} />
                            <div>
                              <h4 style={{ fontWeight: 600, margin: 0, color: '#f4f4f4' }}>Range Bar Scalping Model</h4>
-                             <p style={{ fontSize: '0.75rem', color: '#a8a8a8', margin: 0, marginTop: '0.25rem' }}>Dual LightGBM on Event-Driven Range Bars ($1.50)</p>
+                             <p style={{ fontSize: '0.75rem', color: '#a8a8a8', margin: 0, marginTop: '0.25rem' }}>Dual LightGBM on Event-Driven Range Bars</p>
                            </div>
                          </div>
                        </div>
                        <p style={{ fontSize: '0.8rem', color: '#c6c6c6', marginBottom: '1.25rem', lineHeight: '1.4' }}>
-                         Latih model Range Bar ($1.50) dengan fitur Price Velocity, Bar Duration, dan Consecutive Bars untuk momentum scalping berkecepatan tinggi.
+                         Latih model Range Bar dengan parameter ukuran harga dinamis ($2.00, $2.50, dll.), fitur Price Velocity, Bar Duration, dan Consecutive Bars untuk momentum scalping berkecepatan tinggi.
                        </p>
                        <Button kind="primary" size="sm" renderIcon={Play} onClick={() => openTrainModal("RANGE_SCALPER")}>
                           Train Range Scalper
@@ -681,26 +722,8 @@ function ModelsContent() {
                     const champ = currentConfig.champion || "NONE";
                     const chall = currentConfig.challenger || "NONE";
                     
-                    // Filter models based on scalper vs macro routing key
-                    const filteredModels = models.filter((m: any) => {
-                      if (m.name === champ || m.name === chall) return true;
-                      const k = key.toLowerCase();
-                      let keyword = '';
-                      if (k.includes('range')) {
-                        keyword = 'range';
-                      } else if (k.includes('scalper')) {
-                        keyword = 'scalper';
-                      } else if (k.includes('macro')) {
-                        keyword = 'macro';
-                      }
-                      
-                      if (!keyword) return true;
-                      
-                      const name = (m.name || '').toLowerCase();
-                      const algo = (m.algorithm_type || '').toLowerCase();
-                      const regime = (m.regime || '').toLowerCase();
-                      return name.includes(keyword) || algo.includes(keyword) || regime.includes(keyword);
-                    });
+                    // Ensure all registered models are available for routing selection
+                    const availableModels = models && models.length > 0 ? models : [];
 
                     return (
                       <Tile key={key} style={{ padding: '1.25rem', background: 'var(--cds-layer-01, #262626)', borderTop: `3px solid ${format.color}` }}>
@@ -721,7 +744,7 @@ function ModelsContent() {
                               size="sm"
                             >
                               <SelectItem value="NONE" text="None (Fallback Default)" />
-                              {filteredModels.map((m: any) => (
+                              {availableModels.map((m: any) => (
                                 <SelectItem key={m.id || m.name} value={m.name} text={`${m.name} (${m.algorithm_type || 'Custom'})`} />
                               ))}
                             </Select>
@@ -737,7 +760,7 @@ function ModelsContent() {
                               size="sm"
                             >
                               <SelectItem value="NONE" text="None (Disabled)" />
-                              {filteredModels.map((m: any) => (
+                              {availableModels.map((m: any) => (
                                 <SelectItem key={m.id || m.name} value={m.name} text={`${m.name} (${m.algorithm_type || 'Custom'})`} />
                               ))}
                             </Select>
@@ -799,8 +822,15 @@ function ModelsContent() {
             <SelectItem value="technical" text="📈 Technical Only (MT5 OHLCV + Indicators)" />
             <SelectItem value="macro" text="🏛️ Macro Indicators Only (FRED Series)" />
           </Select>
-          <Select id="ds-tf" labelText="Timeframe" value={datasetForm.timeframe} onChange={e => setDatasetForm({...datasetForm, timeframe: e.target.value})} style={{ marginBottom: "1rem" }}>
-            <SelectItem value="RANGE_1.5" text="⚡ Range Bar $1.50 (Event-Driven)" />
+          <Select id="ds-tf" labelText="Timeframe / Bar Sampling" value={datasetForm.timeframe.startsWith("RANGE") ? "RANGE" : datasetForm.timeframe} onChange={e => {
+            const val = e.target.value;
+            if (val === "RANGE") {
+              setDatasetForm({ ...datasetForm, timeframe: `RANGE_${datasetForm.range_size || 2.0}` });
+            } else {
+              setDatasetForm({ ...datasetForm, timeframe: val });
+            }
+          }} style={{ marginBottom: "1rem" }}>
+            <SelectItem value="RANGE" text="⚡ Event-Driven Range Bars (Sampling by Price Size)" />
             <SelectItem value="M1" text="1 Minute (M1 Scalping)" />
             <SelectItem value="M5" text="5 Minutes (M5 Scalping)" />
             <SelectItem value="M15" text="15 Minutes" />
@@ -808,6 +838,24 @@ function ModelsContent() {
             <SelectItem value="H4" text="4 Hours" />
             <SelectItem value="D1" text="Daily" />
           </Select>
+          
+          {datasetForm.timeframe.startsWith("RANGE") && (
+            <div style={{ marginBottom: "1rem" }}>
+              <NumberInput
+                id="ds-range-size"
+                label="Range Bar Size (USD)"
+                helperText="Ukuran harga per Range Bar dalam USD (e.g. 2.00 untuk $2.00, 2.50 untuk $2.50)"
+                value={datasetForm.range_size || 2.0}
+                onChange={(e, { value }) => {
+                  const num = Number(value) || 2.0;
+                  setDatasetForm({ ...datasetForm, range_size: num, timeframe: `RANGE_${num}` });
+                }}
+                step={0.1}
+                min={0.1}
+                max={50.0}
+              />
+            </div>
+          )}
           
           <FormGroup legendText="Ingestion Method" style={{ marginBottom: "1rem" }}>
             <RadioButtonGroup
@@ -848,11 +896,26 @@ function ModelsContent() {
              {trainRegime === "MACRO" ? (
                <SelectItem value="Macro Weight Evaluator" text="Macro Weight Evaluator (H1/M15 + DXY Alignment)" />
              ) : trainRegime === "RANGE_SCALPER" ? (
-               <SelectItem value="Dual Binary LightGBM (Range Bar $1.50)" text="Dual Binary LightGBM (Range Bar $1.50)" />
+               <SelectItem value="Dual Binary LightGBM (Range Bar)" text="Dual Binary LightGBM + Isotonic Calibration" />
              ) : (
                <SelectItem value="LightGBM Triple Barrier ONNX" text="LightGBM Triple Barrier ONNX" />
              )}
           </Select>
+
+          {trainRegime === "RANGE_SCALPER" && (
+            <div style={{ marginBottom: "1rem" }}>
+              <NumberInput
+                id="train-range-size"
+                label="Range Bar Size (USD)"
+                helperText="Ukuran Range Bar resolusi model yang akan dilatih (e.g. 2.00 untuk $2.00)"
+                value={trainForm.range_size || 2.0}
+                onChange={(e, { value }) => setTrainForm({ ...trainForm, range_size: Number(value) || 2.0 })}
+                step={0.1}
+                min={0.1}
+                max={50.0}
+              />
+            </div>
+          )}
           <TextInput id="model-name-train" labelText="Custom Model Name (Optional)" placeholder="e.g. xgboost_bull_v2" value={trainForm.model_name} onChange={e => setTrainForm({...trainForm, model_name: e.target.value})} style={{ marginBottom: "1rem" }} />
           
           <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: "1rem" }}>
