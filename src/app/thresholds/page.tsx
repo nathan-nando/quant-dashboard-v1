@@ -40,7 +40,8 @@ export default function ThresholdsPage() {
     pyramiding_enabled: true,
     pyramiding_max_layers: 4,
     pyramiding_step_pips: 15.0,
-    trailing_stop_pips: 20.0,
+    cluster_trailing_stop_enabled: false,
+    trailing_stop_pips: 35.0,
     close_on_opposite_range_bar: false
   });
 
@@ -117,7 +118,7 @@ export default function ThresholdsPage() {
   const rangeKeys = ["engine_active", "enforce_meso_alignment", "range_bar_size_usd", "min_bar_velocity"];
   const macroKeys = ["scalping_base_confidence", "macro_soft_switch_sensitivity", "macro_refresh_interval_minutes"];
   const riskKeys = ["auto_execution_enabled", "use_equity_kill_switch", "max_drawdown_equity_pct", "use_daily_kill_switch", "max_daily_drawdown_pct", "risk_per_trade_pct", "scalping_max_spread_pips", "macro_news_buffer_minutes", "macro_vix_pause_threshold", "scalping_max_consecutive_losses", "scalping_consecutive_loss_cooldown_minutes", "post_loss_cooldown_bars", "scalping_max_trades_per_hour", "scalping_max_trades_per_day"];
-  const pyramidKeys = ["pyramiding_enabled", "pyramiding_max_layers", "pyramiding_step_pips", "trailing_stop_pips", "scalping_sl_pips", "scalping_tp_pips", "close_on_opposite_range_bar"];
+  const pyramidKeys = ["pyramiding_enabled", "pyramiding_max_layers", "pyramiding_step_pips", "cluster_trailing_stop_enabled", "trailing_stop_pips", "scalping_sl_pips", "scalping_tp_pips", "close_on_opposite_range_bar"];
 
   if (loading) return <div>Loading threshold configuration...</div>;
 
@@ -440,6 +441,14 @@ export default function ThresholdsPage() {
                     onToggle={(val) => updateConfig("pyramiding_enabled", val)}
                   />
                   <Toggle
+                    id="cluster_trailing_stop_enabled"
+                    labelText="Cluster Trailing Stop"
+                    labelA="Disabled"
+                    labelB="Active"
+                    toggled={config.cluster_trailing_stop_enabled !== undefined ? config.cluster_trailing_stop_enabled : false}
+                    onToggle={(val) => updateConfig("cluster_trailing_stop_enabled", val)}
+                  />
+                  <Toggle
                     id="close_on_opposite_range_bar"
                     labelText="Fast Reversal Exit (Close on Opposite Bar)"
                     labelA="Disabled"
@@ -490,9 +499,10 @@ export default function ThresholdsPage() {
                     <NumberInput
                       id="trailing_stop_pips"
                       label="Cluster Trailing Stop (Pips)"
-                      value={config.trailing_stop_pips || 25.0}
+                      value={config.trailing_stop_pips || 35.0}
                       min={5.0} max={100.0} step={1.0}
                       onChange={(e: any, { value }: any) => updateConfig("trailing_stop_pips", value)}
+                      disabled={!config.cluster_trailing_stop_enabled}
                     />
                   </div>
                 </div>
