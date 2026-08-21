@@ -15,9 +15,10 @@ const AttributionPanel: React.FC = () => {
 
   const activeMode = state?.account_info?.mode;
   const activeLogin = state?.account_info?.login;
+  const totalTrades = state?.total_trades;
 
   useEffect(() => {
-    fetch(`${API_BASE_URL}/attribution/`)
+    fetch(`${API_BASE_URL}/attribution/?period=today`)
       .then(res => res.json())
       .then(d => {
         setData(d);
@@ -27,7 +28,7 @@ const AttributionPanel: React.FC = () => {
         console.error('Failed to fetch account summary data', err);
         setLoading(false);
       });
-  }, [activeMode, activeLogin]);
+  }, [activeMode, activeLogin, totalTrades]);
 
   if (loading) return <div style={{ padding: '1rem' }}><Loading withOverlay={false} small /></div>;
   if (!data) return <div style={{ padding: '1rem', color: '#8d8d8d' }}>No account summary data</div>;
@@ -40,7 +41,7 @@ const AttributionPanel: React.FC = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', borderBottom: '1px solid #393939', paddingBottom: '0.35rem' }}>
         <div>
           <div style={{ fontSize: '0.7rem', color: '#a8a8a8', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-            Net PnL 
+            Net PnL (Today)
             <span style={{ 
               fontSize: '0.62rem', 
               padding: '1px 5px', 
@@ -53,11 +54,11 @@ const AttributionPanel: React.FC = () => {
             </span>
           </div>
           <div style={{ fontSize: '1.15rem', color: data.summary.net_pnl >= 0 ? '#24a148' : '#fa4d56', fontWeight: 600 }}>
-            ${data.summary.net_pnl.toFixed(2)}
+            {data.summary.net_pnl >= 0 ? '+$' : '-$'}{Math.abs(data.summary.net_pnl).toFixed(2)}
           </div>
         </div>
         <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: '0.7rem', color: '#a8a8a8' }}>Win Rate (Model)</div>
+          <div style={{ fontSize: '0.7rem', color: '#a8a8a8' }}>Win Rate (Today)</div>
           <div style={{ fontSize: '1.15rem', color: '#f4f4f4', fontWeight: 600 }}>{data.summary.win_rate.toFixed(1)}%</div>
         </div>
       </div>

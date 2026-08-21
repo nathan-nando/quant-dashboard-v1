@@ -46,7 +46,7 @@ export default function DashboardMetrics() {
       <Tile>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', marginBottom: "0.35rem" }}>
           <ChartLine size={14} color="#a8a8a8" />
-          <p style={{ fontSize: "10px", color: "#a8a8a8", margin: 0 }}>Total Trades</p>
+          <p style={{ fontSize: "10px", color: "#a8a8a8", margin: 0 }}>Today Trades</p>
         </div>
         <h4 style={{ margin: 0, color: "#f4f4f4", fontWeight: 600, lineHeight: "1.1" }}>
           {analytics?.total_trades !== undefined ? analytics.total_trades : "0"}
@@ -56,10 +56,12 @@ export default function DashboardMetrics() {
       <Tile>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', marginBottom: "0.35rem" }}>
           <Wallet size={14} color="#a8a8a8" />
-          <p style={{ fontSize: "10px", color: "#a8a8a8", margin: 0 }}>Total PnL</p>
+          <p style={{ fontSize: "10px", color: "#a8a8a8", margin: 0 }}>Today PnL</p>
         </div>
         <h4 style={{ margin: 0, fontWeight: 600, color: (analytics?.total_pnl || 0) >= 0 ? "#24a148" : "#fa4d56", lineHeight: "1.1" }}>
-          {analytics?.total_pnl !== undefined && analytics?.total_pnl !== null ? `$${Number(analytics.total_pnl).toFixed(2)}` : "$0.00"}
+          {analytics?.total_pnl !== undefined && analytics?.total_pnl !== null 
+            ? `${analytics.total_pnl >= 0 ? '+$' : '-$'}${Math.abs(Number(analytics.total_pnl)).toFixed(2)}` 
+            : "$0.00"}
         </h4>
       </Tile>
     </div>

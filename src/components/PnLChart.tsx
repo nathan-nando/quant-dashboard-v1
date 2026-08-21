@@ -88,11 +88,14 @@ export default function PnLChart({ trades }: PnLChartProps) {
     }
     
     for (const t of sortedTrades) {
-      cumulative += t.pnl_money;
+      const pnl = typeof t.pnl_money === 'number' ? t.pnl_money : parseFloat(String(t.pnl_money || 0));
+      if (!isNaN(pnl)) {
+        cumulative += pnl;
+      }
       // Extract YYYY-MM-DD
       const dateStr = new Date(t.exit_time!).toISOString().split('T')[0];
       // Overwrite so that the map stores the final cumulative equity of that day
-      dailyPnL.set(dateStr, cumulative);
+      dailyPnL.set(dateStr, parseFloat(cumulative.toFixed(2)));
     }
 
     const finalData = Array.from(dailyPnL.entries()).map(([dateStr, val]) => {

@@ -131,19 +131,21 @@ export function GlobalStateProvider({ children }: { children: React.ReactNode })
 
     connectSSE();
 
-    // 2. Fetch Analytics snapshot
-    const analyticsUrl = `${API_BASE_URL}/dashboard/analytics`;
-    console.log(`[GlobalState] Fetching analytics from: ${analyticsUrl}`);
-    fetch(analyticsUrl)
-      .then(res => {
-        console.log(`[GlobalState] Analytics response status: ${res.status}`);
-        return res.json();
-      })
-      .then(data => setAnalytics(data))
-      .catch(err => console.error("[GlobalState] Failed to load analytics", err));
+    // 2. Fetch Today Analytics snapshot
+    const fetchTodayAnalytics = () => {
+      const analyticsUrl = `${API_BASE_URL}/dashboard/analytics?period=today`;
+      fetch(analyticsUrl)
+        .then(res => res.json())
+        .then(data => setAnalytics(data))
+        .catch(err => console.error("[GlobalState] Failed to load analytics", err));
+    };
+
+    fetchTodayAnalytics();
+    const analyticsInterval = setInterval(fetchTodayAnalytics, 10000);
 
     return () => {
       if (reconnectTimer) clearTimeout(reconnectTimer);
+      clearInterval(analyticsInterval);
       es?.close();
     };
   }, []);

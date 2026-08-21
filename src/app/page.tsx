@@ -117,6 +117,17 @@ export default function Home() {
     });
   }, [positions, trades]);
 
+  const recentClosedTrades = useMemo(() => {
+    return mergedTrades
+      .filter((t: any) => t.status !== 'OPEN')
+      .sort((a: any, b: any) => {
+        const timeA = new Date(a.exit_time || a.entry_time || 0).getTime();
+        const timeB = new Date(b.exit_time || b.entry_time || 0).getTime();
+        return timeB - timeA;
+      })
+      .slice(0, 10);
+  }, [mergedTrades]);
+
   const signalHeaders = [
     { key: "timestamp", header: "Time" },
     { key: "direction", header: "Signal", width: "70px" },
@@ -133,8 +144,9 @@ export default function Home() {
       { i: 'macro_calendar', x: 7.6, y: 0, w: 2.4, h: 2, minW: 2, minH: 2 },
       { i: 'range_pyramid', x: 4, y: 2, w: 3.6, h: 2, minW: 2, minH: 2 },
       { i: 'attribution', x: 7.6, y: 2, w: 2.4, h: 2, minW: 2, minH: 2 },
-      { i: 'trades', x: 0, y: 4, w: 5, h: 5, minW: 3, minH: 2 },
-      { i: 'signals', x: 5, y: 4, w: 5, h: 5, minW: 3, minH: 2 }
+      { i: 'live_trades', x: 0, y: 4, w: 5, h: 1.5, minW: 3, minH: 1.2 },
+      { i: 'recent_trades', x: 0, y: 5.5, w: 5, h: 5.6, minW: 3, minH: 2 },
+      { i: 'signals', x: 5, y: 4, w: 5, h: 7.1, minW: 3, minH: 2 }
     ],
     md: [
       { i: 'chart', x: 0, y: 0, w: 4, h: 4 },
@@ -142,44 +154,47 @@ export default function Home() {
       { i: 'macro_calendar', x: 4, y: 2, w: 4, h: 2 },
       { i: 'range_pyramid', x: 0, y: 4, w: 4, h: 2 },
       { i: 'attribution', x: 4, y: 4, w: 4, h: 2 },
-      { i: 'trades', x: 0, y: 6, w: 4, h: 5 },
-      { i: 'signals', x: 4, y: 6, w: 4, h: 5 }
+      { i: 'live_trades', x: 0, y: 6, w: 4, h: 1.5 },
+      { i: 'recent_trades', x: 0, y: 7.5, w: 4, h: 5.6 },
+      { i: 'signals', x: 4, y: 6, w: 4, h: 7.1 }
     ],
     sm: [
-      { i: 'trades', x: 0, y: 0, w: 4, h: 4 },
-      { i: 'chart', x: 0, y: 4, w: 4, h: 4 },
-      { i: 'range_pyramid', x: 0, y: 8, w: 4, h: 3 },
-      { i: 'hmm_gauges', x: 0, y: 11, w: 4, h: 3 },
-      { i: 'attribution', x: 0, y: 14, w: 4, h: 3 },
-      { i: 'macro_calendar', x: 0, y: 17, w: 4, h: 3 },
-      { i: 'signals', x: 0, y: 20, w: 4, h: 5 }
+      { i: 'live_trades', x: 0, y: 0, w: 4, h: 1.5 },
+      { i: 'recent_trades', x: 0, y: 1.5, w: 4, h: 5.6 },
+      { i: 'chart', x: 0, y: 7.1, w: 4, h: 4 },
+      { i: 'range_pyramid', x: 0, y: 11.1, w: 4, h: 3 },
+      { i: 'hmm_gauges', x: 0, y: 14.1, w: 4, h: 3 },
+      { i: 'attribution', x: 0, y: 17.1, w: 4, h: 3 },
+      { i: 'macro_calendar', x: 0, y: 20.1, w: 4, h: 3 },
+      { i: 'signals', x: 0, y: 23.1, w: 4, h: 7.1 }
     ],
     xs: [
-      { i: 'trades', x: 0, y: 0, w: 2, h: 4 },
-      { i: 'chart', x: 0, y: 4, w: 2, h: 3 },
-      { i: 'range_pyramid', x: 0, y: 7, w: 2, h: 3 },
-      { i: 'hmm_gauges', x: 0, y: 10, w: 2, h: 3 },
-      { i: 'attribution', x: 0, y: 13, w: 2, h: 3 },
-      { i: 'macro_calendar', x: 0, y: 16, w: 2, h: 3 },
-      { i: 'signals', x: 0, y: 19, w: 2, h: 5 }
+      { i: 'live_trades', x: 0, y: 0, w: 2, h: 1.5 },
+      { i: 'recent_trades', x: 0, y: 1.5, w: 2, h: 5.6 },
+      { i: 'chart', x: 0, y: 7.1, w: 2, h: 3 },
+      { i: 'range_pyramid', x: 0, y: 10.1, w: 2, h: 3 },
+      { i: 'hmm_gauges', x: 0, y: 13.1, w: 2, h: 3 },
+      { i: 'attribution', x: 0, y: 16.1, w: 2, h: 3 },
+      { i: 'macro_calendar', x: 0, y: 19.1, w: 2, h: 3 },
+      { i: 'signals', x: 0, y: 22.1, w: 2, h: 7.1 }
     ]
   };
   const [layouts, setLayouts] = useState<any>(defaultLayouts);
- 
+
   useEffect(() => {
     // Clear all older layout keys from localStorage
     try {
       const keysToRemove: string[] = [];
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        if (key && (key.startsWith("quantDashboardLayout_") || key === "dashboard-layouts") && key !== "quantDashboardLayout_v48") {
+        if (key && (key.startsWith("quantDashboardLayout_") || key === "dashboard-layouts") && key !== "quantDashboardLayout_v53") {
           keysToRemove.push(key);
         }
       }
       keysToRemove.forEach(k => localStorage.removeItem(k));
     } catch (e) {}
- 
-    const saved = localStorage.getItem('quantDashboardLayout_v48');
+
+    const saved = localStorage.getItem('quantDashboardLayout_v53');
     if (saved) {
       try {
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -187,10 +202,10 @@ export default function Home() {
       } catch (e) {}
     }
   }, []);
- 
+
   const handleLayoutChange = (layout: any, allLayouts: any) => {
     setLayouts(allLayouts);
-    localStorage.setItem("quantDashboardLayout_v48", JSON.stringify(allLayouts));
+    localStorage.setItem("quantDashboardLayout_v53", JSON.stringify(allLayouts));
   };
   return (
     <div style={{ maxWidth: '100%', padding: '0 2rem', position: 'relative' }}>
@@ -464,19 +479,18 @@ export default function Home() {
             </div>
           </DashboardPanel>
         </div>
-        <div key="trades">
+        <div key="live_trades">
           <DashboardPanel 
             title="Live Trades" 
             tooltipInfo="Currently open trades/positions."
             onExportCsv={() => {
-              const headers = ["Direction", "Entry Time", "Entry", "Current Price", "Lots", "Regime", "Model", "Conf", "PnL"];
+              const headers = ["Direction", "Entry Time", "Entry", "Current Price", "Lots", "Model", "Conf", "PnL"];
               const rows = liveTrades.map(t => [
                 t.direction,
                 t.entry_time ? formatJakartaDateTime(t.entry_time).full : '',
                 t.entry_price || '',
                 t.exit_price || '',
                 t.volume || '',
-                t.regime || '',
                 t.model_version || '',
                 t.confidence ? (t.confidence * 100).toFixed(2) + '%' : '',
                 t.pnl_money || ''
@@ -493,7 +507,41 @@ export default function Home() {
             }}
           >
             <div style={{ height: "100%" }}>
-              <TradeHistoryTable trades={liveTrades} title="" hidePagination hideSearch compact isLiveTrades={true} />
+              <TradeHistoryTable trades={liveTrades} title="" hidePagination hideSearch compact isLiveTrades={true} hideRegime={true} onReload={fetchTrades} />
+            </div>
+          </DashboardPanel>
+        </div>
+
+        <div key="recent_trades">
+          <DashboardPanel 
+            title="Recent Trades" 
+            tooltipInfo="Last 5 completed trade executions and closed positions."
+            onExportCsv={() => {
+              const headers = ["Direction", "Entry Time", "Exit Time", "Entry Price", "Exit Price", "Lots", "PnL", "Reason", "Model"];
+              const rows = recentClosedTrades.map(t => [
+                t.direction,
+                t.entry_time ? formatJakartaDateTime(t.entry_time).full : '',
+                t.exit_time ? formatJakartaDateTime(t.exit_time).full : '',
+                t.entry_price || '',
+                t.exit_price || '',
+                t.volume || '',
+                t.pnl_money || '',
+                t.close_reason || '',
+                t.model_version || ''
+              ].join(","));
+              
+              const csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n" + rows.join("\n");
+              const encodedUri = encodeURI(csvContent);
+              const link = document.createElement("a");
+              link.setAttribute("href", encodedUri);
+              link.setAttribute("download", `recent_trades_${new Date().toISOString().split('T')[0]}.csv`);
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+            }}
+          >
+            <div style={{ height: "100%" }}>
+              <TradeHistoryTable trades={recentClosedTrades} title="" hidePagination hideSearch compact isLiveTrades={false} hideRegime={true} onReload={fetchTrades} />
             </div>
           </DashboardPanel>
         </div>

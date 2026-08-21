@@ -640,7 +640,9 @@ export default function GlobalDetailTable({ id, type = 'signal', dataObj, onClos
                   data.close_reason === "SIGNAL_REVERSE" ? "Signal Reverse" :
                   data.close_reason === "END_OF_DATA" ? "End of Data" :
                   data.close_reason === "MANUAL" ? "Manual" :
-                  data.close_reason.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')
+                  data.close_reason.includes('_') && !data.close_reason.includes(' ')
+                    ? data.close_reason.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')
+                    : data.close_reason
                 ) : '-'} <span style={{ color: '#c6c6c6' }}>| </span>{data.trade_duration || '-'}
               </p>
             </div>

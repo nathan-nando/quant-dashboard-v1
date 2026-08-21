@@ -12,15 +12,20 @@ import {
   TableContainer,
   TableToolbar,
   TableToolbarContent,
-  TableToolbarSearch
+  TableToolbarSearch,
+  Button,
+  Modal
 } from "@carbon/react";
+import { View, Close } from "@carbon/icons-react";
 import GlobalTable from "./GlobalTable";
 import GlobalDetailTable from "./GlobalDetailTable";
 import { formatJakartaDateTime } from "../utils/date";
+import { API_BASE_URL } from "@/config/env";
 
 interface Trade {
   trade_id: string;
   signal_id?: number | string | null;
+  mt5_ticket?: string | number | null;
   symbol: string;
   direction: string;
   entry_time: string;
@@ -72,6 +77,7 @@ interface TradeHistoryTableProps {
   onReload?: () => void | Promise<void>;
   compact?: boolean;
   isLiveTrades?: boolean;
+  hideRegime?: boolean;
 }
 
 export default function TradeHistoryTable({ 
@@ -81,11 +87,15 @@ export default function TradeHistoryTable({
   hidePagination = false,
   onReload,
   compact = false,
-  isLiveTrades = false
+  isLiveTrades = false,
+  hideRegime = false
 }: TradeHistoryTableProps) {
   const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
   const [selectedSignalId, setSelectedSignalId] = useState<number | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [tradeToClose, setTradeToClose] = useState<Trade | null>(null);
+  const [isClosing, setIsClosing] = useState(false);
+  const [closeError, setCloseError] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -96,6 +106,85 @@ export default function TradeHistoryTable({
     if (trade) {
       setSelectedTrade(trade);
     }
+  };
+
+  const handleOpenCloseModal = (rawTrade: any) => {
+    setCloseError(null);
+    setTradeToClose(rawTrade);
+  };
+
+  const handleConfirmClose = async () => {
+    if (!tradeToClose) return;
+    const ticket = (tradeToClose as any)?.mt5_ticket || tradeToClose?.trade_id;
+    if (!ticket) return;
+
+    setIsClosing(true);
+    setCloseError(null);
+    try {
+      const res = await fetch(`${API_BASE_URL}/account/positions/${ticket}/close`, {
+        method: 'POST'
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setCloseError(data.detail || data.message || "Failed to close position");
+      } else {
+        setTradeToClose(null);
+        if (onReload) await onReload();
+      }
+    } catch (err: any) {
+      setCloseError(err.message || "Error communicating with server");
+    } finally {
+      setIsClosing(false);
+    }
+  };
+
+  const renderRowActions = (rowId: any, rawItem: any) => {
+    const isOpen = isLiveTrades || rawItem?.status === 'OPEN';
+
+    return (
+      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', justifyContent: 'center' }}>
+        {isOpen && (
+          <Button
+            kind="danger--ghost"
+            size="sm"
+            hasIconOnly
+            tooltipPosition="left"
+            tooltipAlignment="center"
+            renderIcon={() => <Close size={compact ? 12 : 14} fill="#fa4d56" />}
+            iconDescription="Close Trade"
+            onClick={(e: React.MouseEvent) => {
+              e.stopPropagation();
+              handleOpenCloseModal(rawItem);
+            }}
+            style={{
+              height: compact ? '22px' : '26px',
+              width: compact ? '22px' : '26px',
+              minHeight: compact ? '22px' : '26px',
+              padding: 0
+            }}
+          />
+        )}
+        <Button
+          kind="ghost"
+          size="sm"
+          hasIconOnly
+          tooltipPosition="left"
+          tooltipAlignment="center"
+          renderIcon={() => <View size={compact ? 12 : 14} fill="#4589ff" />}
+          iconDescription="View Details"
+          onClick={(e: React.MouseEvent) => {
+            e.stopPropagation();
+            handleViewDetails(rowId);
+          }}
+          style={{
+            height: compact ? '22px' : '26px',
+            width: compact ? '22px' : '26px',
+            minHeight: compact ? '22px' : '26px',
+            padding: 0
+          }}
+        />
+      </div>
+    );
   };
 
   // Carbon DataTable requires 'id' property
@@ -116,11 +205,11 @@ export default function TradeHistoryTable({
 
   const headers = [
     { key: "formatted_dir_status", header: "Status", width: "60px" },
-    { key: "formatted_entry_time", header: "Time" },
+    { key: "formatted_entry_time", header: "Time", width: "105px" },
     { key: "formatted_entry_price", header: isLiveTrades ? "Price (Entry/Current) / Lots" : "Price (Entry/Exit) / Lots" },
     { key: "formatted_pnl_money", header: "PnL", width: "65px" },
     ...(isLiveTrades ? [] : [{ key: "formatted_close_reason", header: "Reason", width: "90px" }]),
-    { key: "regime", header: "Regime", width: "80px" },
+    ...(hideRegime ? [] : [{ key: "regime", header: "Regime", width: "80px" }]),
     { key: "model_version", header: "Model" },
   ];
 
@@ -139,7 +228,7 @@ export default function TradeHistoryTable({
       const statusLabel = isOpen ? 'Open' : 'Closed';
 
       return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', lineHeight: '1.2', fontSize: compact ? '9.5px' : '11px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', lineHeight: '1.2', fontSize: compact ? '9.5px' : '11px', whiteSpace: 'nowrap' }}>
           {/* Direction */}
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: compact ? '4px' : '6px', fontWeight: 'bold' }}>
             {isBuy ? (
@@ -169,54 +258,25 @@ export default function TradeHistoryTable({
       const trade = trades.find((t, idx) => (t.trade_id || `trade-${idx}`) === rowId);
       if (!trade) return "-";
       
-      const formatTime = (isoString: string) => {
-        if (!isoString) return "-";
-        const { date, time, short } = formatJakartaDateTime(isoString);
-        if (date === '-') return isoString;
-        
-        if (compact) {
-          return short; // e.g. "23 Jun 13:00"
-        }
-        return `${date} ${time}`;
-      };
+      const { date, time } = formatJakartaDateTime(trade.entry_time);
+      const exitTimeFmt = trade.exit_time ? formatJakartaDateTime(trade.exit_time).time : '-';
       
       if (isLiveTrades) {
         return (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: compact ? '2px' : '4px', lineHeight: '1.2', fontSize: compact ? '9.5px' : 'inherit' }}>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: compact ? '4px' : '6px' }}>
-              <svg width={compact ? 8 : 10} height={compact ? 8 : 10} viewBox="0 0 32 32" style={{ fill: '#24a148', flexShrink: 0 }}>
-                <title>Entry Time</title>
-                <path d="M18 6l-1.43 1.39L22.47 13H4v2h18.47l-5.9 5.61L18 22l8-8z" />
-              </svg>
-              <span>{formatTime(trade.entry_time)}</span>
-            </div>
+          <div style={{ display: 'flex', flexDirection: 'column', lineHeight: '1.2', fontSize: compact ? '9.5px' : 'inherit', whiteSpace: 'nowrap' }}>
+            <span style={{ fontWeight: 500 }}>{date}</span>
+            <span style={{ color: '#a8a8a8', fontSize: '8.5px' }}>{time}</span>
           </div>
         );
       }
       
       return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: compact ? '2px' : '4px', lineHeight: '1.2', fontSize: compact ? '9.5px' : 'inherit' }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: compact ? '4px' : '6px' }}>
-            <svg width={compact ? 8 : 10} height={compact ? 8 : 10} viewBox="0 0 32 32" style={{ fill: '#24a148', flexShrink: 0 }}>
-              <title>Entry Time</title>
-              <path d="M18 6l-1.43 1.39L22.47 13H4v2h18.47l-5.9 5.61L18 22l8-8z" />
-            </svg>
-            <span>{formatTime(trade.entry_time)}</span>
-          </div>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: compact ? '4px' : '6px' }}>
-            <svg width={compact ? 8 : 10} height={compact ? 8 : 10} viewBox="0 0 32 32" style={{ fill: '#fa4d56', flexShrink: 0 }}>
-              <title>Exit Time</title>
-              <path d="M14 22l1.43-1.39L9.53 15H28v-2H9.53l5.9-5.61L14 6l-8 8z" />
-            </svg>
-            <span style={{ color: '#e0e0e0' }}>{formatTime(trade.exit_time)}</span>
-          </div>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: compact ? '4px' : '6px' }}>
-            <svg width={compact ? 8 : 10} height={compact ? 8 : 10} viewBox="0 0 32 32" style={{ fill: '#4589ff', flexShrink: 0 }}>
-              <title>Duration</title>
-              <path d="M16 2A14 14 0 1030 16 14 14 0 0016 2zm0 26a12 12 0 1112-12A12 12 0 0116 28z" />
-              <path d="M15 8h2v8.59l6 6-1.41 1.41-6.59-6.59z" />
-            </svg>
-            <span style={{ color: '#a8a8a8' }}>{(trade as any).duration_str || '-'}</span>
+        <div style={{ display: 'flex', flexDirection: 'column', lineHeight: '1.2', fontSize: compact ? '9.5px' : 'inherit', whiteSpace: 'nowrap' }}>
+          <span style={{ fontWeight: 500 }}>{date}</span>
+          <div style={{ fontSize: '8.5px', color: '#a8a8a8', display: 'flex', gap: '3px', alignItems: 'center' }}>
+            <span style={{ color: '#24a148' }}>{time}</span>
+            <span>-</span>
+            <span style={{ color: '#fa4d56' }}>{exitTimeFmt}</span>
           </div>
         </div>
       );
@@ -234,7 +294,7 @@ export default function TradeHistoryTable({
         const sl = trade.sl_price != null ? Number(trade.sl_price).toFixed(2) : '-';
         const tp = trade.tp_price != null ? Number(trade.tp_price).toFixed(2) : '-';
         return (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', lineHeight: '1.1', fontSize: compact ? '9.5px' : '11px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', lineHeight: '1.1', fontSize: compact ? '9.5px' : '11px', whiteSpace: 'nowrap' }}>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
               <svg width="8" height="8" viewBox="0 0 32 32" style={{ fill: '#24a148', flexShrink: 0 }}>
                 <title>Entry Price</title>
@@ -253,7 +313,7 @@ export default function TradeHistoryTable({
       
       if (compact) {
         return (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', lineHeight: '1.1', fontSize: '9.5px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', lineHeight: '1.1', fontSize: '9.5px', whiteSpace: 'nowrap' }}>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
               <svg width="8" height="8" viewBox="0 0 32 32" style={{ fill: '#24a148', flexShrink: 0 }}>
                 <title>Entry Price</title>
@@ -327,34 +387,42 @@ export default function TradeHistoryTable({
       let label = reason.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
       let iconPath = <circle cx="16" cy="16" r="8" />; // default circle
 
-      if (reason === 'TP_HIT') {
+      const rUpper = reason.toUpperCase();
+
+      if (rUpper === 'TP_HIT' || rUpper.includes('TP_HIT') || rUpper.includes('TAKE PROFIT')) {
         color = '#24a148';
         label = 'TP Hit';
         iconPath = <path d="M14 21.414l-5.707-5.707-1.414 1.414 7.121 7.121 12-12-1.414-1.414z" />;
-      } else if (reason === 'SL_HIT') {
+      } else if (rUpper === 'SL_HIT' || rUpper.includes('SL_HIT') || rUpper.includes('STOP LOSS')) {
         color = '#fa4d56';
         label = 'SL Hit';
         iconPath = <circle cx="16" cy="16" r="8" />;
-      } else if (reason === 'TIME_EXIT') {
+      } else if (rUpper.includes('OPPOSITE') || rUpper.includes('RANGE_BAR') || rUpper.includes('RANGE BAR')) {
+        color = '#f1c21b';
+        label = 'Opposite Range Bar';
+        iconPath = <path d="M16 4L6 14h7v14h6V14h7z" />;
+      } else if (rUpper === 'TIME_EXIT' || rUpper.includes('TIME_EXIT') || rUpper.includes('TIMEOUT')) {
         color = '#4589ff';
         label = 'Time Exit';
         iconPath = <path d="M16 4C9.383 4 4 9.383 4 16s5.383 12 12 12 12-5.383 12-12S22.617 4 16 4zm0 2c5.523 0 10 4.477 10 10s-4.477 10-10 10S6 21.523 6 16 10.477 6 16 6zm-1 3v8h6v-2h-4v-6h-2z" />;
-      } else if (reason === 'MARGIN_CALL') {
+      } else if (rUpper === 'MARGIN_CALL' || rUpper.includes('MARGIN')) {
         color = '#da1e28';
         label = 'Margin Call';
         iconPath = <circle cx="16" cy="16" r="8" />;
-      } else if (reason === 'SIGNAL_REVERSE') {
-        color = '#8d8d8d';
+      } else if (rUpper === 'SIGNAL_REVERSE' || rUpper.includes('REVERSE')) {
+        color = '#8a3ffc';
         label = 'Sig. Reverse';
         iconPath = <circle cx="16" cy="16" r="8" />;
-      } else if (reason === 'MANUAL') {
+      } else if (rUpper === 'MANUAL' || rUpper.includes('MANUAL')) {
         color = '#8d8d8d';
         label = 'Manual';
         iconPath = <circle cx="16" cy="16" r="8" />;
+      } else if (label.length > 20) {
+        label = label.substring(0, 18) + '...';
       }
 
       return (
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: compact ? '4px' : '6px', fontWeight: 'bold', fontSize: compact ? '9.5px' : '11px' }}>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: compact ? '4px' : '6px', fontWeight: 'bold', fontSize: compact ? '9.5px' : '11px', whiteSpace: 'nowrap' }}>
           <svg width="10" height="10" viewBox="0 0 32 32" style={{ fill: color, flexShrink: 0 }}>
             {iconPath}
           </svg>
@@ -441,11 +509,12 @@ export default function TradeHistoryTable({
     <>
       <GlobalTable
         title={title}
-        description={trades.length === 0 ? "No trades" : undefined}
+        description={title ? (trades.length === 0 ? "No trades" : undefined) : undefined}
         headers={headers}
         initialData={rows}
         formatCell={formatCell}
         onViewDetails={handleViewDetails}
+        renderRowActions={renderRowActions}
         hideSearch={hideSearch}
         hidePagination={hidePagination}
         onReload={onReload}
@@ -467,6 +536,57 @@ export default function TradeHistoryTable({
           type="signal"
           onClose={() => setSelectedSignalId(null)} 
         />
+      )}
+
+      {mounted && (
+        <Modal
+          open={tradeToClose !== null}
+          danger
+          modalHeading="Close Trade Position"
+          primaryButtonText={isClosing ? "Closing Position..." : "Close Position"}
+          secondaryButtonText="Cancel"
+          primaryButtonDisabled={isClosing}
+          onRequestClose={() => {
+            if (!isClosing) {
+              setTradeToClose(null);
+              setCloseError(null);
+            }
+          }}
+          onRequestSubmit={handleConfirmClose}
+        >
+          {tradeToClose && (
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "16px", fontSize: "13px" }}>
+              <p style={{ color: "#c6c6c6" }}>
+                Are you sure you want to manually close this active position at current market price?
+              </p>
+
+              <div style={{ background: "#262626", border: "1px solid #393939", borderRadius: "4px", padding: "12px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+                <div><strong style={{ color: "#8d8d8d" }}>Ticket:</strong> #{tradeToClose.mt5_ticket || tradeToClose.trade_id}</div>
+                <div><strong style={{ color: "#8d8d8d" }}>Symbol:</strong> {tradeToClose.symbol}</div>
+                <div>
+                  <strong style={{ color: "#8d8d8d" }}>Direction:</strong>{" "}
+                  <span style={{ color: tradeToClose.direction === "BUY" ? "#24a148" : "#fa4d56", fontWeight: "bold" }}>
+                    {tradeToClose.direction} ({tradeToClose.volume} Lots)
+                  </span>
+                </div>
+                <div><strong style={{ color: "#8d8d8d" }}>Entry Price:</strong> {tradeToClose.entry_price != null ? Number(tradeToClose.entry_price).toFixed(2) : '-'}</div>
+                <div><strong style={{ color: "#8d8d8d" }}>Current Price:</strong> {tradeToClose.exit_price != null ? Number(tradeToClose.exit_price).toFixed(2) : '-'}</div>
+                <div>
+                  <strong style={{ color: "#8d8d8d" }}>Unrealized PnL:</strong>{" "}
+                  <span style={{ color: (tradeToClose.pnl_money ?? 0) >= 0 ? "#24a148" : "#fa4d56", fontWeight: "bold" }}>
+                    {tradeToClose.pnl_money != null ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(tradeToClose.pnl_money) : '-'}
+                  </span>
+                </div>
+              </div>
+
+              {closeError && (
+                <div style={{ color: "#fa4d56", background: "rgba(250, 77, 86, 0.1)", border: "1px solid #fa4d56", padding: "8px 12px", borderRadius: "4px", fontSize: "12px" }}>
+                  ⚠️ {closeError}
+                </div>
+              )}
+            </div>
+          )}
+        </Modal>
       )}
     </>
   );

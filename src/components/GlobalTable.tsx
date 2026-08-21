@@ -27,6 +27,7 @@ interface GlobalTableProps {
   formatCell?: (cellId: string, value: any, row?: any) => React.ReactNode;
   toolbarActions?: React.ReactNode; // Extra buttons for toolbar
   onViewDetails?: (rowId: any) => void;
+  renderRowActions?: (rowId: any, rawItem: any) => React.ReactNode;
   onPageDataChange?: (currentData: any[]) => void;
   hideSearch?: boolean;
   hidePagination?: boolean;
@@ -47,6 +48,7 @@ export default function GlobalTable({
   formatCell,
   toolbarActions,
   onViewDetails,
+  renderRowActions,
   onPageDataChange,
   hideSearch = false,
   hidePagination = false,
@@ -253,8 +255,8 @@ export default function GlobalTable({
                     </TableHeader>
                     );
                   })}
-                  {onViewDetails && (
-                    <TableHeader style={{ textAlign: "center", width: "50px", fontSize: compact ? "9.5px" : "inherit", padding: compact ? "0.3rem" : "inherit" }}>Actions</TableHeader>
+                  {(onViewDetails || renderRowActions) && (
+                    <TableHeader style={{ textAlign: "center", width: renderRowActions ? "80px" : "50px", fontSize: compact ? "9.5px" : "inherit", padding: compact ? "0.3rem" : "inherit" }}>Actions</TableHeader>
                   )}
                 </TableRow>
               </TableHead>
@@ -295,23 +297,29 @@ export default function GlobalTable({
                           </TableCell>
                         );
                       })}
-                    {onViewDetails && (
-                      <TableCell style={{ padding: compact ? "0.15rem" : "0.2rem", textAlign: "center", width: "50px" }}>
-                        <Button 
-                          kind="ghost" 
-                          size="sm" 
-                          hasIconOnly 
-                          tooltipPosition="left"
-                          tooltipAlignment="center"
-                          renderIcon={() => <View size={compact ? 12 : 16} fill="#4589ff" />} 
-                          iconDescription="View Details" 
-                          onClick={() => onViewDetails(row.id)} 
-                          style={{
-                            height: compact ? '24px' : 'auto',
-                            width: compact ? '24px' : 'auto',
-                            minHeight: compact ? '24px' : 'auto'
-                          }}
-                        />
+                    {(onViewDetails || renderRowActions) && (
+                      <TableCell style={{ padding: compact ? "0.15rem" : "0.2rem", textAlign: "center", width: renderRowActions ? "80px" : "50px" }}>
+                        {renderRowActions ? (
+                          renderRowActions(row.id, rawItem)
+                        ) : (
+                          onViewDetails && (
+                            <Button 
+                              kind="ghost" 
+                              size="sm" 
+                              hasIconOnly 
+                              tooltipPosition="left"
+                              tooltipAlignment="center"
+                              renderIcon={() => <View size={compact ? 12 : 16} fill="#4589ff" />} 
+                              iconDescription="View Details" 
+                              onClick={() => onViewDetails(row.id)} 
+                              style={{
+                                height: compact ? '24px' : 'auto',
+                                width: compact ? '24px' : 'auto',
+                                minHeight: compact ? '24px' : 'auto'
+                              }}
+                            />
+                          )
+                        )}
                       </TableCell>
                     )}
                   </TableRow>
@@ -319,7 +327,7 @@ export default function GlobalTable({
                 })}
                 {rows.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={headers.length + (onViewDetails ? 1 : 0)} style={{ textAlign: "center", padding: "2rem" }}>
+                    <TableCell colSpan={headers.length + ((onViewDetails || renderRowActions) ? 1 : 0)} style={{ textAlign: "center", padding: compact ? "1.2rem 0.5rem" : "2rem" }}>
                       {loading ? "Loading..." : "No data available"}
                     </TableCell>
                   </TableRow>

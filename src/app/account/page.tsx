@@ -125,8 +125,8 @@ function AccountContent() {
 
     fetchTrades();
 
-    // Fetch Analytics
-    fetch(`${API_BASE_URL}/dashboard/analytics`)
+    // Fetch All-Time Analytics for Account Page
+    fetch(`${API_BASE_URL}/dashboard/analytics?period=all`)
       .then(res => res.json())
       .then(data => {
         setAnalytics(data);
@@ -261,27 +261,27 @@ function AccountContent() {
                 {/* Performance Metrics */}
                 <div className="account-perf-grid">
                   <Tile style={{ textAlign: 'center' }}>
-                    <span style={{ fontSize: '0.75rem', color: '#a8a8a8' }}>Win Rate</span>
+                    <span style={{ fontSize: '0.75rem', color: '#a8a8a8' }}>Win Rate (All-Time)</span>
                     <strong style={{ display: 'block', fontSize: '1.5rem', marginTop: '0.5rem' }}>
                       {analytics ? `${analytics.win_rate}%` : '...'}
                     </strong>
                   </Tile>
                   <Tile style={{ textAlign: 'center' }}>
-                    <span style={{ fontSize: '0.75rem', color: '#a8a8a8' }}>Profit Factor</span>
+                    <span style={{ fontSize: '0.75rem', color: '#a8a8a8' }}>Profit Factor (All-Time)</span>
                     <strong style={{ display: 'block', fontSize: '1.5rem', marginTop: '0.5rem' }}>
                       {analytics ? analytics.profit_factor : '...'}
                     </strong>
                   </Tile>
                   <Tile style={{ textAlign: 'center' }}>
-                    <span style={{ fontSize: '0.75rem', color: '#a8a8a8' }}>Total Trades</span>
+                    <span style={{ fontSize: '0.75rem', color: '#a8a8a8' }}>Total Trades (All-Time)</span>
                     <strong style={{ display: 'block', fontSize: '1.5rem', marginTop: '0.5rem' }}>
                       {analytics ? analytics.total_trades : '...'}
                     </strong>
                   </Tile>
                   <Tile style={{ textAlign: 'center' }}>
-                    <span style={{ fontSize: '0.75rem', color: '#a8a8a8' }}>Total PnL (Closed)</span>
-                    <strong style={{ display: 'block', fontSize: '1.5rem', marginTop: '0.5rem', color: analytics?.total_pnl >= 0 ? '#24a148' : '#fa4d56' }}>
-                      {analytics ? `$${analytics.total_pnl}` : '...'}
+                    <span style={{ fontSize: '0.75rem', color: '#a8a8a8' }}>Total PnL (Closed, All-Time)</span>
+                    <strong style={{ display: 'block', fontSize: '1.5rem', marginTop: '0.5rem', color: (analytics?.total_pnl || 0) >= 0 ? '#24a148' : '#fa4d56' }}>
+                      {analytics ? `${analytics.total_pnl >= 0 ? '+$' : '-$'}${Math.abs(Number(analytics.total_pnl)).toFixed(2)}` : '...'}
                     </strong>
                   </Tile>
                   <Tile style={{ textAlign: 'center' }}>
