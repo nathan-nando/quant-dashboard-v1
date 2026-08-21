@@ -3,13 +3,14 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { Column, Grid, Modal, CodeSnippet, Tag } from '@carbon/react';
-import { Terminal, Activity, Task } from '@carbon/icons-react';
+import { Terminal, Activity, Task, Calendar } from '@carbon/icons-react';
 import DashboardPanel from '@/components/DashboardPanel';
 import GlobalTable from '@/components/GlobalTable';
 import GlobalHealthWidget from '@/components/GlobalHealthWidget';
 import GlobalJobsTable from '@/components/GlobalJobsTable';
 import DriftMetricsWidget from '@/components/DriftMetricsWidget';
 import SubPageSidebar from '@/components/SubPageSidebar';
+import MacroCalendar from '@/components/MacroCalendar';
 import { API_BASE_URL } from '@/config/env';
 
 function MonitoringPageContent() {
@@ -21,7 +22,8 @@ function MonitoringPageContent() {
   const navItems = [
     { id: 'health', label: 'Model Health', icon: Activity },
     { id: 'logs', label: 'Audit Logs', icon: Terminal },
-    { id: 'jobs', label: 'Background Jobs', icon: Task }
+    { id: 'jobs', label: 'Background Jobs', icon: Task },
+    { id: 'calendar', label: 'Economic Calendar', icon: Calendar }
   ];
 
   const [selectedLogId, setSelectedLogId] = useState<number | null>(null);
@@ -155,6 +157,13 @@ function MonitoringPageContent() {
                     collapsible={false}
                     defaultCollapsed={false}
                   />
+                </DashboardPanel>
+              )}
+
+              {/* Tab 4: Economic Calendar */}
+              {currentTab === 'calendar' && (
+                <DashboardPanel title="Economic Calendar" tooltipInfo="Upcoming high-impact macroeconomic events and releases.">
+                  <MacroCalendar />
                 </DashboardPanel>
               )}
             </div>

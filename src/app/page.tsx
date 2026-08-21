@@ -13,9 +13,7 @@ import { Responsive, WidthProvider } from 'react-grid-layout/legacy';
 const ResponsiveGridLayout = WidthProvider(Responsive);
 const CandlestickChart = dynamic(() => import('../components/CandlestickChart'), { ssr: false });
 import MarketSummaryWidget from '../components/MarketSummaryWidget';
-import AttributionPanel from '../components/AttributionPanel';
 import MacroSnapshot from '../components/MacroSnapshot';
-import MacroCalendar from '../components/MacroCalendar';
 import HMMRegimeGauges from '../components/HMMRegimeGauges';
 import RangeBarPyramidVisualizer from '../components/RangeBarPyramidVisualizer';
 import { useGlobalState } from '../contexts/GlobalStateContext';
@@ -115,8 +113,8 @@ export default function Home() {
   }, [mergedTrades]);
 
   const signalHeaders = [
+    { key: "direction", header: "Signal", width: "75px" },
     { key: "timestamp", header: "Time" },
-    { key: "direction", header: "Signal", width: "70px" },
     { key: "entry_price", header: "Price / SL / TP / R:R" },
     { key: "model", header: "Model" },
     { key: "status", header: "Status", width: "80px" },
@@ -125,44 +123,40 @@ export default function Home() {
 
   const defaultLayouts = {
     lg: [
-      { i: 'chart', x: 0, y: 0, w: 4, h: 4, minW: 3, minH: 2 },
-      { i: 'range_pyramid', x: 4, y: 0, w: 3.8, h: 2.2, minW: 3, minH: 2 },
-      { i: 'macro_calendar', x: 7.8, y: 0, w: 2.2, h: 2.2, minW: 1.5, minH: 2 },
-      { i: 'hmm_gauges', x: 4, y: 2.2, w: 3.6, h: 1.8, minW: 2, minH: 1.8 },
-      { i: 'attribution', x: 7.6, y: 2.2, w: 2.4, h: 1.8, minW: 2, minH: 1.8 },
-      { i: 'live_trades', x: 0, y: 4, w: 5, h: 1.5, minW: 3, minH: 1.2 },
-      { i: 'recent_trades', x: 0, y: 5.5, w: 5, h: 5.6, minW: 3, minH: 2 },
-      { i: 'signals', x: 5, y: 4, w: 5, h: 7.1, minW: 3, minH: 2 }
+      { i: 'top_metrics', x: 0, y: 0, w: 7.4, h: 0.55, minW: 4, minH: 0.4 },
+      { i: 'chart', x: 0, y: 0.55, w: 4.1, h: 4.45, minW: 3, minH: 2 },
+      { i: 'range_pyramid', x: 4.1, y: 0.55, w: 3.3, h: 4.45, minW: 2.5, minH: 2 },
+      { i: 'live_trades', x: 7.4, y: 0, w: 2.6, h: 2.5, minW: 2, minH: 1.5 },
+      { i: 'hmm_gauges', x: 7.4, y: 2.5, w: 2.6, h: 2.5, minW: 2, minH: 1.5 },
+      { i: 'recent_trades', x: 0, y: 5.0, w: 5, h: 4.5, minW: 3, minH: 2 },
+      { i: 'signals', x: 5, y: 5.0, w: 5, h: 4.5, minW: 3, minH: 2 }
     ],
     md: [
-      { i: 'chart', x: 0, y: 0, w: 4, h: 4 },
-      { i: 'range_pyramid', x: 4, y: 0, w: 4, h: 2.2 },
-      { i: 'macro_calendar', x: 4, y: 2.2, w: 4, h: 1.8 },
-      { i: 'hmm_gauges', x: 0, y: 4, w: 4, h: 2 },
-      { i: 'attribution', x: 4, y: 4, w: 4, h: 2 },
-      { i: 'live_trades', x: 0, y: 6, w: 4, h: 1.5 },
-      { i: 'recent_trades', x: 0, y: 7.5, w: 4, h: 5.6 },
-      { i: 'signals', x: 4, y: 6, w: 4, h: 7.1 }
+      { i: 'top_metrics', x: 0, y: 0, w: 8, h: 0.55 },
+      { i: 'chart', x: 0, y: 0.55, w: 4, h: 4.15 },
+      { i: 'range_pyramid', x: 4, y: 0.55, w: 4, h: 4.15 },
+      { i: 'live_trades', x: 0, y: 4.7, w: 4, h: 2.8 },
+      { i: 'hmm_gauges', x: 4, y: 4.7, w: 4, h: 2.8 },
+      { i: 'recent_trades', x: 0, y: 7.5, w: 4, h: 4.8 },
+      { i: 'signals', x: 4, y: 7.5, w: 4, h: 4.8 }
     ],
     sm: [
-      { i: 'live_trades', x: 0, y: 0, w: 4, h: 1.5 },
-      { i: 'recent_trades', x: 0, y: 1.5, w: 4, h: 5.6 },
-      { i: 'range_pyramid', x: 0, y: 7.1, w: 4, h: 2.2 },
-      { i: 'chart', x: 0, y: 9.3, w: 4, h: 4 },
-      { i: 'signals', x: 0, y: 13.3, w: 4, h: 7.1 },
-      { i: 'hmm_gauges', x: 0, y: 20.4, w: 4, h: 2 },
-      { i: 'macro_calendar', x: 0, y: 22.4, w: 4, h: 2 },
-      { i: 'attribution', x: 0, y: 24.4, w: 4, h: 2 }
+      { i: 'top_metrics', x: 0, y: 0, w: 4, h: 1.1 },
+      { i: 'live_trades', x: 0, y: 1.1, w: 4, h: 2.5 },
+      { i: 'chart', x: 0, y: 3.6, w: 4, h: 4 },
+      { i: 'range_pyramid', x: 0, y: 7.6, w: 4, h: 3.8 },
+      { i: 'hmm_gauges', x: 0, y: 11.4, w: 4, h: 2.5 },
+      { i: 'recent_trades', x: 0, y: 13.9, w: 4, h: 4.8 },
+      { i: 'signals', x: 0, y: 18.7, w: 4, h: 4.8 }
     ],
     xs: [
-      { i: 'live_trades', x: 0, y: 0, w: 2, h: 1.5 },
-      { i: 'recent_trades', x: 0, y: 1.5, w: 2, h: 5.6 },
-      { i: 'range_pyramid', x: 0, y: 7.1, w: 2, h: 3 },
-      { i: 'chart', x: 0, y: 10.1, w: 2, h: 3 },
-      { i: 'signals', x: 0, y: 13.1, w: 2, h: 7.1 },
-      { i: 'hmm_gauges', x: 0, y: 20.2, w: 2, h: 3 },
-      { i: 'attribution', x: 0, y: 23.2, w: 2, h: 3 },
-      { i: 'macro_calendar', x: 0, y: 26.2, w: 2, h: 3 }
+      { i: 'top_metrics', x: 0, y: 0, w: 2, h: 1.3 },
+      { i: 'live_trades', x: 0, y: 1.3, w: 2, h: 2.5 },
+      { i: 'chart', x: 0, y: 3.8, w: 2, h: 3 },
+      { i: 'range_pyramid', x: 0, y: 6.8, w: 2, h: 3.5 },
+      { i: 'hmm_gauges', x: 0, y: 10.3, w: 2, h: 3 },
+      { i: 'recent_trades', x: 0, y: 13.3, w: 2, h: 4.8 },
+      { i: 'signals', x: 0, y: 18.1, w: 2, h: 4.8 }
     ]
   };
   const [layouts, setLayouts] = useState<any>(defaultLayouts);
@@ -173,14 +167,14 @@ export default function Home() {
       const keysToRemove: string[] = [];
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        if (key && (key.startsWith("quantDashboardLayout_") || key === "dashboard-layouts") && key !== "quantDashboardLayout_v55") {
+        if (key && (key.startsWith("quantDashboardLayout_") || key === "dashboard-layouts") && key !== "quantDashboardLayout_v59") {
           keysToRemove.push(key);
         }
       }
       keysToRemove.forEach(k => localStorage.removeItem(k));
     } catch (e) {}
 
-    const saved = localStorage.getItem('quantDashboardLayout_v55');
+    const saved = localStorage.getItem('quantDashboardLayout_v59');
     if (saved) {
       try {
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -191,22 +185,12 @@ export default function Home() {
 
   const handleLayoutChange = (layout: any, allLayouts: any) => {
     setLayouts(allLayouts);
-    localStorage.setItem("quantDashboardLayout_v55", JSON.stringify(allLayouts));
+    localStorage.setItem("quantDashboardLayout_v59", JSON.stringify(allLayouts));
   };
   return (
     <div style={{ maxWidth: '100%', padding: '0 2rem', position: 'relative' }}>
 
-      {/* --- ROW 1: STATIC LIVE STATE METRICS & MARKET SUMMARY --- */}
-      <div className="top-metrics-container">
-        <div className="dashboard-metrics-wrapper">
-          <DashboardMetrics />
-        </div>
-        <div className="macro-snapshot-wrapper">
-          <MacroSnapshot />
-        </div>
-      </div>
-
-      {/* --- ROW 2: DYNAMIC CHARTS AND SIGNALS --- */}
+      {/* --- DYNAMIC CHARTS, PANELS, AND SIGNALS --- */}
       <ResponsiveGridLayout
         className="layout"
         layouts={layouts}
@@ -220,6 +204,16 @@ export default function Home() {
         isDraggable={!isMobile}
         isResizable={!isMobile}
       >
+        <div key="top_metrics">
+          <div className="top-metrics-container" style={{ height: '100%', marginBottom: 0 }}>
+            <div className="dashboard-metrics-wrapper">
+              <DashboardMetrics />
+            </div>
+            <div className="macro-snapshot-wrapper">
+              <MacroSnapshot />
+            </div>
+          </div>
+        </div>
         <div key="chart">
           <DashboardPanel 
             title="XAUUSD" 
@@ -329,6 +323,20 @@ export default function Home() {
                 compact
                 formatCell={(cellId, value, row) => {
                   const col = cellId.split('__')[1] || cellId.split(':').pop() || '';
+                  if (col.includes("direction")) {
+                    const isBuy = value === 'BUY';
+                    const isSell = value === 'SELL';
+                    const dirColor = isBuy ? '#24a148' : isSell ? '#fa4d56' : '#8d8d8d';
+                    const readableVal = value ? value.charAt(0).toUpperCase() + value.slice(1).toLowerCase() : 'Neutral';
+                    return (
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontWeight: 'bold', fontSize: '11px' }}>
+                        <svg width="8" height="8" viewBox="0 0 32 32" style={{ fill: dirColor, flexShrink: 0 }}>
+                          <circle cx="16" cy="16" r="8" />
+                        </svg>
+                        <span style={{ color: dirColor, whiteSpace: 'nowrap' }}>{readableVal}</span>
+                      </div>
+                    );
+                  }
                   if (col.includes("timestamp") && value) {
                     const { date, time } = formatJakartaDateTime(value);
                     const allSigs = nonShadowSignals.slice(0, 15);
@@ -346,52 +354,6 @@ export default function Home() {
                       </div>
                     );
                   }
-                  if (col.includes("status")) {
-                    if (value === "PENDING_EXECUTION") {
-                      return (
-                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 'bold', fontSize: '9.5px' }}>
-                          <svg width="10" height="10" viewBox="0 0 32 32" style={{ fill: '#11a3c6', flexShrink: 0 }}>
-                            <path d="M16 4C9.383 4 4 9.383 4 16s5.383 12 12 12 12-5.383 12-12S22.617 4 16 4zm0 2c5.523 0 10 4.477 10 10s-4.477 10-10 10S6 21.523 6 16 10.477 6 16 6zm-1 3v8h6v-2h-4v-6h-2z" />
-                          </svg>
-                          <span style={{ color: '#11a3c6', whiteSpace: 'nowrap' }}>Pending Execution</span>
-                        </div>
-                      );
-                    }
-                    if (value === "EXECUTED") {
-                      return (
-                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 'bold', fontSize: '9.5px' }}>
-                          <svg width="10" height="10" viewBox="0 0 32 32" style={{ fill: '#24a148', flexShrink: 0 }}>
-                            <path d="M14 21.414l-5.707-5.707-1.414 1.414 7.121 7.121 12-12-1.414-1.414z" />
-                          </svg>
-                          <span style={{ color: '#ffffff', whiteSpace: 'nowrap' }}>Executed</span>
-                        </div>
-                      );
-                    }
-                    if (value === "NEW") {
-                      return (
-                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 'bold', fontSize: '9.5px' }}>
-                          <svg width="10" height="10" viewBox="0 0 32 32" style={{ fill: '#fa4d56', flexShrink: 0 }}>
-                            <circle cx="16" cy="16" r="8" />
-                          </svg>
-                          <span style={{ color: '#ffffff', whiteSpace: 'nowrap' }}>New</span>
-                        </div>
-                      );
-                    }
-                    // Fallback
-                    const readableValue = value ? value.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ') : '';
-                    return (
-                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 'bold', fontSize: '9.5px' }}>
-                        <svg width="10" height="10" viewBox="0 0 32 32" style={{ fill: '#6f6f6f', flexShrink: 0 }}>
-                          <circle cx="16" cy="16" r="8" />
-                        </svg>
-                        <span style={{ color: '#a8a8a8', whiteSpace: 'nowrap' }}>{readableValue}</span>
-                      </div>
-                    );
-                  }
-                  if (col.includes("direction")) {
-                    const readableVal = value ? value.charAt(0).toUpperCase() + value.slice(1).toLowerCase() : '';
-                    return <span style={{ color: value === 'BUY' ? '#24a148' : value === 'SELL' ? '#fa4d56' : '#f4f4f4', fontWeight: 'bold' }}>{readableVal}</span>;
-                  }
                   if (col.includes("entry_price")) {
                     const rowId = cellId.split(':')[0];
                     const signal = row || signals.find((s: any) => String(s.id) === String(rowId));
@@ -403,14 +365,14 @@ export default function Home() {
                     const rr = Number(signal?.rr_ratio) || 0;
                     const rrColor = rr >= 2.0 ? '#24a148' : '#a8a8a8';
                     return (
-                      <div style={{ display: 'flex', flexDirection: 'column', lineHeight: '1.2', fontSize: '9.5px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', lineHeight: '1.2', fontSize: '10.5px' }}>
                         <div>
-                          <span style={{ fontWeight: 'bold' }}>{entry}</span>
-                          <span style={{ fontSize: '8.5px', color: rrColor, marginLeft: '4px' }}>
+                          <span style={{ fontWeight: 'bold', fontSize: '11px' }}>{entry}</span>
+                          <span style={{ fontSize: '9.5px', color: rrColor, marginLeft: '4px' }}>
                             (R:R {rr.toFixed(2)})
                           </span>
                         </div>
-                        <div style={{ fontSize: '8.5px', color: '#a8a8a8' }}>
+                        <div style={{ fontSize: '9.5px', color: '#a8a8a8' }}>
                           <span style={{ color: '#fa4d56' }}>{sl}</span>
                           <span style={{ margin: '0 4px' }}>|</span>
                           <span style={{ color: '#24a148' }}>{tp}</span>
@@ -444,21 +406,75 @@ export default function Home() {
                     const calSell = mo.cal_sell !== undefined ? Number(mo.cal_sell) : (signal?.cal_sell !== undefined ? Number(signal.cal_sell) : (conf > 0 ? conf : undefined));
                     
                     return (
-                      <div style={{ display: 'flex', flexDirection: 'column', lineHeight: '1.2', fontSize: '9.5px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', lineHeight: '1.2', fontSize: '10.5px' }}>
                         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                           <svg width="10" height="10" viewBox="0 0 32 32" style={{ fill: '#4589ff', flexShrink: 0 }}>
                             <path d="M26,8V6a2,2,0,0,0-2-2H22V2H20V4H18V2H16V4H14V2H12V4H10V2H8V4H6A2,2,0,0,0,4,6V8H2v2H4v2H2v2H4v2H2v2H4v2H2v2H4v2H2v2H4v2A2,2,0,0,0,6,28H8v2h2V28h2v2h2V28h2v2h2V28h2v2h2V28h2A2,2,0,0,0,28,26V24h2V22H28V20h2V18H28V16h2V14H28V12h2V10H28V8ZM26,26H6V6H26Z" />
                             <rect x="10" y="10" width="12" height="12" />
                           </svg>
-                          <span style={{ color: '#ffffff', fontWeight: 'bold', fontSize: '9px', whiteSpace: 'nowrap' }}>
+                          <span style={{ color: '#ffffff', fontWeight: 'bold', fontSize: '10.5px', whiteSpace: 'nowrap' }}>
                             {readableModelText}
                           </span>
                         </div>
-                        <div style={{ fontSize: '8.5px', fontWeight: 'bold', display: 'flex', gap: '3px', marginTop: '1px' }}>
+                        <div style={{ fontSize: '11px', fontWeight: 700, display: 'flex', gap: '4px', marginTop: '2px' }}>
                           <span style={{ color: '#24a148' }}>B:{calBuy !== undefined ? (calBuy * 100).toFixed(1) : '0.0'}%</span>
                           <span style={{ color: '#6f6f6f' }}>|</span>
                           <span style={{ color: '#fa4d56' }}>S:{calSell !== undefined ? (calSell * 100).toFixed(1) : '0.0'}%</span>
                         </div>
+                      </div>
+                    );
+                  }
+                  if (col.includes("status")) {
+                    const valUpper = String(value || '').toUpperCase();
+                    if (valUpper === "PENDING_EXECUTION") {
+                      return (
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 'bold', fontSize: '10.5px' }}>
+                          <svg width="10" height="10" viewBox="0 0 32 32" style={{ fill: '#11a3c6', flexShrink: 0 }}>
+                            <path d="M16 4C9.383 4 4 9.383 4 16s5.383 12 12 12 12-5.383 12-12S22.617 4 16 4zm0 2c5.523 0 10 4.477 10 10s-4.477 10-10 10S6 21.523 6 16 10.477 6 16 6zm-1 3v8h6v-2h-4v-6h-2z" />
+                          </svg>
+                          <span style={{ color: '#11a3c6', whiteSpace: 'nowrap' }}>Pending Execution</span>
+                        </div>
+                      );
+                    }
+                    if (valUpper === "EXECUTED") {
+                      return (
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 'bold', fontSize: '10.5px' }}>
+                          <svg width="10" height="10" viewBox="0 0 32 32" style={{ fill: '#24a148', flexShrink: 0 }}>
+                            <path d="M14 21.414l-5.707-5.707-1.414 1.414 7.121 7.121 12-12-1.414-1.414z" />
+                          </svg>
+                          <span style={{ color: '#ffffff', whiteSpace: 'nowrap' }}>Executed</span>
+                        </div>
+                      );
+                    }
+                    if (valUpper === "NEW") {
+                      return (
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 'bold', fontSize: '10.5px' }}>
+                          <svg width="10" height="10" viewBox="0 0 32 32" style={{ fill: '#fa4d56', flexShrink: 0 }}>
+                            <circle cx="16" cy="16" r="8" />
+                          </svg>
+                          <span style={{ color: '#ffffff', whiteSpace: 'nowrap' }}>New</span>
+                        </div>
+                      );
+                    }
+                    if (valUpper === "NEUTRAL" || valUpper === "IGNORED" || !value) {
+                      return (
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 'bold', fontSize: '10.5px' }}>
+                          <svg width="10" height="10" viewBox="0 0 32 32" style={{ fill: '#8d8d8d', flexShrink: 0 }}>
+                            <circle cx="16" cy="16" r="8" />
+                          </svg>
+                          <span style={{ color: '#8d8d8d', whiteSpace: 'nowrap' }}>Ignored</span>
+                        </div>
+                      );
+                    }
+                    // Fallback
+                    let readableValue = value ? value.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ') : 'Ignored';
+                    if (readableValue.toLowerCase() === 'neutral') readableValue = 'Ignored';
+                    return (
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 'bold', fontSize: '10.5px' }}>
+                        <svg width="10" height="10" viewBox="0 0 32 32" style={{ fill: '#8d8d8d', flexShrink: 0 }}>
+                          <circle cx="16" cy="16" r="8" />
+                        </svg>
+                        <span style={{ color: '#8d8d8d', whiteSpace: 'nowrap' }}>{readableValue}</span>
                       </div>
                     );
                   }
@@ -544,46 +560,9 @@ export default function Home() {
           </DashboardPanel>
         </div>
 
-        <div key="attribution">
-          <DashboardPanel title="Account Summary" tooltipInfo="Performance decomposition and summary for the currently active account.">
-            <AttributionPanel />
-          </DashboardPanel>
-        </div>
-
-
-
         <div key="hmm_gauges">
           <DashboardPanel title="Regime Detection" tooltipInfo="Hidden Markov Model regime probabilities.">
             <HMMRegimeGauges />
-          </DashboardPanel>
-        </div>
-
-        <div key="macro_calendar">
-          <DashboardPanel 
-            title="Economic Calendar" 
-            tooltipInfo="Upcoming high-impact macroeconomic events."
-            onExportCsv={() => {
-              const headers = ["Date", "Event", "Impact", "Currency"];
-              const rows = (state?.calendar || []).map((e: any) => [
-                e.date ? formatJakartaDateTime(e.date).full : '',
-                e.event || '',
-                e.impact || '',
-                e.currency || ''
-              ].join(","));
-              
-              const csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n" + rows.join("\n");
-              const encodedUri = encodeURI(csvContent);
-              const link = document.createElement("a");
-              link.setAttribute("href", encodedUri);
-              link.setAttribute("download", `economic_calendar_${new Date().toISOString().split('T')[0]}.csv`);
-              document.body.appendChild(link);
-              link.click();
-              document.body.removeChild(link);
-            }}
-          >
-            <div style={{ height: "100%" }}>
-              <MacroCalendar />
-            </div>
           </DashboardPanel>
         </div>
 

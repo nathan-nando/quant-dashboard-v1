@@ -16,8 +16,8 @@ interface RadialGaugeProps {
 }
 
 const RadialGauge: React.FC<RadialGaugeProps> = ({ pct, label, valueStr, color, sublabel, icon: Icon, isHighlighted }) => {
-  const r = 22;
-  const stroke = 4.5;
+  const r = 19;
+  const stroke = 4;
   const circ = 2 * Math.PI * r;
   const clampedPct = Math.max(0, Math.min(100, pct));
   const strokeDashoffset = circ - (clampedPct / 100) * circ;
@@ -30,19 +30,20 @@ const RadialGauge: React.FC<RadialGaugeProps> = ({ pct, label, valueStr, color, 
       alignItems: 'center', 
       justifyContent: 'center',
       background: 'transparent',
-      padding: '0.4rem 0.1rem',
+      padding: '0.2rem 0.1rem',
       height: '100%',
+      minWidth: 0,
       transition: 'all 0.4s ease'
     }}>
       {/* Gauge Ring */}
-      <div style={{ position: 'relative', width: 52, height: 52, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <svg width="52" height="52" style={{ transform: 'rotate(-90deg)' }}>
+      <div style={{ position: 'relative', width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <svg width="44" height="44" style={{ transform: 'rotate(-90deg)' }}>
           {/* Background Track Ring */}
-          <circle cx="26" cy="26" r={r} fill="none" stroke="#262626" strokeWidth={stroke} />
+          <circle cx="22" cy="22" r={r} fill="none" stroke="#262626" strokeWidth={stroke} />
           {/* Active Colored Ring */}
           <circle
-            cx="26"
-            cy="26"
+            cx="22"
+            cy="22"
             r={r}
             fill="none"
             stroke={color}
@@ -56,9 +57,9 @@ const RadialGauge: React.FC<RadialGaugeProps> = ({ pct, label, valueStr, color, 
         {/* Center Text or Icon */}
         <div style={{ position: 'absolute', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
           {Icon ? (
-            <Icon size={18} color={color} />
+            <Icon size={16} color={color} />
           ) : (
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#f4f4f4' }}>
+            <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#f4f4f4' }}>
               {valueStr}
             </span>
           )}
@@ -66,12 +67,12 @@ const RadialGauge: React.FC<RadialGaugeProps> = ({ pct, label, valueStr, color, 
       </div>
 
       {/* Label */}
-      <div style={{ fontSize: '0.68rem', fontWeight: 600, color: '#f4f4f4', marginTop: '0.25rem', textAlign: 'center', whiteSpace: 'nowrap' }}>
+      <div style={{ fontSize: '0.64rem', fontWeight: 600, color: '#f4f4f4', marginTop: '0.2rem', textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>
         {label}
       </div>
 
       {/* Sublabel */}
-      <div style={{ fontSize: '0.62rem', color: color, fontWeight: 500, textAlign: 'center', marginTop: '0.1rem' }}>
+      <div style={{ fontSize: '0.58rem', color: color, fontWeight: 500, textAlign: 'center', marginTop: '0.05rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>
         {sublabel || valueStr}
       </div>
     </div>
@@ -99,10 +100,11 @@ const VerticalMacroStepper: React.FC<VerticalMacroStepperProps> = ({ currentBias
       flexDirection: 'column', 
       alignItems: 'flex-start', 
       justifyContent: 'center', 
-      padding: '0.2rem 0.6rem',
+      padding: '0.2rem 0.4rem',
       position: 'relative',
       height: '100%',
-      minWidth: '145px'
+      minWidth: '125px',
+      flexShrink: 0
     }}>
       
       <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: '5px', width: '100%' }}>

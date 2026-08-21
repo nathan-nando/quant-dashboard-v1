@@ -291,18 +291,18 @@ export default function TradeHistoryTable({
         const sl = trade.sl_price != null ? Number(trade.sl_price).toFixed(2) : '-';
         const tp = trade.tp_price != null ? Number(trade.tp_price).toFixed(2) : '-';
         return (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', lineHeight: '1.1', fontSize: compact ? '9.5px' : '11px', whiteSpace: 'nowrap' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', lineHeight: '1.2', fontSize: compact ? '10.5px' : '11.5px', whiteSpace: 'nowrap' }}>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
               <svg width="8" height="8" viewBox="0 0 32 32" style={{ fill: '#24a148', flexShrink: 0 }}>
                 <title>Entry Price</title>
                 <path d="M18 6l-1.43 1.39L22.47 13H4v2h18.47l-5.9 5.61L18 22l8-8z" />
               </svg>
-              <span style={{ fontWeight: 'bold' }}>{entry}</span>
-              <span style={{ fontSize: '8px', color: '#a8a8a8', marginLeft: '4px' }}>({lots} L)</span>
+              <span style={{ fontWeight: 'bold', fontSize: compact ? '11px' : '12px' }}>{entry}</span>
+              <span style={{ fontSize: '9.5px', color: '#a8a8a8', marginLeft: '4px' }}>({lots} L)</span>
             </div>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '8px' }}>
-              <span style={{ color: '#fa4d56', fontWeight: 500 }}>SL: {sl}</span>
-              <span style={{ color: '#24a148', fontWeight: 500 }}>TP: {tp}</span>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '9.5px' }}>
+              <span style={{ color: '#fa4d56', fontWeight: 600 }}>SL: {sl}</span>
+              <span style={{ color: '#24a148', fontWeight: 600 }}>TP: {tp}</span>
             </div>
           </div>
         );
@@ -310,21 +310,21 @@ export default function TradeHistoryTable({
       
       if (compact) {
         return (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', lineHeight: '1.1', fontSize: '9.5px', whiteSpace: 'nowrap' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', lineHeight: '1.2', fontSize: '10.5px', whiteSpace: 'nowrap' }}>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
               <svg width="8" height="8" viewBox="0 0 32 32" style={{ fill: '#24a148', flexShrink: 0 }}>
                 <title>Entry Price</title>
                 <path d="M18 6l-1.43 1.39L22.47 13H4v2h18.47l-5.9 5.61L18 22l8-8z" />
               </svg>
-              <span style={{ fontWeight: 'bold' }}>{entry}</span>
-              <span style={{ fontSize: '8px', color: '#a8a8a8', marginLeft: '4px' }}>({lots} L)</span>
+              <span style={{ fontWeight: 'bold', fontSize: '11px' }}>{entry}</span>
+              <span style={{ fontSize: '9.5px', color: '#a8a8a8', marginLeft: '4px' }}>({lots} L)</span>
             </div>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
               <svg width="8" height="8" viewBox="0 0 32 32" style={{ fill: isOpen ? '#4589ff' : '#fa4d56', flexShrink: 0 }}>
                 <title>{isOpen ? 'Current Price' : 'Exit Price'}</title>
                 <path d="M14 22l1.43-1.39L9.53 15H28v-2H9.53l5.9-5.61L14 6l-8 8z" />
               </svg>
-              <span style={{ fontWeight: 'bold', color: '#e0e0e0' }}>{exit}</span>
+              <span style={{ fontWeight: 'bold', color: '#e0e0e0', fontSize: '11px' }}>{exit}</span>
             </div>
           </div>
         );
@@ -338,17 +338,17 @@ export default function TradeHistoryTable({
                 <title>Entry Price</title>
                 <path d="M18 6l-1.43 1.39L22.47 13H4v2h18.47l-5.9 5.61L18 22l8-8z" />
               </svg>
-              <span style={{ fontWeight: 'bold' }}>{entry}</span>
+              <span style={{ fontWeight: 'bold', fontSize: '11.5px' }}>{entry}</span>
             </div>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
               <svg width="10" height="10" viewBox="0 0 32 32" style={{ fill: isOpen ? '#4589ff' : '#fa4d56', flexShrink: 0 }}>
                 <title>{isOpen ? 'Current Price' : 'Exit Price'}</title>
                 <path d="M14 22l1.43-1.39L9.53 15H28v-2H9.53l5.9-5.61L14 6l-8 8z" />
               </svg>
-              <span style={{ fontWeight: 'bold', color: '#e0e0e0' }}>{exit}</span>
+              <span style={{ fontWeight: 'bold', color: '#e0e0e0', fontSize: '11.5px' }}>{exit}</span>
             </div>
           </div>
-          <div style={{ fontSize: '10px', color: '#a8a8a8' }}>Lots: {lots}</div>
+          <div style={{ fontSize: '10.5px', color: '#a8a8a8' }}>Lots: {lots}</div>
         </div>
       );
     }
@@ -367,7 +367,7 @@ export default function TradeHistoryTable({
       }
 
       return (
-        <span style={{ color: pnlColor, fontWeight: 'bold', fontSize: compact ? '9.5px' : 'inherit' }}>
+        <span style={{ color: pnlColor, fontWeight: 'bold', fontSize: compact ? '11px' : '12px' }}>
           {pnlDisplay}
         </span>
       );
@@ -442,18 +442,18 @@ export default function TradeHistoryTable({
       
       if (compact) {
         return (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', lineHeight: '1.1', fontSize: '9.5px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', lineHeight: '1.2', fontSize: '10.5px' }}>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
               <svg width="10" height="10" viewBox="0 0 32 32" style={{ fill: '#4589ff', flexShrink: 0 }}>
                 <path d="M26,8V6a2,2,0,0,0-2-2H22V2H20V4H18V2H16V4H14V2H12V4H10V2H8V4H6A2,2,0,0,0,4,6V8H2v2H4v2H2v2H4v2H2v2H4v2H2v2H4v2H2v2H4v2A2,2,0,0,0,6,28H8v2h2V28h2v2h2V28h2v2h2V28h2v2h2V28h2A2,2,0,0,0,28,26V24h2V22H28V20h2V18H28V16h2V14H28V12h2V10H28V8ZM26,26H6V6H26Z" />
                 <rect x="10" y="10" width="12" height="12" />
               </svg>
-              <span style={{ color: '#ffffff', fontWeight: 'bold', fontSize: '9.5px', whiteSpace: 'nowrap' }}>
+              <span style={{ color: '#ffffff', fontWeight: 'bold', fontSize: '10.5px', whiteSpace: 'nowrap' }}>
                 {readableModelText}
               </span>
             </div>
             {conf !== undefined && conf !== null && (
-              <span style={{ color: confColor, fontWeight: 'bold', fontSize: '8.5px', marginLeft: '13px' }}>
+              <span style={{ color: confColor, fontWeight: 700, fontSize: '11px', marginLeft: '13px' }}>
                 {(conf * 100).toFixed(1)}%
               </span>
             )}
@@ -477,7 +477,7 @@ export default function TradeHistoryTable({
             <span>-</span>
           )}
           {conf !== undefined && conf !== null && (
-            <span style={{ color: confColor, fontWeight: 'bold', fontSize: '10px', whiteSpace: 'nowrap' }}>
+            <span style={{ color: confColor, fontWeight: 700, fontSize: '11.5px', whiteSpace: 'nowrap' }}>
               {(conf * 100).toFixed(1)}%
             </span>
           )}

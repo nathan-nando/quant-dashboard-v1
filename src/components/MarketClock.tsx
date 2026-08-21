@@ -54,12 +54,12 @@ export default function MarketClock() {
       {/* Time Display */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', alignItems: 'flex-end' }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', lineHeight: 1 }}>
-          <span style={{ color: '#a8a8a8', fontSize: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>UTC</span>
-          <span style={{ fontWeight: 600, fontFamily: 'monospace', fontSize: '0.75rem', color: '#f4f4f4' }}>{formatTime(now, 'UTC')}</span>
+          <span style={{ color: '#a8a8a8', fontSize: '0.55rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>UTC</span>
+          <span style={{ fontWeight: 600, fontFamily: 'monospace', fontSize: '0.875rem', color: '#4589ff' }}>{formatTime(now, 'UTC')}</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', lineHeight: 1 }}>
-          <span style={{ color: '#a8a8a8', fontSize: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>WIB</span>
-          <span style={{ fontWeight: 600, fontFamily: 'monospace', fontSize: '0.75rem', color: '#4589ff' }}>{formatTime(now, 'Asia/Jakarta')}</span>
+          <span style={{ color: '#a8a8a8', fontSize: '0.55rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>WIB</span>
+          <span style={{ fontWeight: 600, fontFamily: 'monospace', fontSize: '0.875rem', color: '#ffffff' }}>{formatTime(now, 'Asia/Jakarta')}</span>
         </div>
       </div>
     </div>

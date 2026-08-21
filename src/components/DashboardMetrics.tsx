@@ -22,47 +22,67 @@ export default function DashboardMetrics() {
   const { state, analytics } = useGlobalState();
 
   return (
-    <div className="dashboard-metrics-grid">
-      <Tile>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', marginBottom: "0.35rem" }}>
-          <Power size={14} color="#a8a8a8" />
-          <p style={{ fontSize: "10px", color: "#a8a8a8", margin: 0 }}>Engine</p>
+    <div className="dashboard-metrics-grid" style={{ height: '100%' }}>
+      {/* Group 1: Engine & Auto Trade */}
+      <Tile style={{ padding: '0.25rem 0.5rem', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-around', height: '100%', gap: '0.75rem' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', marginBottom: "0.25rem" }}>
+              <Power size={13} color="#a8a8a8" />
+              <p style={{ fontSize: "10px", color: "#a8a8a8", margin: 0 }}>Engine</p>
+            </div>
+            <h4 style={{ margin: 0, fontWeight: 600, color: state?.engine_active ? "#24a148" : "#fa4d56", lineHeight: "1.1" }}>
+              {state?.engine_active ? "ON" : "OFF"}
+            </h4>
+          </div>
+          <div style={{ width: '1px', height: '65%', backgroundColor: '#393939' }} />
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', marginBottom: "0.25rem" }}>
+              <MachineLearningModel size={13} color="#a8a8a8" />
+              <p style={{ fontSize: "10px", color: "#a8a8a8", margin: 0 }}>Auto Trade</p>
+            </div>
+            <h4 style={{ margin: 0, fontWeight: 600, color: state?.auto_execution ? "#24a148" : "#fa4d56", lineHeight: "1.1" }}>
+              {state?.auto_execution ? "ON" : "OFF"}
+            </h4>
+          </div>
         </div>
-        <h4 style={{ margin: 0, fontWeight: 600, color: state?.engine_active ? "#24a148" : "#fa4d56", lineHeight: "1.1" }}>
-          {state?.engine_active ? "ON" : "OFF"}
-        </h4>
       </Tile>
 
-      <Tile>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', marginBottom: "0.35rem" }}>
-          <MachineLearningModel size={14} color="#a8a8a8" />
-          <p style={{ fontSize: "10px", color: "#a8a8a8", margin: 0 }}>Auto Trade</p>
+      {/* Group 2: Today Trades, Today PnL, Today Winrate */}
+      <Tile style={{ padding: '0.25rem 0.5rem', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-around', height: '100%', gap: '0.5rem' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', marginBottom: "0.25rem" }}>
+              <ChartLine size={13} color="#a8a8a8" />
+              <p style={{ fontSize: "10px", color: "#a8a8a8", margin: 0 }}>Today Trades</p>
+            </div>
+            <h4 style={{ margin: 0, color: "#f4f4f4", fontWeight: 600, lineHeight: "1.1" }}>
+              {analytics?.total_trades !== undefined ? analytics.total_trades : (state?.total_trades || "0")}
+            </h4>
+          </div>
+          <div style={{ width: '1px', height: '65%', backgroundColor: '#393939' }} />
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', marginBottom: "0.25rem" }}>
+              <Wallet size={13} color="#a8a8a8" />
+              <p style={{ fontSize: "10px", color: "#a8a8a8", margin: 0 }}>Today PnL</p>
+            </div>
+            <h4 style={{ margin: 0, fontWeight: 600, color: (analytics?.total_pnl || 0) >= 0 ? "#24a148" : "#fa4d56", lineHeight: "1.1" }}>
+              {analytics?.total_pnl !== undefined && analytics?.total_pnl !== null 
+                ? `${analytics.total_pnl >= 0 ? '+$' : '-$'}${Math.abs(Number(analytics.total_pnl)).toFixed(2)}` 
+                : "$0.00"}
+            </h4>
+          </div>
+          <div style={{ width: '1px', height: '65%', backgroundColor: '#393939' }} />
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', marginBottom: "0.25rem" }}>
+              <Activity size={13} color="#a8a8a8" />
+              <p style={{ fontSize: "10px", color: "#a8a8a8", margin: 0 }}>Today Winrate</p>
+            </div>
+            <h4 style={{ margin: 0, color: "#f4f4f4", fontWeight: 600, lineHeight: "1.1" }}>
+              {analytics?.win_rate !== undefined && analytics?.win_rate !== null ? `${Number(analytics.win_rate).toFixed(1)}%` : "0.0%"}
+            </h4>
+          </div>
         </div>
-        <h4 style={{ margin: 0, fontWeight: 600, color: state?.auto_execution ? "#24a148" : "#fa4d56", lineHeight: "1.1" }}>
-          {state?.auto_execution ? "ON" : "OFF"}
-        </h4>
-      </Tile>
-
-      <Tile>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', marginBottom: "0.35rem" }}>
-          <ChartLine size={14} color="#a8a8a8" />
-          <p style={{ fontSize: "10px", color: "#a8a8a8", margin: 0 }}>Today Trades</p>
-        </div>
-        <h4 style={{ margin: 0, color: "#f4f4f4", fontWeight: 600, lineHeight: "1.1" }}>
-          {analytics?.total_trades !== undefined ? analytics.total_trades : "0"}
-        </h4>
-      </Tile>
-
-      <Tile>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', marginBottom: "0.35rem" }}>
-          <Wallet size={14} color="#a8a8a8" />
-          <p style={{ fontSize: "10px", color: "#a8a8a8", margin: 0 }}>Today PnL</p>
-        </div>
-        <h4 style={{ margin: 0, fontWeight: 600, color: (analytics?.total_pnl || 0) >= 0 ? "#24a148" : "#fa4d56", lineHeight: "1.1" }}>
-          {analytics?.total_pnl !== undefined && analytics?.total_pnl !== null 
-            ? `${analytics.total_pnl >= 0 ? '+$' : '-$'}${Math.abs(Number(analytics.total_pnl)).toFixed(2)}` 
-            : "$0.00"}
-        </h4>
       </Tile>
     </div>
   );
