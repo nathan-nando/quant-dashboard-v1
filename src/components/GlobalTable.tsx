@@ -37,6 +37,9 @@ interface GlobalTableProps {
   hideReload?: boolean;
   refreshTrigger?: any;
   compact?: boolean;
+  extraParams?: Record<string, string | number | undefined | null>;
+  timeFilter?: { startTime?: Date | null; endTime?: Date | null };
+  defaultPageSize?: number;
 }
 
 export default function GlobalTable({
@@ -57,7 +60,10 @@ export default function GlobalTable({
   onReload,
   hideReload = false,
   refreshTrigger,
-  compact = false
+  compact = false,
+  extraParams,
+  timeFilter,
+  defaultPageSize = 10,
 }: GlobalTableProps) {
   // State
   const [data, setData] = useState<any[]>([]);
@@ -67,10 +73,17 @@ export default function GlobalTable({
   
   // Pagination & Filter & Sort state
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(defaultPageSize);
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDesc, setSortDesc] = useState(true); // default sort descending
+
+  const extraParamsKey = JSON.stringify(extraParams || {});
+
+  // Reset page to 1 when extraParams or timeFilter change
+  useEffect(() => {
+    setPage(1);
+  }, [extraParamsKey, timeFilter?.startTime, timeFilter?.endTime]);
 
   // For Local Mode
   const isServerSide = !!fetchUrl;
@@ -91,6 +104,14 @@ export default function GlobalTable({
         url.searchParams.set("sort_desc", sortDesc ? "true" : "false");
       }
 
+      if (extraParams) {
+        Object.entries(extraParams).forEach(([k, v]) => {
+          if (v !== undefined && v !== null && v !== '') {
+            url.searchParams.set(k, String(v));
+          }
+        });
+      }
+
       const res = await fetch(url.toString());
       const result = await res.json();
       
@@ -108,7 +129,7 @@ export default function GlobalTable({
     } finally {
       setLoading(false);
     }
-  }, [fetchUrl, page, pageSize, search, sortKey, sortDesc]);
+  }, [fetchUrl, page, pageSize, search, sortKey, sortDesc, extraParamsKey]);
 
   // Effect to re-fetch on Server Side when params change or refreshTrigger changes
   useEffect(() => {
@@ -122,6 +143,19 @@ export default function GlobalTable({
     if (isServerSide) return data;
     
     let result = [...initialData];
+
+    // Time filter for client-side
+    if (timeFilter && (timeFilter.startTime || timeFilter.endTime)) {
+      result = result.filter(row => {
+        const rawTime = row.timestamp || row.time || row.date || row.created_at;
+        if (!rawTime) return true;
+        const rowDate = new Date(rawTime);
+        if (isNaN(rowDate.getTime())) return true;
+        if (timeFilter.startTime && rowDate < timeFilter.startTime) return false;
+        if (timeFilter.endTime && rowDate > timeFilter.endTime) return false;
+        return true;
+      });
+    }
     
     // Search
     if (search) {
@@ -145,7 +179,7 @@ export default function GlobalTable({
     }
 
     return result;
-  }, [isServerSide, data, initialData, search, sortKey, sortDesc]);
+  }, [isServerSide, data, initialData, search, sortKey, sortDesc, timeFilter]);
 
   // Set total items for pagination safely outside render
   useEffect(() => {
@@ -199,8 +233,8 @@ export default function GlobalTable({
             {!isCollapsed && (
               <>
             {(!hideSearch || toolbarActions) && (
-              <TableToolbar>
-                <TableToolbarContent>
+              <TableToolbar style={{ height: '2rem', minHeight: '2rem', backgroundColor: '#353535', padding: 0, margin: 0, borderBottom: 'none' }}>
+                <TableToolbarContent style={{ display: 'flex', alignItems: 'center', height: '2rem', minHeight: '2rem', backgroundColor: '#353535', padding: 0, margin: 0 }}>
                   {!hideSearch && (
                     <TableToolbarSearch 
                       onChange={handleSearch} 
@@ -208,6 +242,7 @@ export default function GlobalTable({
                       persistent 
                     />
                   )}
+                  {toolbarActions}
                   {(!hideReload && (isServerSide || onReload)) && (
                     <Button 
                       kind="ghost" 
@@ -215,6 +250,7 @@ export default function GlobalTable({
                       renderIcon={Renew} 
                       iconDescription="Reload" 
                       hasIconOnly 
+                      style={{ height: '2rem', width: '2rem', minHeight: '2rem', padding: 0 }}
                       onClick={async () => {
                         if (isServerSide) {
                           await fetchData();
@@ -224,7 +260,6 @@ export default function GlobalTable({
                       }} 
                     />
                   )}
-                  {toolbarActions}
                 </TableToolbarContent>
               </TableToolbar>
             )}

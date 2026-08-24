@@ -2,13 +2,18 @@
 
 import React, { Suspense, useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { Grid, Column, Tile, Button, Toggle, TextInput, Select, SelectItem, Dropdown, Modal, ToastNotification } from '@carbon/react';
 import { Wallet, Settings, ArrowUpRight, ArrowDownRight, Information, Activity, DataBase } from '@carbon/icons-react';
 import TradeHistoryTable from '@/components/TradeHistoryTable';
 import PnLChart from '@/components/PnLChart';
 import GlobalDetailTable from '@/components/GlobalDetailTable';
 import SubPageSidebar from '@/components/SubPageSidebar';
+import DashboardPanel from '@/components/DashboardPanel';
+import { useGlobalState } from '@/contexts/GlobalStateContext';
 import { API_BASE_URL } from '@/config/env';
+
+const CandlestickChart = dynamic(() => import('@/components/CandlestickChart'), { ssr: false });
 
 function AccountContent() {
   const searchParams = useSearchParams();
@@ -17,6 +22,7 @@ function AccountContent() {
 
   const currentTab = searchParams.get('tab') || 'portfolio';
 
+  const { signals } = useGlobalState();
   const [accountData, setAccountData] = useState<any>(null);
   const [positions, setPositions] = useState<any[]>([]);
   const [analytics, setAnalytics] = useState<any>(null);
@@ -24,6 +30,22 @@ function AccountContent() {
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
   const [selectedSignalId, setSelectedSignalId] = useState<number | null>(null);
+
+  const mergedTrades = useMemo(() => {
+    return trades.map(t => {
+      if (t.status === 'OPEN') {
+        const pos = positions.find(p => String(p.ticket) === String(t.mt5_ticket));
+        if (pos) {
+          return {
+            ...t,
+            pnl_money: pos.profit,
+            exit_price: pos.price_current
+          };
+        }
+      }
+      return t;
+    });
+  }, [trades, positions]);
 
   const [accounts, setAccounts] = useState<any[]>([]);
   const [notification, setNotification] = useState<{kind: "success" | "error" | "info", title: string, subtitle: string} | null>(null);
@@ -305,91 +327,107 @@ function AccountContent() {
 
             {/* TRADES TAB */}
             {currentTab === 'trades' && (
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <Tile style={{ padding: '1.5rem', marginBottom: '0.2rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                    <h4 style={{ margin: 0, fontWeight: 500 }}>Active MT5 Positions</h4>
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: 'bold' }}>
-                      <svg width="12" height="12" viewBox="0 0 32 32" style={{ fill: '#11a3c6', flexShrink: 0 }}>
-                        <path d="M12 10H6.78A11 11 0 114 16h2a9 9 0 102.26-6H12v2H6V6h2zm13.22 12A11 11 0 0128 16h-2a9 9 0 10-2.26 6H20v-2h6v6h-2z" />
-                      </svg>
-                      <span style={{ color: '#11a3c6', whiteSpace: 'nowrap' }}>Live Sync</span>
-                    </div>
-                  </div>
-
-                  {positions.length > 0 ? (
-                    <div style={{ overflowX: 'auto', border: '1px solid #393939', borderRadius: '4px' }}>
-                      <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
-                        <thead>
-                          <tr style={{ borderBottom: '1px solid #393939', backgroundColor: '#262626' }}>
-                            <th style={{ padding: '1rem' }}>Ticket</th>
-                            <th style={{ padding: '1rem' }}>Symbol</th>
-                            <th style={{ padding: '1rem' }}>Type</th>
-                            <th style={{ padding: '1rem' }}>Volume</th>
-                            <th style={{ padding: '1rem' }}>Open Price</th>
-                            <th style={{ padding: '1rem' }}>Current Price</th>
-                            <th style={{ padding: '1rem' }}>SL / TP</th>
-                            <th style={{ padding: '1rem', textAlign: 'right' }}>Profit</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {positions.map((p, idx) => {
-                            const isBuy = p.type === 0; // MT5 standard: 0=Buy, 1=Sell
-                            return (
-                              <tr key={idx} style={{ borderBottom: '1px solid #393939' }}>
-                                <td style={{ padding: '1rem', fontFamily: 'monospace' }}>
-                                  #{p.ticket}
-                                  {p.signal_id && (
-                                    <div style={{ marginTop: '6px' }}>
-                                      <span
-                                        style={{
-                                          display: 'inline-flex',
-                                          alignItems: 'center',
-                                          gap: '4px',
-                                          color: '#a56eff',
-                                          cursor: 'pointer',
-                                          fontSize: '11px',
-                                          fontWeight: 'bold',
-                                          textDecoration: 'underline'
-                                        }}
-                                        onClick={() => setSelectedSignalId(p.signal_id)}
-                                      >
-                                        <svg width="10" height="10" viewBox="0 0 32 32" style={{ fill: '#a56eff', flexShrink: 0 }}>
-                                          <path d="M22.41 2H9.59A2.59 2.59 0 007 4.59v22.82A2.59 2.59 0 009.59 30h12.82A2.59 2.59 0 0025 27.41V4.59A2.59 2.59 0 0022.41 2zM9 4.59C9 4.26 9.26 4 9.59 4h12.82c.33 0 .59.26.59.59V8H9zm14 22.82c0 .33-.26.59-.59.59H9.59A.59.59 0 019 27.41V10h14z" />
-                                        </svg>
-                                        Signal #{p.signal_id}
-                                      </span>
-                                    </div>
-                                  )}
-                                </td>
-                                <td style={{ padding: '1rem', fontWeight: 600 }}>{p.symbol}</td>
-                                <td style={{ padding: '1rem' }}>
-                                  <span style={{ color: isBuy ? '#24a148' : '#fa4d56', fontWeight: 500 }}>
-                                    {isBuy ? 'BUY' : 'SELL'}
-                                  </span>
-                                </td>
-                                <td style={{ padding: '1rem' }}>{p.volume}</td>
-                                <td style={{ padding: '1rem' }}>{p.price_open?.toFixed(3)}</td>
-                                <td style={{ padding: '1rem' }}>{p.price_current?.toFixed(3)}</td>
-                                <td style={{ padding: '1rem', color: '#a8a8a8' }}>
-                                  {p.sl > 0 ? p.sl : '-'} / {p.tp > 0 ? p.tp : '-'}
-                                </td>
-                                <td style={{ padding: '1rem', textAlign: 'right', fontWeight: 600, color: p.profit >= 0 ? '#24a148' : '#fa4d56' }}>
-                                  ${p.profit?.toFixed(2)}
-                                </td>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                <div className="account-trades-top-row">
+                  {/* Left Column (50%): Active MT5 Positions */}
+                  <DashboardPanel
+                    title="Active MT5 Positions"
+                    tooltipInfo="Currently open positions and trades in MT5."
+                    headerActions={
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: 'bold' }}>
+                        <svg width="12" height="12" viewBox="0 0 32 32" style={{ fill: '#11a3c6', flexShrink: 0 }}>
+                          <path d="M12 10H6.78A11 11 0 114 16h2a9 9 0 102.26-6H12v2H6V6h2zm13.22 12A11 11 0 0128 16h-2a9 9 0 10-2.26 6H20v-2h6v6h-2z" />
+                        </svg>
+                        <span style={{ color: '#11a3c6', whiteSpace: 'nowrap' }}>Live Sync</span>
+                      </div>
+                    }
+                  >
+                    <div style={{ height: '100%', overflowY: 'auto' }}>
+                      {positions.length > 0 ? (
+                        <div style={{ overflowX: 'auto', border: '1px solid #393939', borderRadius: '4px' }}>
+                          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
+                            <thead>
+                              <tr style={{ borderBottom: '1px solid #393939', backgroundColor: '#262626' }}>
+                                <th style={{ padding: '0.75rem 1rem' }}>Ticket</th>
+                                <th style={{ padding: '0.75rem 1rem' }}>Symbol</th>
+                                <th style={{ padding: '0.75rem 1rem' }}>Type</th>
+                                <th style={{ padding: '0.75rem 1rem' }}>Volume</th>
+                                <th style={{ padding: '0.75rem 1rem' }}>Open Price</th>
+                                <th style={{ padding: '0.75rem 1rem' }}>Current Price</th>
+                                <th style={{ padding: '0.75rem 1rem' }}>SL / TP</th>
+                                <th style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>Profit</th>
                               </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
+                            </thead>
+                            <tbody>
+                              {positions.map((p, idx) => {
+                                const isBuy = p.type === 0; // MT5 standard: 0=Buy, 1=Sell
+                                return (
+                                  <tr key={idx} style={{ borderBottom: '1px solid #393939' }}>
+                                    <td style={{ padding: '0.75rem 1rem', fontFamily: 'monospace' }}>
+                                      #{p.ticket}
+                                      {p.signal_id && (
+                                        <div style={{ marginTop: '4px' }}>
+                                          <span
+                                            style={{
+                                              display: 'inline-flex',
+                                              alignItems: 'center',
+                                              gap: '4px',
+                                              color: '#a56eff',
+                                              cursor: 'pointer',
+                                              fontSize: '11px',
+                                              fontWeight: 'bold',
+                                              textDecoration: 'underline'
+                                            }}
+                                            onClick={() => setSelectedSignalId(p.signal_id)}
+                                          >
+                                            <svg width="10" height="10" viewBox="0 0 32 32" style={{ fill: '#a56eff', flexShrink: 0 }}>
+                                              <path d="M22.41 2H9.59A2.59 2.59 0 007 4.59v22.82A2.59 2.59 0 009.59 30h12.82A2.59 2.59 0 0025 27.41V4.59A2.59 2.59 0 0022.41 2zM9 4.59C9 4.26 9.26 4 9.59 4h12.82c.33 0 .59.26.59.59V8H9zm14 22.82c0 .33-.26.59-.59.59H9.59A.59.59 0 019 27.41V10h14z" />
+                                            </svg>
+                                            Signal #{p.signal_id}
+                                          </span>
+                                        </div>
+                                      )}
+                                    </td>
+                                    <td style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>{p.symbol}</td>
+                                    <td style={{ padding: '0.75rem 1rem' }}>
+                                      <span style={{ color: isBuy ? '#24a148' : '#fa4d56', fontWeight: 500 }}>
+                                        {isBuy ? 'BUY' : 'SELL'}
+                                      </span>
+                                    </td>
+                                    <td style={{ padding: '0.75rem 1rem' }}>{p.volume}</td>
+                                    <td style={{ padding: '0.75rem 1rem' }}>{p.price_open?.toFixed(3)}</td>
+                                    <td style={{ padding: '0.75rem 1rem' }}>{p.price_current?.toFixed(3)}</td>
+                                    <td style={{ padding: '0.75rem 1rem', color: '#a8a8a8' }}>
+                                      {p.sl > 0 ? p.sl : '-'} / {p.tp > 0 ? p.tp : '-'}
+                                    </td>
+                                    <td style={{ padding: '0.75rem 1rem', textAlign: 'right', fontWeight: 600, color: p.profit >= 0 ? '#24a148' : '#fa4d56' }}>
+                                      ${p.profit?.toFixed(2)}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      ) : (
+                        <div style={{ padding: '3rem 1rem', textAlign: 'center', backgroundColor: '#262626', color: '#8d8d8d', borderRadius: '4px', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                          <DataBase size={32} style={{ opacity: 0.5, marginBottom: '1rem' }} />
+                          <p style={{ margin: 0 }}>No open positions in MT5.</p>
+                        </div>
+                      )}
                     </div>
-                  ) : (
-                    <div style={{ padding: '4rem', textAlign: 'center', backgroundColor: '#262626', color: '#8d8d8d', borderRadius: '4px' }}>
-                      <DataBase size={32} style={{ opacity: 0.5, marginBottom: '1rem' }} />
-                      <p>No open positions in MT5.</p>
+                  </DashboardPanel>
+
+                  {/* Right Column (50%): XAUUSD Candlestick Chart */}
+                  <DashboardPanel
+                    title="XAUUSD"
+                    tooltipInfo="Interactive candlestick chart depicting trades and executions."
+                  >
+                    <div style={{ height: "100%", width: "100%", overflow: "hidden", position: "relative", background: '#262626' }}>
+                      <CandlestickChart symbol="XAUUSD" trades={mergedTrades} signals={signals} />
                     </div>
-                  )}
-                </Tile>
+                  </DashboardPanel>
+                </div>
 
                 <div style={{ marginTop: 0 }}>
                   <TradeHistoryTable trades={trades} title="Trade History" onReload={fetchTrades} />

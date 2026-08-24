@@ -8,10 +8,11 @@ interface DashboardPanelProps {
   title: string;
   tooltipInfo?: string;
   onExportCsv?: () => void;
+  headerActions?: React.ReactNode;
   children: React.ReactNode;
 }
 
-export default function DashboardPanel({ title, tooltipInfo, onExportCsv, children }: DashboardPanelProps) {
+export default function DashboardPanel({ title, tooltipInfo, onExportCsv, headerActions, children }: DashboardPanelProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -78,7 +79,8 @@ export default function DashboardPanel({ title, tooltipInfo, onExportCsv, childr
             </Tooltip>
           )}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center' }} className="nodrag">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }} className="nodrag">
+          {headerActions}
           {onExportCsv && (
             <OverflowMenu 
               flipped 

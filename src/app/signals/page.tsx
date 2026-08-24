@@ -1,13 +1,13 @@
 "use client";
 
 import { Grid, Column } from "@carbon/react";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import dynamic from "next/dynamic";
 import GlobalTable from "../../components/GlobalTable";
 import GlobalDetailTable from "../../components/GlobalDetailTable";
 import { useGlobalState } from "../../contexts/GlobalStateContext";
 import DashboardPanel from "../../components/DashboardPanel";
-import RangeBarPyramidVisualizer from "../../components/RangeBarPyramidVisualizer";
+import ElasticTimeFilter, { TimeRangeValue, getDefaultTimeRange } from "../../components/ElasticTimeFilter";
 import { API_BASE_URL } from '@/config/env';
 import { formatJakartaDateTime } from "../../utils/date";
 
@@ -17,6 +17,7 @@ import { getMarketRegimeFormat as getRegimeFormat, getEngineSourceFormat } from 
 export default function SignalsPage() {
   const [selectedItem, setSelectedItem] = useState<{ id: number; type: 'signal' | 'feature_snapshot' } | null>(null);
   const [signals, setSignals] = useState<any[]>([]);
+  const [timeFilter, setTimeFilter] = useState<TimeRangeValue>(getDefaultTimeRange());
   const { signals: liveSignals } = useGlobalState();
 
   const headers = [
@@ -180,11 +181,6 @@ export default function SignalsPage() {
         <h3 style={{ fontWeight: 400 }}>Signals</h3>
       </Column>
 
-      {/* Range Bar & Pyramiding Monitor */}
-      <Column lg={16} md={8} sm={4} style={{ marginBottom: "0.1rem" }}>
-        <RangeBarPyramidVisualizer />
-      </Column>
-
       {/* Chart + Table — stack on mobile, row on desktop */}
       <Column lg={16} md={8} sm={4}>
         <div className="signals-layout">
@@ -255,6 +251,17 @@ export default function SignalsPage() {
                   title=""
                   headers={headers}
                   fetchUrl={`${API_BASE_URL}/dashboard/signals`}
+                  extraParams={useMemo(() => ({
+                    start_time: timeFilter.startTime ? timeFilter.startTime.toISOString() : undefined,
+                    end_time: timeFilter.endTime ? timeFilter.endTime.toISOString() : undefined,
+                  }), [timeFilter])}
+                  timeFilter={timeFilter}
+                  toolbarActions={
+                    <ElasticTimeFilter 
+                      value={timeFilter} 
+                      onChange={setTimeFilter} 
+                    />
+                  }
                   onViewDetails={(id) => setSelectedItem({ id: Number(id), type: 'signal' })}
                   formatCell={formatCell}
                   onPageDataChange={setSignals}

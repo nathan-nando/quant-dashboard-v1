@@ -1,0 +1,51 @@
+# Quant Dashboard V1 - Subsystem Rules & Architecture
+
+`quant-dashboard-v1` is the web control portal for the Quant-V1 ecosystem, built with **Next.js (App Router)** and **IBM Carbon Design System**.
+
+---
+
+## 🏛️ Architecture & Component Layout
+
+- **Framework**: Next.js 15+ (App Router).
+- **Design System**: IBM Carbon React (`@carbon/react`, `@carbon/icons-react`, Carbon Grid).
+- **Charts**: Lightweight Charts by TradingView for real-time Range Bar candlestick charting.
+- **Layouting**: React Grid Layout for customizable dashboard widgets.
+- **Live Stream Integration**: Server-Sent Events (SSE) connecting to `http://localhost:8000/api/dashboard/stream`.
+
+---
+
+## ⚡ Key Dashboard Capabilities
+
+1. **Range Bar Telemetry Monitor**:
+   - Live progress indicator of current active bar formation `[$X.XX / $1.50] (0% - 100%)`.
+   - Metrics: Price Velocity (\$/sec), Bar Duration (sec), Streak Count, Bar Velocity Sparkline.
+2. **Pyramiding Decision State Widget**:
+   - Visual indicators for 4 layers: `L1 Base`, `L2 Add`, `L3 Waiting`, `L4 Cap`.
+   - Cluster average price and Dynamic Trailing Stop locking indicator.
+3. **Pure Range Bar Charting**:
+   - Candlestick stream driven by discrete \$1.50 range bars.
+   - Event marker overlays (`ENTRY`, `+P2`, `+P3`, `+P4`, `TRAIL`).
+   - Timeframe switcher: `RANGE ($1.50)`, `M1`, `M5`, `H1`.
+4. **Macro Soft-Switching & Threshold Control**:
+   - Visual regime status (*Strong Bullish, Moderate Bullish, Neutral, Moderate Bearish, Strong Bearish*).
+   - Interactive sliders/inputs to tune probability thresholds.
+
+---
+
+## 🛠️ Critical Rules for Dashboard Development
+
+1. **Carbon Design Compliance**:
+   - Always use IBM Carbon React design components (`Button`, `Tile`, `Tag`, `ProgressBar`, `InlineLoading`, `DataTable`) and IBM Carbon color tokens (`@carbon/styles`, `g100` / dark theme tokens).
+   - Avoid generic ad-hoc styles when a Carbon component/token exists.
+2. **Next.js App Router Conventions**:
+   - Follow Next.js App Router guidelines (`app/layout.tsx`, `app/page.tsx`, client components marked with `'use client'`).
+3. **SSE Connection Resilience**:
+   - Always handle SSE disconnects, reconnect backoffs, and stream state reset gracefully.
+4. **Verification & Build Rules (IMPORTANT)**:
+   - **No Full Rebuilds for UI Changes**: For UI/component changes, DO NOT run `npm run build`.
+   - **Type Checking Only**: Only run `npx tsc` (or `npx tsc --noEmit`) to verify TypeScript correctness.
+   - **Node Environment**: The system uses `nvm` (Node Version Manager).
+5. **Commands**:
+   - Install dependencies: `npm install`
+   - Run dev server: `npm run dev` (Access at `http://localhost:3000`)
+   - Verify TypeScript: `npx tsc --noEmit`

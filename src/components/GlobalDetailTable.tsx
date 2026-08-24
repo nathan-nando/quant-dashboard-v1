@@ -29,7 +29,7 @@ const CollapsibleJSON = ({
   };
 
   return (
-    <div style={{ background: 'transparent', border: '1px dashed #8d8d8d', color: 'inherit', padding: '0.5rem', borderRadius: '4px', width: 'fit-content', maxWidth: '100%' }}>
+    <div style={{ background: 'transparent', border: '1px dashed #8d8d8d', color: 'inherit', padding: '0.5rem', borderRadius: '0', width: 'fit-content', maxWidth: '100%' }}>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
         <button 
           type="button" 
@@ -175,7 +175,7 @@ export default function GlobalDetailTable({ id, type = 'signal', dataObj, onClos
                   ? '#fa4d56'
                   : '#f1c21b'
               }`,
-              borderRadius: '4px',
+              borderRadius: '0',
               padding: '0.75rem',
               marginBottom: '1rem',
               display: 'flex',
@@ -445,7 +445,7 @@ export default function GlobalDetailTable({ id, type = 'signal', dataObj, onClos
               <div style={{ marginBottom: "1.5rem", borderTop: "1px solid #393939", paddingTop: "1rem" }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: "1.25rem" }}>
                   <h4 style={{ fontSize: "1rem", margin: 0 }}>Model Explainibilty</h4>
-                  <span style={{ fontSize: "0.75rem", color: "#a8a8a8", background: "#262626", padding: "2px 8px", borderRadius: "12px" }}>
+                  <span style={{ fontSize: "0.75rem", color: "#a8a8a8", background: "#262626", padding: "2px 8px", borderRadius: "0" }}>
                     {explainability?.total_features || allContribs.length} features evaluated
                   </span>
                 </div>

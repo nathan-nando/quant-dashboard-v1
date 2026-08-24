@@ -278,7 +278,12 @@ export default function Home() {
                  <MarketSummaryWidget />
                </div>
 
-                 <CandlestickChart symbol="XAUUSD" onHistoryUpdate={(data) => chartHistoryRef.current = data} signals={nonShadowSignals} />
+                  <CandlestickChart 
+                    symbol="XAUUSD" 
+                    onHistoryUpdate={(data) => chartHistoryRef.current = data} 
+                    signals={nonShadowSignals} 
+                    trades={mergedTrades} 
+                  />
              </div>
           </DashboardPanel>
         </div>
