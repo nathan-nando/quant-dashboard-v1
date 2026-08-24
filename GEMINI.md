@@ -41,11 +41,10 @@
    - Follow Next.js App Router guidelines (`app/layout.tsx`, `app/page.tsx`, client components marked with `'use client'`).
 3. **SSE Connection Resilience**:
    - Always handle SSE disconnects, reconnect backoffs, and stream state reset gracefully.
-4. **Verification & Build Rules (IMPORTANT)**:
-   - **No Full Rebuilds for UI Changes**: For UI/component changes, DO NOT run `npm run build`.
-   - **Type Checking Only**: Only run `npx tsc` (or `npx tsc --noEmit`) to verify TypeScript correctness.
-   - **Node Environment**: The system uses `nvm` (Node Version Manager).
-5. **Commands**:
-   - Install dependencies: `npm install`
-   - Run dev server: `npm run dev` (Access at `http://localhost:3000`)
-   - Verify TypeScript: `npx tsc --noEmit`
+4. **Verification & Build Rules (IMPORTANT - WSL Environment Preferred)**:
+   - **Always Use WSL Environment**: All UI commands (type checking, docker build/up) must be executed in WSL (`/mnt/c/code/quant-v1/quant-dashboard-v1`).
+   - **Verification via Type Checking**: For UI/component changes, run `npx tsc --noEmit` via WSL. DO NOT run `npm run build`.
+   - **Container Rebuild (`make rebuild`)**: If and ONLY IF `npx tsc` passes with 0 errors, execute `make rebuild` in WSL.
+5. **Standard WSL Command Sequence**:
+   1. Check types: `wsl bash -c 'source ~/.nvm/nvm.sh && cd /mnt/c/code/quant-v1/quant-dashboard-v1 && npx tsc --noEmit'`
+   2. If passes: `wsl bash -c 'cd /mnt/c/code/quant-v1/quant-dashboard-v1 && make rebuild'`

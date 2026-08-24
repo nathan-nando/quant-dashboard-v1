@@ -54,6 +54,7 @@ export function GlobalStateProvider({ children }: { children: React.ReactNode })
           
           if (payload.total_trades !== undefined) setTotalTrades(payload.total_trades);
           if (payload.positions) setPositions(payload.positions);
+          if (payload.analytics) setAnalytics(payload.analytics);
           
           if (payload.flash_message) {
             const fm = payload.flash_message;
@@ -120,21 +121,8 @@ export function GlobalStateProvider({ children }: { children: React.ReactNode })
 
     connectSSE();
 
-    // 2. Fetch Today Analytics snapshot
-    const fetchTodayAnalytics = () => {
-      const analyticsUrl = `${API_BASE_URL}/dashboard/analytics?period=today`;
-      fetch(analyticsUrl)
-        .then(res => res.json())
-        .then(data => setAnalytics(data))
-        .catch(err => console.error("[GlobalState] Failed to load analytics", err));
-    };
-
-    fetchTodayAnalytics();
-    const analyticsInterval = setInterval(fetchTodayAnalytics, 10000);
-
     return () => {
       if (reconnectTimer) clearTimeout(reconnectTimer);
-      clearInterval(analyticsInterval);
       es?.close();
     };
   }, []);

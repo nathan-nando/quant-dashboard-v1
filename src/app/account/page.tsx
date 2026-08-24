@@ -27,9 +27,35 @@ function AccountContent() {
   const [positions, setPositions] = useState<any[]>([]);
   const [analytics, setAnalytics] = useState<any>(null);
   const [trades, setTrades] = useState<any[]>([]);
+  const [signalsHistory, setSignalsHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
   const [selectedSignalId, setSelectedSignalId] = useState<number | null>(null);
+
+  const fetchSignals = useCallback(() => {
+    return fetch(`${API_BASE_URL}/dashboard/signals?limit=100`)
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data.data)) setSignalsHistory(data.data);
+        else if (data.items) setSignalsHistory(data.items);
+        else if (Array.isArray(data)) setSignalsHistory(data);
+        else setSignalsHistory([]);
+      })
+      .catch(console.error);
+  }, []);
+
+  const allSignals = useMemo(() => {
+    const map = new Map<number, any>();
+    signalsHistory.forEach((s: any) => {
+      if (s.id) map.set(s.id, s);
+    });
+    (signals || []).forEach((s: any) => {
+      if (s.id) map.set(s.id, s);
+    });
+    const list = Array.from(map.values());
+    list.sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime());
+    return list.filter((s: any) => s.status !== 'SHADOW');
+  }, [signalsHistory, signals]);
 
   const mergedTrades = useMemo(() => {
     return trades.map(t => {
@@ -146,6 +172,7 @@ function AccountContent() {
     };
 
     fetchTrades();
+    fetchSignals();
 
     // Fetch All-Time Analytics for Account Page
     fetch(`${API_BASE_URL}/dashboard/analytics?period=all`)
@@ -159,7 +186,7 @@ function AccountContent() {
     return () => {
       eventSource.close();
     };
-  }, []);
+  }, [fetchSignals]);
 
   const handleTabChange = (tabId: string) => {
     router.push(`${pathname}?tab=${tabId}`);
@@ -424,7 +451,7 @@ function AccountContent() {
                     tooltipInfo="Interactive candlestick chart depicting trades and executions."
                   >
                     <div style={{ height: "100%", width: "100%", overflow: "hidden", position: "relative", background: '#262626' }}>
-                      <CandlestickChart symbol="XAUUSD" trades={mergedTrades} signals={signals} />
+                      <CandlestickChart symbol="XAUUSD" trades={mergedTrades} signals={allSignals} />
                     </div>
                   </DashboardPanel>
                 </div>

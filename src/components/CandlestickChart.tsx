@@ -34,7 +34,7 @@ interface HoverCandleInfo {
 
 export default function CandlestickChart({ 
   symbol = "XAUUSD", 
-  initialTimeframe = "RANGE_1.5",
+  initialTimeframe = "M15",
   onHistoryUpdate, 
   signals = [],
   trades = [],
@@ -87,6 +87,8 @@ export default function CandlestickChart({
       layout: {
         background: { type: ColorType.Solid, color: "transparent" },
         textColor: "#c6c6c6",
+        fontSize: 10,
+        fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
       },
       grid: {
         vertLines: { color: "#393939" },
@@ -102,8 +104,8 @@ export default function CandlestickChart({
       },
       rightPriceScale: {
         scaleMargins: {
-          top: 0.1,
-          bottom: 0.2,
+          top: 0.18,
+          bottom: 0.15,
         },
       },
       crosshair: {
@@ -347,10 +349,17 @@ export default function CandlestickChart({
     const tfConfig = TIMEFRAME_CONFIGS[timeframe] || { seconds: 300, isRange: false };
     const tfSeconds = tfConfig.seconds;
 
-    const allMarkers: any[] = [];
-
     // Helper to snap unix seconds in Jakarta time to closest chart candle
-    const snapToCandle = (timeJkt: number): number => {
+    const snapToCandle = (timeJkt: number): number | null => {
+        if (!dataRef.current || dataRef.current.length === 0) return null;
+        const firstTime = dataRef.current[0].time as number;
+        const lastTime = dataRef.current[dataRef.current.length - 1].time as number;
+        
+        // Prevent ancient/future timestamps beyond loaded candles
+        if (timeJkt < firstTime - tfSeconds * 2 || timeJkt > lastTime + tfSeconds * 2) {
+            return null;
+        }
+
         let closest = dataRef.current[0];
         let minDiff = Math.abs((closest.time as number) - timeJkt);
         for (const c of dataRef.current) {
@@ -360,45 +369,33 @@ export default function CandlestickChart({
         return closest.time as number;
     };
 
-    // 1. Process Signal Markers
-    if (showSignals && signals && signals.length > 0) {
-        signals.forEach(s => {
-            if (!s.timestamp) return;
-            const timeRawUtc = new Date(s.timestamp).getTime() / 1000;
-            if (isNaN(timeRawUtc)) return;
-            const timeRawJkt = timeRawUtc + JAKARTA_OFFSET_SECONDS;
-            const currentCandleTimeJkt = Math.floor(timeRawJkt / tfSeconds) * tfSeconds;
-            const targetTime = tfConfig.isRange ? Math.floor(timeRawJkt) : Math.floor(currentCandleTimeJkt);
-            const markerTime = snapToCandle(targetTime);
-            
-            const isShadow = s.status === 'SHADOW';
-            let color = isShadow ? '#8d8d8d' : '#e8e8e8';
-            let shape: any = isShadow ? 'square' : 'circle';
-            let position: any = 'aboveBar';
-            let text = 'N';
-            const meta = s.signal_metadata || {};
-            const layerIdx = Number(meta.layer_index || 1);
-
-            if (s.direction === 'BUY') {
-                color = isShadow ? '#8d8d8d' : (layerIdx > 1 ? '#42be65' : '#24a148'); 
-                shape = isShadow ? 'square' : 'arrowUp'; 
-                position = 'belowBar'; 
-                text = layerIdx > 1 ? `+P${layerIdx}` : 'SIG BUY';
-            } else if (s.direction === 'SELL') {
-                color = isShadow ? '#8d8d8d' : (layerIdx > 1 ? '#ff8389' : '#fa4d56'); 
-                shape = isShadow ? 'square' : 'arrowDown'; 
-                position = 'aboveBar'; 
-                text = layerIdx > 1 ? `+P${layerIdx}` : 'SIG SELL';
-            }
-
-            allMarkers.push({ time: markerTime as Time, position, color, shape, text, size: 0.6, isShadow, type: 'signal' });
-        });
+    interface BarMarkerSlot {
+        type: 'trade_entry' | 'trade_exit' | 'signal' | 'combined';
+        isBuy?: boolean;
+        isProfit?: boolean;
+        text: string;
+        color: string;
+        shape: any;
+        count: number;
+        netPnl?: number;
     }
 
-    // 2. Process Trade Markers (Entry and Exit)
+    // Map of candleTime -> { below?: BarMarkerSlot, above?: BarMarkerSlot }
+    // Consolidates markers per candle so texts never overlap vertically into unreadable towers
+    const barMarkersMap = new Map<number, {
+        below?: BarMarkerSlot;
+        above?: BarMarkerSlot;
+    }>();
+
+    const getOrCreateBar = (t: number) => {
+        if (!barMarkersMap.has(t)) barMarkersMap.set(t, {});
+        return barMarkersMap.get(t)!;
+    };
+
+    // 1. Process Trade Entries & Exits (if showTrades is active)
     if (showTrades && trades && trades.length > 0) {
         trades.forEach(t => {
-            // Trade Entry Marker
+            // Trade Entry
             if (t.entry_time) {
                 const entryUtc = new Date(t.entry_time).getTime() / 1000;
                 if (!isNaN(entryUtc)) {
@@ -406,28 +403,29 @@ export default function CandlestickChart({
                     const candleJkt = Math.floor(entryJkt / tfSeconds) * tfSeconds;
                     const targetTime = tfConfig.isRange ? Math.floor(entryJkt) : Math.floor(candleJkt);
                     const markerTime = snapToCandle(targetTime);
+                    if (markerTime !== null) {
+                        const bar = getOrCreateBar(markerTime);
+                        const isBuy = t.direction === 'BUY';
+                        const slot = isBuy ? 'below' : 'above';
 
-                    const isBuy = t.direction === 'BUY';
-                    const pos = isBuy ? 'belowBar' : 'aboveBar';
-                    const shape = isBuy ? 'arrowUp' : 'arrowDown';
-                    const color = isBuy ? '#24a148' : '#fa4d56';
-                    const volStr = t.volume ? `${t.volume}L` : '';
-                    const isOpen = t.status === 'OPEN';
-                    const text = `${isBuy ? 'BUY' : 'SELL'}${volStr ? ' ' + volStr : ''}${isOpen ? ' (Live)' : ''}`;
-
-                    allMarkers.push({
-                        time: markerTime as Time,
-                        position: pos,
-                        color,
-                        shape,
-                        text,
-                        size: 0.8,
-                        type: 'trade_entry'
-                    });
+                        if (!bar[slot] || bar[slot]!.type !== 'trade_entry') {
+                            bar[slot] = {
+                                type: 'trade_entry',
+                                isBuy: isBuy,
+                                text: isBuy ? 'BUY' : 'SELL',
+                                color: isBuy ? '#24a148' : '#fa4d56',
+                                shape: isBuy ? 'arrowUp' : 'arrowDown',
+                                count: 1
+                            };
+                        } else {
+                            bar[slot]!.count += 1;
+                            bar[slot]!.text = `${isBuy ? 'BUY' : 'SELL'} (${bar[slot]!.count}x)`;
+                        }
+                    }
                 }
             }
 
-            // Trade Exit Marker
+            // Trade Exit
             if (t.exit_time) {
                 const exitUtc = new Date(t.exit_time).getTime() / 1000;
                 if (!isNaN(exitUtc)) {
@@ -435,51 +433,126 @@ export default function CandlestickChart({
                     const candleJkt = Math.floor(exitJkt / tfSeconds) * tfSeconds;
                     const targetTime = tfConfig.isRange ? Math.floor(exitJkt) : Math.floor(candleJkt);
                     const markerTime = snapToCandle(targetTime);
+                    if (markerTime !== null) {
+                        const bar = getOrCreateBar(markerTime);
+                        const pnl = Number(t.pnl_money) || 0;
+                        const isBuy = t.direction === 'BUY';
+                        // BUY exits appear aboveBar; SELL exits appear belowBar
+                        const slot = isBuy ? 'above' : 'below';
 
-                    const pnl = Number(t.pnl_money);
-                    const isProfit = !isNaN(pnl) && pnl > 0;
-                    const isLoss = !isNaN(pnl) && pnl < 0;
-                    const pnlStr = !isNaN(pnl) ? (pnl >= 0 ? `+$${pnl.toFixed(1)}` : `-$${Math.abs(pnl).toFixed(1)}`) : '';
-                    const reason = String(t.close_reason || '').toUpperCase();
-                    let prefix = 'EXIT';
-                    if (reason.includes('TP_HIT') || reason.includes('TAKE PROFIT')) prefix = 'TP';
-                    else if (reason.includes('SL_HIT') || reason.includes('STOP LOSS')) prefix = 'SL';
-                    else if (reason.includes('TIMEOUT') || reason.includes('TIME_EXIT')) prefix = 'TIME';
-
-                    const exitText = pnlStr ? `${prefix} ${pnlStr}` : prefix;
-                    const exitColor = isProfit ? '#24a148' : (isLoss ? '#fa4d56' : '#c6c6c6');
-                    const exitPos = t.direction === 'BUY' ? 'aboveBar' : 'belowBar';
-
-                    allMarkers.push({
-                        time: markerTime as Time,
-                        position: exitPos,
-                        color: exitColor,
-                        shape: 'circle',
-                        text: exitText,
-                        size: 0.7,
-                        type: 'trade_exit'
-                    });
+                        if (!bar[slot] || bar[slot]!.type !== 'trade_exit') {
+                            bar[slot] = {
+                                type: 'trade_exit',
+                                netPnl: pnl,
+                                count: 1,
+                                text: pnl >= 0 ? `+$${pnl.toFixed(1)}` : `-$${Math.abs(pnl).toFixed(1)}`,
+                                color: pnl >= 0 ? '#42be65' : '#ff8389',
+                                shape: 'circle'
+                            };
+                        } else {
+                            const prev = bar[slot]!;
+                            prev.count += 1;
+                            prev.netPnl = (prev.netPnl || 0) + pnl;
+                            const net = prev.netPnl;
+                            prev.text = net >= 0 ? `+$${net.toFixed(1)} (${prev.count}x)` : `-$${Math.abs(net).toFixed(1)} (${prev.count}x)`;
+                            prev.color = net >= 0 ? '#42be65' : '#ff8389';
+                        }
+                    }
                 }
             }
         });
     }
 
-    // Deduplicate & Sort strictly ascending by time
-    const seen = new Map<string, any>();
-    for (const m of allMarkers) {
-        const key = `${m.time}-${m.position}-${m.text}`;
-        if (!seen.has(key)) seen.set(key, m);
+    // 2. Process Actionable Signals (BUY, SELL, Pyramiding +P2/+P3/+P4, Hold, Blocked)
+    if (showSignals && signals && signals.length > 0) {
+        signals.forEach(s => {
+            if (!s.timestamp) return;
+            // Ignore NEUTRAL and SHADOW signals to prevent chart pollution
+            if (s.direction !== 'BUY' && s.direction !== 'SELL') return;
+            if (s.status === 'SHADOW') return;
+
+            const timeRawUtc = new Date(s.timestamp).getTime() / 1000;
+            if (isNaN(timeRawUtc)) return;
+            const timeRawJkt = timeRawUtc + JAKARTA_OFFSET_SECONDS;
+            const currentCandleTimeJkt = Math.floor(timeRawJkt / tfSeconds) * tfSeconds;
+            const targetTime = tfConfig.isRange ? Math.floor(timeRawJkt) : Math.floor(currentCandleTimeJkt);
+            const markerTime = snapToCandle(targetTime);
+            if (markerTime === null) return;
+
+            const bar = getOrCreateBar(markerTime);
+            const isBuy = s.direction === 'BUY';
+            const meta = s.signal_metadata || {};
+            const layerIdx = Number(meta.layer_index || (s.remarks && s.remarks.includes('Layer') ? s.remarks.split('Layer')[1].trim().charAt(0) : 1));
+            
+            // Format Signal Text & Color by status and layer
+            let sigText = isBuy ? 'BUY' : 'SELL';
+            let sigColor = isBuy ? '#24a148' : '#fa4d56';
+
+            if (s.status === 'PYRAMID_HOLD') {
+                sigText = layerIdx > 1 ? `+P${layerIdx} [Hold]` : 'P-Hold';
+                sigColor = '#f1c21b';
+            } else if (s.status === 'GATE_BLOCKED' || s.status === 'RISK_BLOCKED' || s.status === 'DUPLICATE_BLOCKED') {
+                sigText = layerIdx > 1 ? `+P${layerIdx} [B]` : (isBuy ? 'BUY [B]' : 'SELL [B]');
+                sigColor = '#8d8d8d';
+            } else if (layerIdx > 1) {
+                sigText = `+P${layerIdx}`;
+                sigColor = isBuy ? '#42be65' : '#ff8389';
+            }
+
+            const slot = isBuy ? 'below' : 'above';
+
+            if (!bar[slot]) {
+                bar[slot] = {
+                    type: 'signal',
+                    isBuy: isBuy,
+                    text: sigText,
+                    color: sigColor,
+                    shape: isBuy ? 'arrowUp' : 'arrowDown',
+                    count: 1
+                };
+            } else if (bar[slot]!.type === 'signal') {
+                bar[slot]!.count += 1;
+                bar[slot]!.text = `${sigText} (${bar[slot]!.count}x)`;
+            } else if (bar[slot]!.type === 'trade_entry') {
+                // If trade entry already on this candle, enrich label if layer index or special state
+                if (layerIdx > 1) {
+                    bar[slot]!.text = `${bar[slot]!.text} (+P${layerIdx})`;
+                } else if (s.status === 'PYRAMID_HOLD') {
+                    bar[slot]!.text = `${bar[slot]!.text} (Hold)`;
+                }
+            }
+        });
     }
-    
-    const uniqueMarkers = Array.from(seen.values()).sort((a, b) => {
-        if (a.time !== b.time) return (a.time as number) - (b.time as number);
-        if (a.isShadow && !b.isShadow) return 1;
-        if (!a.isShadow && b.isShadow) return -1;
-        return 0;
-    }).map(({ isShadow, type, ...rest }) => rest);
+
+    // 3. Build Final Clean Sorted Marker Array
+    const allMarkers: any[] = [];
+    for (const [timeKey, bar] of barMarkersMap.entries()) {
+        if (bar.below) {
+            allMarkers.push({
+                time: timeKey as Time,
+                position: 'belowBar',
+                color: bar.below.color,
+                shape: bar.below.shape,
+                text: bar.below.text,
+                size: 0.5
+            });
+        }
+        if (bar.above) {
+            allMarkers.push({
+                time: timeKey as Time,
+                position: 'aboveBar',
+                color: bar.above.color,
+                shape: bar.above.shape,
+                text: bar.above.text,
+                size: 0.5
+            });
+        }
+    }
+
+    allMarkers.sort((a, b) => (a.time as number) - (b.time as number));
 
     try {
-        markersRef.current.setMarkers(uniqueMarkers);
+        markersRef.current.setMarkers(allMarkers);
     } catch (e) {
         console.error('Failed to set markers:', e);
     }
@@ -620,94 +693,90 @@ export default function CandlestickChart({
         <div style={{ width: '1px', height: '10px', background: '#393939' }} />
 
         {/* Compact Toggle for Signal Markers */}
-        {signals && signals.length > 0 && (
-          <label style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '3px', 
-            cursor: 'pointer', 
-            fontSize: '8.5px', 
-            color: showSignals ? '#f4f4f4' : '#8d8d8d', 
-            userSelect: 'none'
+        <label style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '3px', 
+          cursor: 'pointer', 
+          fontSize: '8.5px', 
+          color: showSignals ? '#f4f4f4' : '#8d8d8d', 
+          userSelect: 'none'
+        }}>
+          <span style={{ 
+            position: 'relative', 
+            display: 'inline-block', 
+            width: '15px', 
+            height: '8px' 
           }}>
-            <span style={{ 
-              position: 'relative', 
-              display: 'inline-block', 
-              width: '15px', 
-              height: '8px' 
-            }}>
-              <input 
-                type="checkbox" 
-                checked={showSignals} 
-                onChange={(e) => setShowSignals(e.target.checked)}
-                style={{ opacity: 0, width: 0, height: 0, position: 'absolute' }} 
-              />
-              <span style={{
-                position: 'absolute', 
-                top: 0, left: 0, right: 0, bottom: 0,
-                backgroundColor: showSignals ? '#24a148' : '#525252',
-                borderRadius: '8px',
-                transition: '0.15s'
-              }} />
-              <span style={{
-                position: 'absolute', 
-                top: '1px', 
-                left: showSignals ? '8px' : '1px', 
-                height: '6px', 
-                width: '6px', 
-                backgroundColor: '#ffffff', 
-                borderRadius: '50%',
-                transition: '0.15s'
-              }} />
-            </span>
-            <span>Sig</span>
-          </label>
-        )}
+            <input 
+              type="checkbox" 
+              checked={showSignals} 
+              onChange={(e) => setShowSignals(e.target.checked)}
+              style={{ opacity: 0, width: 0, height: 0, position: 'absolute' }} 
+            />
+            <span style={{
+              position: 'absolute', 
+              top: 0, left: 0, right: 0, bottom: 0,
+              backgroundColor: showSignals ? '#24a148' : '#525252',
+              borderRadius: '8px',
+              transition: '0.15s'
+            }} />
+            <span style={{
+              position: 'absolute', 
+              top: '1px', 
+              left: showSignals ? '8px' : '1px', 
+              height: '6px', 
+              width: '6px', 
+              backgroundColor: '#ffffff', 
+              borderRadius: '50%',
+              transition: '0.15s'
+            }} />
+          </span>
+          <span>Sig</span>
+        </label>
 
         {/* Compact Toggle for Trade Markers */}
-        {trades && trades.length > 0 && (
-          <label style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '3px', 
-            cursor: 'pointer', 
-            fontSize: '8.5px', 
-            color: showTrades ? '#f4f4f4' : '#8d8d8d', 
-            userSelect: 'none'
+        <label style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '3px', 
+          cursor: 'pointer', 
+          fontSize: '8.5px', 
+          color: showTrades ? '#f4f4f4' : '#8d8d8d', 
+          userSelect: 'none'
+        }}>
+          <span style={{ 
+            position: 'relative', 
+            display: 'inline-block', 
+            width: '15px', 
+            height: '8px' 
           }}>
-            <span style={{ 
-              position: 'relative', 
-              display: 'inline-block', 
-              width: '15px', 
-              height: '8px' 
-            }}>
-              <input 
-                type="checkbox" 
-                checked={showTrades} 
-                onChange={(e) => setShowTrades(e.target.checked)}
-                style={{ opacity: 0, width: 0, height: 0, position: 'absolute' }} 
-              />
-              <span style={{
-                position: 'absolute', 
-                top: 0, left: 0, right: 0, bottom: 0,
-                backgroundColor: showTrades ? '#0f62fe' : '#525252',
-                borderRadius: '8px',
-                transition: '0.15s'
-              }} />
-              <span style={{
-                position: 'absolute', 
-                top: '1px', 
-                left: showTrades ? '8px' : '1px', 
-                height: '6px', 
-                width: '6px', 
-                backgroundColor: '#ffffff', 
-                borderRadius: '50%',
-                transition: '0.15s'
-              }} />
-            </span>
-            <span>Trades</span>
-          </label>
-        )}
+            <input 
+              type="checkbox" 
+              checked={showTrades} 
+              onChange={(e) => setShowTrades(e.target.checked)}
+              style={{ opacity: 0, width: 0, height: 0, position: 'absolute' }} 
+            />
+            <span style={{
+              position: 'absolute', 
+              top: 0, left: 0, right: 0, bottom: 0,
+              backgroundColor: showTrades ? '#0f62fe' : '#525252',
+              borderRadius: '8px',
+              transition: '0.15s'
+            }} />
+            <span style={{
+              position: 'absolute', 
+              top: '1px', 
+              left: showTrades ? '8px' : '1px', 
+              height: '6px', 
+              width: '6px', 
+              backgroundColor: '#ffffff', 
+              borderRadius: '50%',
+              transition: '0.15s'
+            }} />
+          </span>
+          <span>Trades</span>
+        </label>
       </div>
 
       {/* Candlestick Hover Popover / Tooltip */}

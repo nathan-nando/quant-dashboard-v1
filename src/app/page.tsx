@@ -21,17 +21,45 @@ import { API_BASE_URL } from '@/config/env';
 import { formatJakartaDateTime } from '../utils/date';
 import { getMarketRegimeFormat as getRegimeFormat, getEngineSourceFormat } from '../utils/formatters';
 
+import { useCallback } from "react";
+
 export default function Home() {
   const { state, signals, totalTrades, positions } = useGlobalState();
-
-  const nonShadowSignals = useMemo(() => {
-    return (signals || []).filter((s: any) => s.status !== 'SHADOW');
-  }, [signals]);
+  const [signalsHistory, setSignalsHistory] = useState<any[]>([]);
 
   const latestSignalIdRef = useRef<number | null>(null);
   const chartHistoryRef = useRef<any[]>([]);
   const [trades, setTrades] = useState<any[]>([]);
   const [isMobile, setIsMobile] = useState(false);
+
+  const fetchSignals = useCallback(() => {
+    fetch(`${API_BASE_URL}/dashboard/signals?limit=100`)
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data.data)) setSignalsHistory(data.data);
+        else if (data.items) setSignalsHistory(data.items);
+        else if (Array.isArray(data)) setSignalsHistory(data);
+        else setSignalsHistory([]);
+      })
+      .catch(err => console.error("Failed to fetch signals in dashboard", err));
+  }, []);
+
+  const allSignals = useMemo(() => {
+    const map = new Map<number, any>();
+    signalsHistory.forEach((s: any) => {
+      if (s.id) map.set(s.id, s);
+    });
+    (signals || []).forEach((s: any) => {
+      if (s.id) map.set(s.id, s);
+    });
+    const list = Array.from(map.values());
+    list.sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime());
+    return list;
+  }, [signalsHistory, signals]);
+
+  const nonShadowSignals = useMemo(() => {
+    return allSignals.filter((s: any) => s.status !== 'SHADOW');
+  }, [allSignals]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -56,7 +84,8 @@ export default function Home() {
 
   useEffect(() => {
     fetchTrades();
-  }, [totalTrades]);
+    fetchSignals();
+  }, [totalTrades, fetchSignals]);
 
   const mergedTrades = useMemo(() => {
     return trades.map(t => {

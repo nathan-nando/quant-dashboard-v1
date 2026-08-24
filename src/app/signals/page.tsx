@@ -1,7 +1,7 @@
 "use client";
 
 import { Grid, Column } from "@carbon/react";
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import dynamic from "next/dynamic";
 import GlobalTable from "../../components/GlobalTable";
 import GlobalDetailTable from "../../components/GlobalDetailTable";
@@ -17,8 +17,52 @@ import { getMarketRegimeFormat as getRegimeFormat, getEngineSourceFormat } from 
 export default function SignalsPage() {
   const [selectedItem, setSelectedItem] = useState<{ id: number; type: 'signal' | 'feature_snapshot' } | null>(null);
   const [signals, setSignals] = useState<any[]>([]);
+  const [chartSignals, setChartSignals] = useState<any[]>([]);
+  const [chartTrades, setChartTrades] = useState<any[]>([]);
   const [timeFilter, setTimeFilter] = useState<TimeRangeValue>(getDefaultTimeRange());
   const { signals: liveSignals } = useGlobalState();
+
+  const fetchChartData = useCallback(() => {
+    // 1. Fetch Signals for chart
+    const sigUrl = new URL(`${API_BASE_URL}/dashboard/signals`);
+    sigUrl.searchParams.set("limit", "200");
+    if (timeFilter.startTime) sigUrl.searchParams.set("start_time", timeFilter.startTime.toISOString());
+    if (timeFilter.endTime) sigUrl.searchParams.set("end_time", timeFilter.endTime.toISOString());
+    
+    fetch(sigUrl.toString())
+      .then(res => res.json())
+      .then(data => {
+        const list = Array.isArray(data.data) ? data.data : (Array.isArray(data) ? data : []);
+        setChartSignals(list);
+      })
+      .catch(err => console.error("Failed to fetch chart signals", err));
+
+    // 2. Fetch Trades for chart
+    fetch(`${API_BASE_URL}/dashboard/trades?limit=200`)
+      .then(res => res.json())
+      .then(data => {
+        const list = Array.isArray(data.data) ? data.data : (Array.isArray(data) ? data : []);
+        setChartTrades(list);
+      })
+      .catch(err => console.error("Failed to fetch chart trades", err));
+  }, [timeFilter]);
+
+  useEffect(() => {
+    fetchChartData();
+  }, [fetchChartData]);
+
+  const allChartSignals = useMemo(() => {
+    const map = new Map<number, any>();
+    chartSignals.forEach((s: any) => {
+      if (s.id) map.set(s.id, s);
+    });
+    (liveSignals || []).forEach((s: any) => {
+      if (s.id) map.set(s.id, s);
+    });
+    const list = Array.from(map.values());
+    list.sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime());
+    return list.filter((s: any) => s.status !== 'SHADOW');
+  }, [chartSignals, liveSignals]);
 
   const headers = [
     { key: "timestamp", header: "Time" },
@@ -210,7 +254,7 @@ export default function SignalsPage() {
                     Neutral
                   </span>
                 </div>
-                <CandlestickChart symbol="XAUUSD" signals={signals} />
+                <CandlestickChart symbol="XAUUSD" signals={allChartSignals} trades={chartTrades} />
               </div>
             </DashboardPanel>
           </div>
