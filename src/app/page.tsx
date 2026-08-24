@@ -12,7 +12,6 @@ import { Responsive, WidthProvider } from 'react-grid-layout/legacy';
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 const CandlestickChart = dynamic(() => import('../components/CandlestickChart'), { ssr: false });
-import MarketSummaryWidget from '../components/MarketSummaryWidget';
 import MacroSnapshot from '../components/MacroSnapshot';
 import HMMRegimeGauges from '../components/HMMRegimeGauges';
 import RangeBarPyramidVisualizer from '../components/RangeBarPyramidVisualizer';
@@ -146,9 +145,11 @@ export default function Home() {
   const signalHeaders = [
     { key: "direction", header: "Signal", width: "75px" },
     { key: "timestamp", header: "Time" },
-    { key: "entry_price", header: "Price / SL / TP / R:R" },
+    { key: "entry_price", header: "Price" },
     { key: "model", header: "Model" },
     { key: "status", header: "Status", width: "80px" },
+    { key: "validation_outcome", header: "Outcome" },
+    { key: "remarks", header: "Remarks" },
   ];
   const [selectedSignal, setSelectedSignal] = useState<number | null>(null);
 
@@ -288,25 +289,6 @@ export default function Home() {
                    <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#e8e8e8' }}/>
                    Neutral
                  </span>
-               </div>
-
-               {/* Market Summary Overlay HUD */}
-               <div 
-                 className="chart-market-summary-hud"
-                 style={{
-                   position: 'absolute',
-                   top: '5px',
-                   left: '140px',
-                   right: '160px',
-                   zIndex: 5,
-                   background: 'none',
-                   padding: '0',
-                   border: 'none',
-                   boxShadow: 'none',
-                   pointerEvents: 'none' // Let clicks pass through to chart
-                 }}
-               >
-                 <MarketSummaryWidget />
                </div>
 
                   <CandlestickChart 
@@ -507,6 +489,80 @@ export default function Home() {
                         <span style={{ color: '#8d8d8d', whiteSpace: 'nowrap' }}>{readableValue}</span>
                       </div>
                     );
+                  }
+                  if (col.includes("validation_outcome")) {
+                    const rowId = cellId.split(':')[0];
+                    const signal = row || (nonShadowSignals || []).find((s: any) => String(s.id) === String(rowId));
+                    const outcome = signal?.validation_outcome || (signal?.signal_correct === true ? 'WIN' : (signal?.signal_correct === false ? 'LOSS' : null));
+                    const barrier = signal?.validation_barrier;
+                    const realizedPips = signal?.realized_pips !== undefined && signal?.realized_pips !== null ? Number(signal.realized_pips) : (signal?.actual_magnitude !== null && signal?.actual_magnitude !== undefined ? Number(signal.actual_magnitude) : null);
+                    const mfe = signal?.mfe_pips !== undefined ? Number(signal.mfe_pips) : null;
+                    const mae = signal?.mae_pips !== undefined ? Number(signal.mae_pips) : null;
+                    const vetoEval = signal?.veto_evaluation || 'NONE';
+
+                    if (!outcome && !barrier) {
+                      if (signal?.direction === 'NEUTRAL' && !signal?.actual_direction) {
+                        return <span style={{ color: '#6f6f6f', fontSize: '9.5px' }}>-</span>;
+                      }
+                      return (
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '9.5px', color: '#11a3c6' }}>
+                          <span style={{ display: 'inline-block', width: 5, height: 5, borderRadius: '50%', background: '#11a3c6' }} />
+                          <span>Tracking</span>
+                        </div>
+                      );
+                    }
+
+                    const isWin = outcome === 'WIN';
+                    const isLoss = outcome === 'LOSS';
+                    const outcomeColor = isWin ? '#24a148' : (isLoss ? '#fa4d56' : '#f1c21b');
+                    const barrierText = barrier ? `[${barrier}]` : '';
+                    const pipsText = realizedPips !== null ? `${realizedPips >= 0 ? '+' : ''}${realizedPips.toFixed(1)}p` : '';
+
+                    return (
+                      <div style={{ display: 'flex', flexDirection: 'column', lineHeight: '1.2' }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          <span style={{ 
+                            backgroundColor: isWin ? 'rgba(36, 161, 72, 0.15)' : 'rgba(250, 77, 86, 0.15)',
+                            color: outcomeColor,
+                            border: `1px solid ${outcomeColor}`,
+                            padding: '1px 4px',
+                            borderRadius: '2px',
+                            fontSize: '9.5px',
+                            fontWeight: 'bold',
+                            whiteSpace: 'nowrap'
+                          }}>
+                            {isWin ? '✓ WIN' : '✗ LOSS'} {barrierText} {pipsText}
+                          </span>
+                        </div>
+                        {(mfe !== null || mae !== null) && (
+                          <div style={{ fontSize: '8.5px', color: '#a8a8a8', marginTop: '1px' }}>
+                            <span style={{ color: '#24a148' }}>+{mfe?.toFixed(1) || '0.0'}</span>
+                            <span style={{ margin: '0 2px' }}>|</span>
+                            <span style={{ color: '#fa4d56' }}>-{mae?.toFixed(1) || '0.0'}</span>
+                          </div>
+                        )}
+                        {vetoEval === 'SAVED_LOSS' && (
+                          <span style={{ fontSize: '8px', color: '#24a148', fontWeight: 'bold' }}>
+                            🛡️ Saved Loss
+                          </span>
+                        )}
+                        {vetoEval === 'MISSED_PROFIT' && (
+                          <span style={{ fontSize: '8px', color: '#f1c21b', fontWeight: 'bold' }}>
+                            ⚠️ Missed Profit
+                          </span>
+                        )}
+                      </div>
+                    );
+                  }
+                  if (col.includes("remarks")) {
+                    const rowId = cellId.split(':')[0];
+                    const signal = row || (nonShadowSignals || []).find((s: any) => String(s.id) === String(rowId));
+                    const rowDir = String(signal?.direction || row?.direction || '').toUpperCase();
+                    if (rowDir === 'BUY' || rowDir === 'SELL' || !value) {
+                      return <span style={{ color: '#525252' }}>-</span>;
+                    }
+                    const isError = String(value).toLowerCase().includes("error") || String(value).toLowerCase().includes("rejected") || String(value).toLowerCase().includes("blocked") || String(value).toLowerCase().includes("exceeded");
+                    return <span style={{ color: isError ? '#fa4d56' : '#f1c21b', fontSize: '0.65rem', lineHeight: '1.25', display: 'inline-block' }}>{value}</span>;
                   }
                   return value;
                 }}

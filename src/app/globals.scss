@@ -209,34 +209,25 @@ main {
   padding-bottom: 0 !important;
 }
 
-/* Prevent Pagination Tooltip from overflowing right and triggering horizontal scroll */
+/* Hide ONLY the tooltip/popover floating bubble on pagination buttons, keep buttons visible */
 .cds--pagination,
 .bx--pagination {
   position: relative;
-  overflow: visible !important;
   width: 100% !important;
 }
 
-.cds--pagination .cds--pagination__control-buttons,
-.bx--pagination .bx--pagination__control-buttons {
-  position: relative;
-}
-
-.cds--pagination .cds--pagination__button--forward .cds--popover,
-.cds--pagination .cds--pagination__button--forward [role="tooltip"],
-.cds--pagination .cds--pagination__button--forward .cds--popover-content,
-.cds--pagination .cds--pagination__control-buttons button:last-child .cds--popover,
-.cds--pagination .cds--pagination__control-buttons button:last-child [role="tooltip"],
-.cds--pagination .cds--pagination__control-buttons button:last-child .cds--popover-content {
-  left: auto !important;
-  right: 0 !important;
-  transform: translateX(-15px) !important;
-}
-
-.cds--pagination .cds--pagination__button--forward .cds--popover-caret,
-.cds--pagination .cds--pagination__control-buttons button:last-child .cds--popover-caret {
-  right: 12px !important;
-  left: auto !important;
+.cds--pagination .cds--popover-content,
+.cds--pagination .cds--popover-caret,
+.cds--pagination [role="tooltip"],
+.bx--pagination .bx--popover-content,
+.bx--pagination .bx--popover-caret,
+.bx--pagination [role="tooltip"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 /* Remove border, shadow, and radius from modal container & dialogs */

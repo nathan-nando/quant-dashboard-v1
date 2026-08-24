@@ -195,7 +195,7 @@ export default function TradeHistoryTable({
   const headers = [
     { key: "formatted_dir_status", header: "Status", width: "60px" },
     { key: "formatted_entry_time", header: "Time", width: isLiveTrades ? "75px" : "120px" },
-    { key: "formatted_entry_price", header: isLiveTrades ? "Price (Entry/Current) / Lots" : "Price (Entry/Exit) / Lots" },
+    { key: "formatted_entry_price", header: "Price" },
     { key: "formatted_pnl_money", header: "PnL", width: "65px" },
     ...(isLiveTrades ? [] : [{ key: "formatted_close_reason", header: "Reason", width: "95px" }]),
     ...(hideRegime ? [] : [{ key: "regime", header: "Regime", width: "85px" }]),

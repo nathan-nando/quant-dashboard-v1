@@ -412,14 +412,14 @@ export default function CandlestickChart({
                             bar[slot] = {
                                 type: 'trade_entry',
                                 isBuy: isBuy,
-                                text: isBuy ? 'BUY' : 'SELL',
+                                text: '',
                                 color: isBuy ? '#24a148' : '#fa4d56',
                                 shape: isBuy ? 'arrowUp' : 'arrowDown',
                                 count: 1
                             };
                         } else {
                             bar[slot]!.count += 1;
-                            bar[slot]!.text = `${isBuy ? 'BUY' : 'SELL'} (${bar[slot]!.count}x)`;
+                            bar[slot]!.text = `${bar[slot]!.count}x`;
                         }
                     }
                 }
@@ -445,8 +445,8 @@ export default function CandlestickChart({
                                 type: 'trade_exit',
                                 netPnl: pnl,
                                 count: 1,
-                                text: pnl >= 0 ? `+$${pnl.toFixed(1)}` : `-$${Math.abs(pnl).toFixed(1)}`,
-                                color: pnl >= 0 ? '#42be65' : '#ff8389',
+                                text: pnl >= 0 ? `+${pnl.toFixed(1)}` : `-${Math.abs(pnl).toFixed(1)}`,
+                                color: pnl >= 0 ? '#24a148' : '#fa4d56',
                                 shape: 'circle'
                             };
                         } else {
@@ -454,8 +454,8 @@ export default function CandlestickChart({
                             prev.count += 1;
                             prev.netPnl = (prev.netPnl || 0) + pnl;
                             const net = prev.netPnl;
-                            prev.text = net >= 0 ? `+$${net.toFixed(1)} (${prev.count}x)` : `-$${Math.abs(net).toFixed(1)} (${prev.count}x)`;
-                            prev.color = net >= 0 ? '#42be65' : '#ff8389';
+                            prev.text = net >= 0 ? `+${net.toFixed(1)}` : `-${Math.abs(net).toFixed(1)}`;
+                            prev.color = net >= 0 ? '#24a148' : '#fa4d56';
                         }
                     }
                 }
@@ -463,7 +463,7 @@ export default function CandlestickChart({
         });
     }
 
-    // 2. Process Actionable Signals (BUY, SELL, Pyramiding +P2/+P3/+P4, Hold, Blocked)
+    // 2. Process Actionable Signals (BUY, SELL, Pyramiding +P2/+P3/+P4)
     if (showSignals && signals && signals.length > 0) {
         signals.forEach(s => {
             if (!s.timestamp) return;
@@ -483,29 +483,10 @@ export default function CandlestickChart({
             const isBuy = s.direction === 'BUY';
             const meta = s.signal_metadata || {};
             const layerIdx = Number(meta.layer_index || (s.remarks && s.remarks.includes('Layer') ? s.remarks.split('Layer')[1].trim().charAt(0) : 1));
-            
-            // Format Signal Text & Color by status and layer
-            let sigText = isBuy ? 'BUY' : 'SELL';
-            let sigColor = isBuy ? '#24a148' : '#fa4d56';
 
-            const valOutcome = s.validation_outcome || (s.signal_correct === true ? 'WIN' : (s.signal_correct === false ? 'LOSS' : null));
-
-            if (s.status === 'PYRAMID_HOLD') {
-                sigText = layerIdx > 1 ? `+P${layerIdx} [Hold]` : 'P-Hold';
-                sigColor = '#f1c21b';
-            } else if (s.status === 'GATE_BLOCKED' || s.status === 'RISK_BLOCKED' || s.status === 'DUPLICATE_BLOCKED') {
-                sigText = layerIdx > 1 ? `+P${layerIdx} [B]` : (isBuy ? 'BUY [B]' : 'SELL [B]');
-                sigColor = '#8d8d8d';
-            } else if (layerIdx > 1) {
-                sigText = `+P${layerIdx}`;
-                sigColor = isBuy ? '#42be65' : '#ff8389';
-            }
-
-            if (valOutcome === 'WIN') {
-                sigText = `${sigText} ✓`;
-            } else if (valOutcome === 'LOSS') {
-                sigText = `${sigText} ✗`;
-            }
+            // Only show layer numbers or count numbers - no words
+            const sigText = layerIdx > 1 ? `+P${layerIdx}` : '';
+            const sigColor = isBuy ? '#24a148' : '#fa4d56';
 
             const slot = isBuy ? 'below' : 'above';
 
@@ -520,13 +501,10 @@ export default function CandlestickChart({
                 };
             } else if (bar[slot]!.type === 'signal') {
                 bar[slot]!.count += 1;
-                bar[slot]!.text = `${sigText} (${bar[slot]!.count}x)`;
+                bar[slot]!.text = layerIdx > 1 ? `+P${layerIdx}` : (bar[slot]!.count > 1 ? `${bar[slot]!.count}x` : '');
             } else if (bar[slot]!.type === 'trade_entry') {
-                // If trade entry already on this candle, enrich label if layer index or special state
                 if (layerIdx > 1) {
-                    bar[slot]!.text = `${bar[slot]!.text} (+P${layerIdx})`;
-                } else if (s.status === 'PYRAMID_HOLD') {
-                    bar[slot]!.text = `${bar[slot]!.text} (Hold)`;
+                    bar[slot]!.text = `+P${layerIdx}`;
                 }
             }
         });
@@ -542,7 +520,7 @@ export default function CandlestickChart({
                 color: bar.below.color,
                 shape: bar.below.shape,
                 text: bar.below.text,
-                size: 0.5
+                size: bar.below.shape === 'circle' ? 0.6 : 0.8
             });
         }
         if (bar.above) {
@@ -552,7 +530,7 @@ export default function CandlestickChart({
                 color: bar.above.color,
                 shape: bar.above.shape,
                 text: bar.above.text,
-                size: 0.5
+                size: bar.above.shape === 'circle' ? 0.6 : 0.8
             });
         }
     }

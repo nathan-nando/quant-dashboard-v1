@@ -68,11 +68,11 @@ export default function SignalsPage() {
   const headers = [
     { key: "timestamp", header: "Time" },
     { key: "direction", header: "Signal" },
-    { key: "entry_price", header: "Price / SL / TP / R:R" },
-    { key: "validation_outcome", header: "Ground-Truth Outcome" },
+    { key: "entry_price", header: "Price" },
     { key: "model", header: "Model" },
     { key: "regime", header: "Regime" },
     { key: "status", header: "Status" },
+    { key: "validation_outcome", header: "Outcome" },
     { key: "remarks", header: "Remarks" },
   ];
 
@@ -217,7 +217,12 @@ export default function SignalsPage() {
       );
     }
     if (col.includes("remarks")) {
-      if (!value) return <span style={{ color: '#525252' }}>-</span>;
+      const rowId = cellId.split(':')[0];
+      const signal = row || signals.find((s: any) => String(s.id) === String(rowId));
+      const rowDir = String(signal?.direction || row?.direction || '').toUpperCase();
+      if (rowDir === 'BUY' || rowDir === 'SELL' || !value) {
+        return <span style={{ color: '#525252' }}>-</span>;
+      }
       const isError = String(value).toLowerCase().includes("error") || String(value).toLowerCase().includes("rejected") || String(value).toLowerCase().includes("blocked") || String(value).toLowerCase().includes("exceeded");
       return <span style={{ color: isError ? '#fa4d56' : '#f1c21b', fontSize: '0.65rem', lineHeight: '1.25', display: 'inline-block' }}>{value}</span>;
     }
