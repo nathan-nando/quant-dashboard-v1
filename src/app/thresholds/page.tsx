@@ -22,6 +22,14 @@ export default function ThresholdsPage() {
     trading_mode: "SCALPING",
     scalping_tp_pips: 60.0,
     scalping_sl_pips: 40.0,
+    trend_sl_pips: 40.0,
+    trend_tp_pips: 60.0,
+    counter_scalp_sl_pips: 20.0,
+    counter_scalp_tp_pips: 25.0,
+    sideways_sl_pips: 20.0,
+    sideways_tp_pips: 35.0,
+    volatile_sl_pips: 45.0,
+    volatile_tp_pips: 70.0,
     scalping_max_holding_minutes: 15,
     scalping_max_trades_per_day: 80,
     scalping_max_trades_per_hour: 15,
@@ -51,7 +59,8 @@ export default function ThresholdsPage() {
     "range-engine": true,
     "macro-regime": true,
     "risk-capital": true,
-    "position-pyramid": true
+    "position-pyramid": true,
+    "dynamic-sltp": true
   });
 
   const [loading, setLoading] = useState(true);
@@ -119,6 +128,7 @@ export default function ThresholdsPage() {
   const macroKeys = ["scalping_base_confidence", "macro_soft_switch_sensitivity", "macro_refresh_interval_minutes"];
   const riskKeys = ["auto_execution_enabled", "use_equity_kill_switch", "max_drawdown_equity_pct", "use_daily_kill_switch", "max_daily_drawdown_pct", "risk_per_trade_pct", "scalping_max_spread_pips", "macro_news_buffer_minutes", "macro_vix_pause_threshold", "scalping_max_consecutive_losses", "scalping_consecutive_loss_cooldown_minutes", "post_loss_cooldown_bars", "scalping_max_trades_per_hour", "scalping_max_trades_per_day"];
   const pyramidKeys = ["pyramiding_enabled", "pyramiding_max_layers", "pyramiding_step_pips", "cluster_trailing_stop_enabled", "trailing_stop_pips", "scalping_sl_pips", "scalping_tp_pips", "close_on_opposite_range_bar"];
+  const dynamicKeys = ["trend_sl_pips", "trend_tp_pips", "counter_scalp_sl_pips", "counter_scalp_tp_pips", "sideways_sl_pips", "sideways_tp_pips", "volatile_sl_pips", "volatile_tp_pips"];
 
   if (loading) return <div>Loading threshold configuration...</div>;
 
@@ -504,6 +514,139 @@ export default function ThresholdsPage() {
                       onChange={(e: any, { value }: any) => updateConfig("trailing_stop_pips", value)}
                       disabled={!config.cluster_trailing_stop_enabled}
                     />
+                  </div>
+                </div>
+              </div>
+            )}
+          </Tile>
+        </Column>
+
+        <Column sm={4} md={8} lg={16} style={{ marginBottom: "0.1rem" }}>
+          <Tile style={{ borderLeft: hasChanges(dynamicKeys) ? "4px solid #f1c21b" : "none", padding: "1.25rem" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <h5 style={{ fontWeight: 600, color: "#f4f4f4" }}>🎯 5. Regime-Aware Dynamic SL & TP Matrix</h5>
+              <Button 
+                kind="ghost" 
+                hasIconOnly 
+                size="sm"
+                iconDescription={visibleCategories["dynamic-sltp"] ? "Hide" : "Show"}
+                renderIcon={visibleCategories["dynamic-sltp"] ? ViewOff : View}
+                onClick={() => toggleCategory("dynamic-sltp")}
+              />
+            </div>
+            {visibleCategories["dynamic-sltp"] && (
+              <div style={{ marginTop: "0.75rem" }}>
+                {/* 1. Trend Mode */}
+                <div style={{ marginBottom: "1rem", padding: "0.75rem", background: "rgba(255,255,255,0.03)", borderRadius: "4px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "0.5rem" }}>
+                    <span style={{ fontWeight: 600, color: "#42be65" }}>📈 1. Bull / Bear Trend Mode</span>
+                    <Tag type="green" size="sm">Pyramiding: Active (Multi-Layer)</Tag>
+                    <Tag type="gray" size="sm">Triple Aligned</Tag>
+                  </div>
+                  <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
+                    <div style={{ width: "190px" }}>
+                      <NumberInput
+                        id="trend_sl_pips"
+                        label="Trend Stop Loss (Pips)"
+                        value={config.trend_sl_pips || 40.0}
+                        min={5.0} max={100.0} step={1.0}
+                        onChange={(e: any, { value }: any) => updateConfig("trend_sl_pips", value)}
+                      />
+                    </div>
+                    <div style={{ width: "190px" }}>
+                      <NumberInput
+                        id="trend_tp_pips"
+                        label="Trend Take Profit (Pips)"
+                        value={config.trend_tp_pips || 60.0}
+                        min={10.0} max={200.0} step={1.0}
+                        onChange={(e: any, { value }: any) => updateConfig("trend_tp_pips", value)}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. Counter Scalp Mode */}
+                <div style={{ marginBottom: "1rem", padding: "0.75rem", background: "rgba(255,255,255,0.03)", borderRadius: "4px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "0.5rem" }}>
+                    <span style={{ fontWeight: 600, color: "#f1c21b" }}>⚡ 2. Counter Scalp Mode (Exhaustion & Fading)</span>
+                    <Tag type="purple" size="sm">Single Layer Only (1L)</Tag>
+                    <Tag type="red" size="sm">Strict No-Pyramiding</Tag>
+                  </div>
+                  <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
+                    <div style={{ width: "190px" }}>
+                      <NumberInput
+                        id="counter_scalp_sl_pips"
+                        label="Counter SL (Pips)"
+                        value={config.counter_scalp_sl_pips || 20.0}
+                        min={5.0} max={50.0} step={1.0}
+                        onChange={(e: any, { value }: any) => updateConfig("counter_scalp_sl_pips", value)}
+                      />
+                    </div>
+                    <div style={{ width: "190px" }}>
+                      <NumberInput
+                        id="counter_scalp_tp_pips"
+                        label="Counter TP (Pips)"
+                        value={config.counter_scalp_tp_pips || 25.0}
+                        min={5.0} max={60.0} step={1.0}
+                        onChange={(e: any, { value }: any) => updateConfig("counter_scalp_tp_pips", value)}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. Sideways Mode */}
+                <div style={{ marginBottom: "1rem", padding: "0.75rem", background: "rgba(255,255,255,0.03)", borderRadius: "4px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "0.5rem" }}>
+                    <span style={{ fontWeight: 600, color: "#4589ff" }}>🔄 3. Sideways / Range Mode (Mean Reversion)</span>
+                    <Tag type="cyan" size="sm">Mean Reversion (1L)</Tag>
+                  </div>
+                  <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
+                    <div style={{ width: "190px" }}>
+                      <NumberInput
+                        id="sideways_sl_pips"
+                        label="Sideways SL (Pips)"
+                        value={config.sideways_sl_pips || 20.0}
+                        min={5.0} max={50.0} step={1.0}
+                        onChange={(e: any, { value }: any) => updateConfig("sideways_sl_pips", value)}
+                      />
+                    </div>
+                    <div style={{ width: "190px" }}>
+                      <NumberInput
+                        id="sideways_tp_pips"
+                        label="Sideways TP (Pips)"
+                        value={config.sideways_tp_pips || 35.0}
+                        min={10.0} max={100.0} step={1.0}
+                        onChange={(e: any, { value }: any) => updateConfig("sideways_tp_pips", value)}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 4. Volatile Mode */}
+                <div style={{ padding: "0.75rem", background: "rgba(255,255,255,0.03)", borderRadius: "4px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "0.5rem" }}>
+                    <span style={{ fontWeight: 600, color: "#fa4d56" }}>🌊 4. Volatile Expansion Mode (High VIX / Shock)</span>
+                    <Tag type="magenta" size="sm">Half Lot Risk (0.5x)</Tag>
+                  </div>
+                  <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
+                    <div style={{ width: "190px" }}>
+                      <NumberInput
+                        id="volatile_sl_pips"
+                        label="Volatile SL (Pips)"
+                        value={config.volatile_sl_pips || 45.0}
+                        min={10.0} max={150.0} step={1.0}
+                        onChange={(e: any, { value }: any) => updateConfig("volatile_sl_pips", value)}
+                      />
+                    </div>
+                    <div style={{ width: "190px" }}>
+                      <NumberInput
+                        id="volatile_tp_pips"
+                        label="Volatile TP (Pips)"
+                        value={config.volatile_tp_pips || 70.0}
+                        min={15.0} max={250.0} step={1.0}
+                        onChange={(e: any, { value }: any) => updateConfig("volatile_tp_pips", value)}
+                      />
+                    </div>
                   </div>
                 </div>
               </div>

@@ -36,6 +36,12 @@ export default function RegimeBadge({ regime, fontSize = '9.5px' }: RegimeBadgeP
             <path d="M20 7l-1.41 1.41L21.17 11H6v2h15.17l-2.58 2.59L20 17l6-5-6-5zm-8 10l1.41-1.41L10.83 13H26v-2H10.83l2.58-2.59L12 7l-6 5 6 5z" />
           </svg>
         );
+      case 'volatile':
+        return (
+          <svg width="11" height="11" viewBox="0 0 32 32" style={{ fill: '#fa4d56', flexShrink: 0 }}>
+            <path d="M27.71 18.29l-9-9a1 1 0 0 0-1.42 0l-5 5L4.71 6.71 3.29 8.12l8.29 8.29a1 1 0 0 0 1.42 0l5-5 8.29 8.3z" />
+          </svg>
+        );
       case 'manual':
         return (
           <svg width="11" height="11" viewBox="0 0 32 32" style={{ fill: '#8a3ffc', flexShrink: 0 }}>

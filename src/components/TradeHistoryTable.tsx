@@ -198,8 +198,7 @@ export default function TradeHistoryTable({
     { key: "formatted_entry_price", header: isLiveTrades ? "Price (Entry/Current) / Lots" : "Price (Entry/Exit) / Lots" },
     { key: "formatted_pnl_money", header: "PnL", width: "65px" },
     ...(isLiveTrades ? [] : [{ key: "formatted_close_reason", header: "Reason", width: "95px" }]),
-    ...(hideRegime ? [] : [{ key: "regime", header: "Regime", width: "80px" }]),
-    { key: "model_version", header: "Model" },
+    ...(hideRegime ? [] : [{ key: "regime", header: "Regime", width: "85px" }]),
   ];
 
   const formatCell = (cellId: string, value: any) => {

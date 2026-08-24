@@ -154,11 +154,11 @@ export default function Home() {
 
   const defaultLayouts = {
     lg: [
-      { i: 'top_metrics', x: 0, y: 0, w: 7.4, h: 0.55, minW: 4, minH: 0.4 },
-      { i: 'chart', x: 0, y: 0.55, w: 4.1, h: 4.45, minW: 3, minH: 2 },
-      { i: 'range_pyramid', x: 4.1, y: 0.55, w: 3.3, h: 4.45, minW: 2.5, minH: 2 },
-      { i: 'live_trades', x: 7.4, y: 0, w: 2.6, h: 2.5, minW: 2, minH: 1.5 },
-      { i: 'hmm_gauges', x: 7.4, y: 2.5, w: 2.6, h: 2.5, minW: 2, minH: 1.5 },
+      { i: 'top_metrics', x: 0, y: 0, w: 6.6, h: 0.55, minW: 3.5, minH: 0.4 },
+      { i: 'chart', x: 0, y: 0.55, w: 3.7, h: 4.45, minW: 3, minH: 2 },
+      { i: 'range_pyramid', x: 3.7, y: 0.55, w: 2.9, h: 4.45, minW: 2.5, minH: 2 },
+      { i: 'live_trades', x: 6.6, y: 0, w: 3.4, h: 2.5, minW: 2.5, minH: 1.5 },
+      { i: 'hmm_gauges', x: 6.6, y: 2.5, w: 3.4, h: 2.5, minW: 2.5, minH: 1.5 },
       { i: 'recent_trades', x: 0, y: 5.0, w: 5, h: 4.5, minW: 3, minH: 2 },
       { i: 'signals', x: 5, y: 5.0, w: 5, h: 4.5, minW: 3, minH: 2 }
     ],
@@ -198,14 +198,14 @@ export default function Home() {
       const keysToRemove: string[] = [];
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        if (key && (key.startsWith("quantDashboardLayout_") || key === "dashboard-layouts") && key !== "quantDashboardLayout_v59") {
+        if (key && (key.startsWith("quantDashboardLayout_") || key === "dashboard-layouts") && key !== "quantDashboardLayout_v60") {
           keysToRemove.push(key);
         }
       }
       keysToRemove.forEach(k => localStorage.removeItem(k));
     } catch (e) {}
 
-    const saved = localStorage.getItem('quantDashboardLayout_v59');
+    const saved = localStorage.getItem('quantDashboardLayout_v60');
     if (saved) {
       try {
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -216,7 +216,7 @@ export default function Home() {
 
   const handleLayoutChange = (layout: any, allLayouts: any) => {
     setLayouts(allLayouts);
-    localStorage.setItem("quantDashboardLayout_v59", JSON.stringify(allLayouts));
+    localStorage.setItem("quantDashboardLayout_v60", JSON.stringify(allLayouts));
   };
   return (
     <div style={{ maxWidth: '100%', padding: '0 2rem', position: 'relative' }}>
@@ -519,15 +519,14 @@ export default function Home() {
             title="Live Trades" 
             tooltipInfo="Currently open trades/positions."
             onExportCsv={() => {
-              const headers = ["Direction", "Entry Time", "Entry", "Current Price", "Lots", "Model", "Conf", "PnL"];
+              const headers = ["Direction", "Entry Time", "Entry", "Current Price", "Lots", "Regime", "PnL"];
               const rows = liveTrades.map(t => [
                 t.direction,
                 t.entry_time ? formatJakartaDateTime(t.entry_time).full : '',
                 t.entry_price || '',
                 t.exit_price || '',
                 t.volume || '',
-                t.model_version || '',
-                t.confidence ? (t.confidence * 100).toFixed(2) + '%' : '',
+                t.regime || '',
                 t.pnl_money || ''
               ].join(","));
               
@@ -542,7 +541,7 @@ export default function Home() {
             }}
           >
             <div style={{ height: "100%" }}>
-              <TradeHistoryTable trades={liveTrades} title="" hidePagination hideSearch compact isLiveTrades={true} hideRegime={true} onReload={fetchTrades} />
+              <TradeHistoryTable trades={liveTrades} title="" hidePagination hideSearch compact isLiveTrades={true} hideRegime={false} onReload={fetchTrades} />
             </div>
           </DashboardPanel>
         </div>
@@ -552,7 +551,7 @@ export default function Home() {
             title="Recent Trades" 
             tooltipInfo="Last 5 completed trade executions and closed positions."
             onExportCsv={() => {
-              const headers = ["Direction", "Entry Time", "Exit Time", "Entry Price", "Exit Price", "Lots", "PnL", "Reason", "Model"];
+              const headers = ["Direction", "Entry Time", "Exit Time", "Entry Price", "Exit Price", "Lots", "PnL", "Reason", "Regime"];
               const rows = recentClosedTrades.map(t => [
                 t.direction,
                 t.entry_time ? formatJakartaDateTime(t.entry_time).full : '',
@@ -562,7 +561,7 @@ export default function Home() {
                 t.volume || '',
                 t.pnl_money || '',
                 t.close_reason || '',
-                t.model_version || ''
+                t.regime || ''
               ].join(","));
               
               const csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n" + rows.join("\n");
@@ -576,7 +575,7 @@ export default function Home() {
             }}
           >
             <div style={{ height: "100%" }}>
-              <TradeHistoryTable trades={recentClosedTrades} title="" hidePagination hideSearch compact isLiveTrades={false} hideRegime={true} onReload={fetchTrades} />
+              <TradeHistoryTable trades={recentClosedTrades} title="" hidePagination hideSearch compact isLiveTrades={false} hideRegime={false} onReload={fetchTrades} />
             </div>
           </DashboardPanel>
         </div>

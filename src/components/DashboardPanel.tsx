@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useRef, useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Tile, IconButton, Tooltip, OverflowMenu, OverflowMenuItem, Modal } from '@carbon/react';
 import { Maximize, Minimize, Information, OverflowMenuVertical } from '@carbon/icons-react';
 
@@ -26,6 +27,11 @@ export default function DashboardPanel({
   const panelRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -83,17 +89,15 @@ export default function DashboardPanel({
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <h4 style={{ margin: 0, fontSize: '0.875rem', fontWeight: 600 }}>{title}</h4>
           {(tooltipInfo || infoModalContent) && (
-            <Tooltip align="bottom" label={tooltipInfo || (infoModalContent ? "Click to view architecture guide" : "")}>
+            <Tooltip align="bottom" label={tooltipInfo || "Click for details"}>
               <button 
                 style={{ 
                   background: 'none', 
                   border: 'none', 
                   cursor: infoModalContent ? 'pointer' : 'help', 
-                  padding: '2px', 
+                  padding: 0, 
                   display: 'flex', 
-                  alignItems: 'center',
-                  transform: 'translateY(-1px)',
-                  borderRadius: '2px'
+                  transform: 'translateY(-2px)' 
                 }} 
                 type="button"
                 onClick={(e) => {
@@ -103,7 +107,7 @@ export default function DashboardPanel({
                   }
                 }}
               >
-                <Information size={14} style={{ fill: infoModalContent ? '#78a9ff' : '#a8a8a8' }} />
+                <Information size={14} style={{ fill: '#a8a8a8' }} />
               </button>
             </Tooltip>
           )}
@@ -152,8 +156,8 @@ export default function DashboardPanel({
         {children}
       </div>
 
-      {/* Info Guide Modal */}
-      {infoModalContent && (
+      {/* Info Guide Modal - Rendered via Portal to document.body to avoid layout/grid trapping */}
+      {mounted && infoModalContent && showInfoModal && createPortal(
         <Modal
           open={showInfoModal}
           onRequestClose={() => setShowInfoModal(false)}
@@ -161,10 +165,11 @@ export default function DashboardPanel({
           passiveModal
           size="lg"
         >
-          <div style={{ padding: '0.5rem 0', maxHeight: '65vh', overflowY: 'auto' }}>
+          <div style={{ padding: '0.5rem 0', maxHeight: '70vh', overflowY: 'auto' }}>
             {infoModalContent}
           </div>
-        </Modal>
+        </Modal>,
+        document.body
       )}
     </Tile>
   );
