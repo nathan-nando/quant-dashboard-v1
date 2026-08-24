@@ -488,6 +488,8 @@ export default function CandlestickChart({
             let sigText = isBuy ? 'BUY' : 'SELL';
             let sigColor = isBuy ? '#24a148' : '#fa4d56';
 
+            const valOutcome = s.validation_outcome || (s.signal_correct === true ? 'WIN' : (s.signal_correct === false ? 'LOSS' : null));
+
             if (s.status === 'PYRAMID_HOLD') {
                 sigText = layerIdx > 1 ? `+P${layerIdx} [Hold]` : 'P-Hold';
                 sigColor = '#f1c21b';
@@ -497,6 +499,12 @@ export default function CandlestickChart({
             } else if (layerIdx > 1) {
                 sigText = `+P${layerIdx}`;
                 sigColor = isBuy ? '#42be65' : '#ff8389';
+            }
+
+            if (valOutcome === 'WIN') {
+                sigText = `${sigText} ✓`;
+            } else if (valOutcome === 'LOSS') {
+                sigText = `${sigText} ✗`;
             }
 
             const slot = isBuy ? 'below' : 'above';

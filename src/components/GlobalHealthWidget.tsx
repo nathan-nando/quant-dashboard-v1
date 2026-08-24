@@ -77,18 +77,34 @@ export default function GlobalHealthWidget({ models }: { models: any[] }) {
               </span>
             </div>
             <div className="health-widget-info-group">
-              <span className="health-widget-info-label">Win Rate</span>
-              <span style={{ fontWeight: 600 }}>{(h.rolling_win_rate * 100).toFixed(1)}%</span>
+              <span className="health-widget-info-label">Ground-Truth Win Rate</span>
+              <span style={{ fontWeight: 600, color: (h.rolling_win_rate >= 0.55 ? '#24a148' : '#f1c21b') }}>{(h.rolling_win_rate * 100).toFixed(1)}%</span>
             </div>
             <div className="health-widget-info-group">
-              <span className="health-widget-info-label">Live Trades</span>
-              <span style={{ fontWeight: 600 }}>{h.total_trades}</span>
+              <span className="health-widget-info-label">Validated Signals</span>
+              <span style={{ fontWeight: 600 }}>{h.total_signals || h.total_trades}</span>
+            </div>
+            <div className="health-widget-info-group">
+              <span className="health-widget-info-label">Live Trades (Exec)</span>
+              <span style={{ fontWeight: 600 }}>{h.total_trades} ({h.executed_win_rate ? (h.executed_win_rate * 100).toFixed(0) : '0'}% W)</span>
+            </div>
+            <div className="health-widget-info-group">
+              <span className="health-widget-info-label">Veto Efficiency</span>
+              <span style={{ fontWeight: 600, color: (h.veto_audit?.veto_efficiency >= 50 ? '#24a148' : '#f1c21b') }}>
+                {h.veto_audit ? `${h.veto_audit.veto_efficiency.toFixed(0)}%` : '0%'}
+              </span>
+            </div>
+            <div className="health-widget-info-group">
+              <span className="health-widget-info-label">Veto Audit (Loss / Profit)</span>
+              <span style={{ fontWeight: 600, fontSize: '0.8rem' }}>
+                <span style={{ color: '#24a148' }}>🛡️ {h.veto_audit?.saved_losses || 0}</span> | <span style={{ color: '#fa4d56' }}>⚠️ {h.veto_audit?.missed_profits || 0}</span>
+              </span>
             </div>
             <div className="health-widget-info-group">
               <span className="health-widget-info-label">Avg Conf (Win)</span>
               <span style={{ fontWeight: 600 }}>{h.average_confidence_win?.toFixed(3) || "0.000"}</span>
             </div>
-            <div className="health-widget-info-group" style={{ gridColumn: "span 2" }}>
+            <div className="health-widget-info-group">
               <span className="health-widget-info-label">Avg Conf (Loss)</span>
               <span style={{ fontWeight: 600 }}>{h.average_confidence_loss?.toFixed(3) || "0.000"}</span>
             </div>

@@ -317,6 +317,103 @@ export default function GlobalDetailTable({ id, type = 'signal', dataObj, onClos
             );
           })()}
 
+          {/* Ground-Truth Parallel Validation Card */}
+          {(() => {
+            const val = data.signal_metadata?.validation || data.metadata?.validation;
+            const outcome = data.validation_outcome || val?.outcome || (data.signal_correct === true ? 'WIN' : (data.signal_correct === false ? 'LOSS' : null));
+            const barrier = data.validation_barrier || val?.barrier_hit;
+            const realizedPips = data.realized_pips !== undefined && data.realized_pips !== null ? Number(data.realized_pips) : (val?.realized_pips !== undefined ? Number(val.realized_pips) : (data.actual_magnitude !== null && data.actual_magnitude !== undefined ? Number(data.actual_magnitude) : null));
+            const mfe = data.mfe_pips !== undefined && data.mfe_pips !== null ? Number(data.mfe_pips) : (val?.mfe_pips !== undefined ? Number(val.mfe_pips) : null);
+            const mae = data.mae_pips !== undefined && data.mae_pips !== null ? Number(data.mae_pips) : (val?.mae_pips !== undefined ? Number(val.mae_pips) : null);
+            const vetoEval = data.veto_evaluation || val?.veto_evaluation || 'NONE';
+            const barsElapsed = val?.bars_elapsed || 0;
+
+            const isWin = outcome === 'WIN';
+            const isLoss = outcome === 'LOSS';
+            const outcomeColor = isWin ? '#24a148' : (isLoss ? '#fa4d56' : '#11a3c6');
+
+            return (
+              <div style={{
+                background: 'rgba(255, 255, 255, 0.03)',
+                border: '1px solid #393939',
+                borderLeft: `4px solid ${outcomeColor}`,
+                borderRadius: '4px',
+                padding: '0.75rem 1rem',
+                marginBottom: '1.25rem'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#f4f4f4' }}>
+                    ⚡ Real-Time Ground-Truth Validation (Triple Barrier)
+                  </span>
+                  <span style={{
+                    fontSize: '0.75rem',
+                    fontWeight: 'bold',
+                    color: outcomeColor,
+                    backgroundColor: isWin ? 'rgba(36, 161, 72, 0.15)' : (isLoss ? 'rgba(250, 77, 86, 0.15)' : 'rgba(17, 163, 198, 0.15)'),
+                    padding: '2px 8px',
+                    borderRadius: '4px',
+                    border: `1px solid ${outcomeColor}`
+                  }}>
+                    {outcome ? `${isWin ? '✓ WIN' : '✗ LOSS'} [${barrier || 'RESOLVED'}]` : '⏳ ACTIVE FORWARD TRACKING'}
+                  </span>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                  <div style={{ background: 'rgba(0,0,0,0.2)', padding: '0.4rem 0.6rem', borderRadius: '2px' }}>
+                    <div style={{ fontSize: '0.7rem', color: '#a8a8a8' }}>Realized Pips</div>
+                    <div style={{ fontSize: '0.95rem', fontWeight: 'bold', color: realizedPips !== null ? (realizedPips >= 0 ? '#42be65' : '#ff8389') : '#ffffff' }}>
+                      {realizedPips !== null ? `${realizedPips >= 0 ? '+' : ''}${realizedPips.toFixed(1)} pips` : '-'}
+                    </div>
+                  </div>
+                  <div style={{ background: 'rgba(0,0,0,0.2)', padding: '0.4rem 0.6rem', borderRadius: '2px' }}>
+                    <div style={{ fontSize: '0.7rem', color: '#a8a8a8' }}>Max Favorable (MFE)</div>
+                    <div style={{ fontSize: '0.95rem', fontWeight: 'bold', color: '#24a148' }}>
+                      {mfe !== null ? `+${mfe.toFixed(1)} pips` : '-'}
+                    </div>
+                  </div>
+                  <div style={{ background: 'rgba(0,0,0,0.2)', padding: '0.4rem 0.6rem', borderRadius: '2px' }}>
+                    <div style={{ fontSize: '0.7rem', color: '#a8a8a8' }}>Max Adverse (MAE)</div>
+                    <div style={{ fontSize: '0.95rem', fontWeight: 'bold', color: '#fa4d56' }}>
+                      {mae !== null ? `-${mae.toFixed(1)} pips` : '-'}
+                    </div>
+                  </div>
+                  <div style={{ background: 'rgba(0,0,0,0.2)', padding: '0.4rem 0.6rem', borderRadius: '2px' }}>
+                    <div style={{ fontSize: '0.7rem', color: '#a8a8a8' }}>Bars Observed</div>
+                    <div style={{ fontSize: '0.95rem', fontWeight: 'bold', color: '#f4f4f4' }}>
+                      {barsElapsed} / 10 bars
+                    </div>
+                  </div>
+                </div>
+
+                {vetoEval !== 'NONE' && (
+                  <div style={{ fontSize: '0.75rem', marginTop: '0.4rem', padding: '0.3rem 0.5rem', background: 'rgba(255,255,255,0.02)', borderRadius: '2px' }}>
+                    <strong style={{ color: '#a8a8a8' }}>Filter Audit: </strong>
+                    {vetoEval === 'SAVED_LOSS' && (
+                      <span style={{ color: '#24a148', fontWeight: 'bold' }}>
+                        🛡️ SAVED LOSS — Macro/Risk filter successfully prevented a real-world loss.
+                      </span>
+                    )}
+                    {vetoEval === 'MISSED_PROFIT' && (
+                      <span style={{ color: '#f1c21b', fontWeight: 'bold' }}>
+                        ⚠️ MISSED PROFIT — Macro/Risk filter vetoed a signal that reached target TP.
+                      </span>
+                    )}
+                    {vetoEval === 'EXECUTED_PROFIT' && (
+                      <span style={{ color: '#24a148', fontWeight: 'bold' }}>
+                        🎯 EXECUTED PROFIT — Live trade executed and hit target barrier.
+                      </span>
+                    )}
+                    {vetoEval === 'EXECUTED_LOSS' && (
+                      <span style={{ color: '#fa4d56', fontWeight: 'bold' }}>
+                        🔻 EXECUTED LOSS — Live trade executed and hit stop loss.
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
           <h4 style={{ marginBottom: "1rem", fontSize: "1rem", borderTop: "1px solid #393939", paddingTop: "1rem" }}>Associated Trades</h4>
           {data.trades && data.trades.length > 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', marginBottom: '1rem' }}>

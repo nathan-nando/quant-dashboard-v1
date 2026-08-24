@@ -69,6 +69,7 @@ export default function SignalsPage() {
     { key: "timestamp", header: "Time" },
     { key: "direction", header: "Signal" },
     { key: "entry_price", header: "Price / SL / TP / R:R" },
+    { key: "validation_outcome", header: "Ground-Truth Outcome" },
     { key: "model", header: "Model" },
     { key: "regime", header: "Regime" },
     { key: "status", header: "Status" },
@@ -77,6 +78,70 @@ export default function SignalsPage() {
 
   const formatCell = (cellId: string, value: any, row?: any) => {
     const col = cellId.split('__')[1] || cellId.split(':').pop() || '';
+    if (col.includes("validation_outcome")) {
+      const rowId = cellId.split(':')[0];
+      const signal = row || signals.find((s: any) => String(s.id) === String(rowId));
+      const outcome = signal?.validation_outcome || (signal?.signal_correct === true ? 'WIN' : (signal?.signal_correct === false ? 'LOSS' : null));
+      const barrier = signal?.validation_barrier;
+      const realizedPips = signal?.realized_pips !== undefined && signal?.realized_pips !== null ? Number(signal.realized_pips) : (signal?.actual_magnitude !== null && signal?.actual_magnitude !== undefined ? Number(signal.actual_magnitude) : null);
+      const mfe = signal?.mfe_pips !== undefined ? Number(signal.mfe_pips) : null;
+      const mae = signal?.mae_pips !== undefined ? Number(signal.mae_pips) : null;
+      const vetoEval = signal?.veto_evaluation || 'NONE';
+
+      if (!outcome && !barrier) {
+        if (signal?.direction === 'NEUTRAL' && !signal?.actual_direction) {
+          return <span style={{ color: '#6f6f6f', fontSize: '10px' }}>-</span>;
+        }
+        return (
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '10px', color: '#11a3c6' }}>
+            <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#11a3c6' }} />
+            <span>Tracking...</span>
+          </div>
+        );
+      }
+
+      const isWin = outcome === 'WIN';
+      const isLoss = outcome === 'LOSS';
+      const outcomeColor = isWin ? '#24a148' : (isLoss ? '#fa4d56' : '#f1c21b');
+      const barrierText = barrier ? `[${barrier}]` : '';
+      const pipsText = realizedPips !== null ? `${realizedPips >= 0 ? '+' : ''}${realizedPips.toFixed(1)}p` : '';
+
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', lineHeight: '1.2' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+            <span style={{ 
+              backgroundColor: isWin ? 'rgba(36, 161, 72, 0.15)' : 'rgba(250, 77, 86, 0.15)',
+              color: outcomeColor,
+              border: `1px solid ${outcomeColor}`,
+              padding: '1px 5px',
+              borderRadius: '2px',
+              fontSize: '10px',
+              fontWeight: 'bold',
+              whiteSpace: 'nowrap'
+            }}>
+              {isWin ? '✓ WIN' : '✗ LOSS'} {barrierText} {pipsText}
+            </span>
+          </div>
+          {(mfe !== null || mae !== null) && (
+            <div style={{ fontSize: '9px', color: '#a8a8a8', marginTop: '2px' }}>
+              <span style={{ color: '#24a148' }}>MFE: +{mfe?.toFixed(1) || '0.0'}p</span>
+              <span style={{ margin: '0 3px' }}>|</span>
+              <span style={{ color: '#fa4d56' }}>MAE: -{mae?.toFixed(1) || '0.0'}p</span>
+            </div>
+          )}
+          {vetoEval === 'SAVED_LOSS' && (
+            <span style={{ fontSize: '8.5px', color: '#24a148', fontWeight: 'bold', marginTop: '1px' }}>
+              🛡️ Saved Loss
+            </span>
+          )}
+          {vetoEval === 'MISSED_PROFIT' && (
+            <span style={{ fontSize: '8.5px', color: '#f1c21b', fontWeight: 'bold', marginTop: '1px' }}>
+              ⚠️ Missed Profit
+            </span>
+          )}
+        </div>
+      );
+    }
     if (col.includes("timestamp") && value) {
       const { date, time } = formatJakartaDateTime(value);
       return (
