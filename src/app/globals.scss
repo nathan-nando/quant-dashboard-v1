@@ -737,12 +737,14 @@ main {
 }
 
 .signals-chart-wrapper {
-  flex: 0 0 50%;
+  flex: 0 0 35%;
+  min-width: 0;
   position: relative;
 }
 
 .signals-table-wrapper {
   flex: 1 1 0;
+  min-width: 0;
   position: relative;
 }
 
