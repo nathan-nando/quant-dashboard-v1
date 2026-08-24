@@ -216,10 +216,11 @@ export default function GlobalTable({
   };
 
   return (
-    <div style={{ position: 'relative' }}>
+    <div style={{ position: 'relative', height: '100%', display: 'flex', flexDirection: 'column' }}>
       <DataTable rows={processedData} headers={headers}>
         {({ rows, headers: tableHeaders, getHeaderProps, getTableProps }: any) => (
           <TableContainer 
+            style={{ flex: '1 1 auto', overflowX: 'auto', paddingBottom: 0 }}
             title={
               collapsible ? (
                 <div style={{ display: 'flex', justifyContent: 'space-between', cursor: 'pointer', alignItems: 'center', width: '100%' }} onClick={() => setIsCollapsed(!isCollapsed)}>
@@ -325,7 +326,7 @@ export default function GlobalTable({
                         return (
                           <TableCell key={cell.id} style={{ 
                             fontSize: compact ? "9.5px" : "11px", 
-                            padding: compact ? "0.15rem 0.3rem" : "0.4rem",
+                            padding: compact ? "0.15rem 0.3rem" : "0.25rem 0.4rem",
                             ...(headerConf?.width ? { width: headerConf.width } : {})
                           }}>
                             {formatCell ? formatCell(cell.id, cell.value, rawItem) : cell.value}
@@ -381,6 +382,8 @@ export default function GlobalTable({
           page={page}
           pageSize={pageSize}
           pageSizes={[5, 10, 20, 50, 100]}
+          backwardText="Previous page"
+          forwardText="Next page"
           onChange={(data: any) => {
             setPage(data.page);
             setPageSize(data.pageSize);

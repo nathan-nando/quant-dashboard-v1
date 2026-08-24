@@ -16,10 +16,12 @@ import MarketSummaryWidget from '../components/MarketSummaryWidget';
 import MacroSnapshot from '../components/MacroSnapshot';
 import HMMRegimeGauges from '../components/HMMRegimeGauges';
 import RangeBarPyramidVisualizer from '../components/RangeBarPyramidVisualizer';
+import EventDrivenEngineGuide from '../components/EventDrivenEngineGuide';
 import { useGlobalState } from '../contexts/GlobalStateContext';
 import { API_BASE_URL } from '@/config/env';
 import { formatJakartaDateTime } from '../utils/date';
 import { getMarketRegimeFormat as getRegimeFormat, getEngineSourceFormat } from '../utils/formatters';
+import RegimeBadge from '../components/RegimeBadge';
 
 import { useCallback } from "react";
 
@@ -415,13 +417,7 @@ export default function Home() {
                     );
                   }
                   if (col.includes("regime")) {
-                    const format = getRegimeFormat(value);
-                    const parts = format.text.split(' ');
-                    return (
-                      <span style={{ color: format.color, fontWeight: 'bold', fontSize: '9px', display: 'inline-block', lineHeight: '1.1' }}>
-                        {parts.map((p, i) => <span key={i}>{p}{i < parts.length - 1 && <br/>}</span>)}
-                      </span>
-                    );
+                    return <RegimeBadge regime={value} fontSize="9.5px" />;
                   }
                   if (col.includes("model")) {
                     const rowId = cellId.split(':')[0];
@@ -588,7 +584,9 @@ export default function Home() {
         <div key="range_pyramid">
           <DashboardPanel 
             title="Event-Driven Price Engine" 
-            tooltipInfo="Live range bar builder and pyramiding scale-in state."
+            tooltipInfo="Live range bar builder and pyramiding scale-in state (Click for architecture guide)."
+            infoModalTitle="Event-Driven Price Engine (Micro, Meso, Macro & Pyramiding)"
+            infoModalContent={<EventDrivenEngineGuide />}
           >
             <RangeBarPyramidVisualizer />
           </DashboardPanel>

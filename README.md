@@ -7,18 +7,19 @@
 ## 🌟 Fitur Utama Dashboard
 
 ### 1. ⚡ Event-Driven Price Engine Monitor
-* **Current Range Progress:** Menampilkan status pembentukan Range Bar aktif `[$X.XX / $1.50] (0% - 100%)`.
+* **Current Range Progress:** Menampilkan status pembentukan Range Bar aktif `[$X.XX / $2.00] (0% - 100%)`.
 * **Telemetry Metrics:** Live *Price Velocity* (\$/detik), *Bar Duration* (detik), *Streak Direction*, dan frekuensi tick.
 * **Bar Velocity Momentum Sparkline:** Visualisasi batang kecepatan 8 bar terakhir untuk mendeteksi akselerasi (**`▲ Accelerating`**) atau deselerasi (**`▼ Decelerating`**) momentum.
-* **Pyramiding Scale-In State:** Visualisasi status keputusan 4 layer (**`L1 Base`**, **`L2 Add`**, **`L3 Waiting`**, **`L4 Cap`**), rata-rata harga klaster, dan level penguncian *Dynamic Trailing Stop*.
+* **Pyramiding Scale-In State:** Visualisasi status keputusan 3 layer (**`L1 Base`**, **`L2 Add`**, **`L3 Cap`**), rata-rata harga klaster, dan level penguncian *Dynamic Trailing Stop*.
 
 ### 2. 📊 Pure Range Bar Charting & Multi-View Context
-* **Range Bar Candlestick:** Grafik candlestick berbasis pergerakan harga diskret (\$1.50) murni via **Lightweight Charts**.
-* **Event Overlays:** Penanda pin eksekusi langsung di atas grafik (`ENTRY`, `+P2`, `+P3`, `+P4`, `TRAIL`).
+* **Range Bar Candlestick:** Grafik candlestick berbasis pergerakan harga diskret (\$2.00) murni via **Lightweight Charts**.
+* **Event Overlays:** Penanda pin eksekusi langsung di atas grafik (`ENTRY`, `+P2`, `+P3`, `TRAIL`).
 * **Multi-View Context Timeframes:** Pilihan tampilan instan:
-  * **`RANGE ($1.50)`**: Struktur eksekusi event-driven.
+  * **`RANGE ($2.00)`**: Struktur eksekusi event-driven.
   * **`M1 (Micro)`**: Aksi harga mikro intraday.
   * **`M5 (Intraday)`**: Struktur pasar intraday.
+  * **`M15`**: Default timeframe intraday.
   * **`H1 (Macro Context)`**: Konteks tren makro.
 
 ### 3. 🌐 Macro Soft-Switching & Regime Detection

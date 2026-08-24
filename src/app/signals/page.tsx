@@ -13,6 +13,7 @@ import { formatJakartaDateTime } from "../../utils/date";
 
 const CandlestickChart = dynamic(() => import("../../components/CandlestickChart"), { ssr: false });
 import { getMarketRegimeFormat as getRegimeFormat, getEngineSourceFormat } from "../../utils/formatters";
+import RegimeBadge from "../../components/RegimeBadge";
 
 export default function SignalsPage() {
   const [selectedItem, setSelectedItem] = useState<{ id: number; type: 'signal' | 'feature_snapshot' } | null>(null);
@@ -86,7 +87,10 @@ export default function SignalsPage() {
       );
     }
     if (col.includes("status")) {
-      if (value === "PYRAMID_HOLD") {
+      const valUpper = String(value || '').toUpperCase();
+      const rowDir = String(row?.direction || '').toUpperCase();
+
+      if (valUpper === "PYRAMID_HOLD") {
         return (
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 'bold', fontSize: '11px' }}>
             <svg width="12" height="12" viewBox="0 0 32 32" style={{ fill: '#f1c21b', flexShrink: 0 }}>
@@ -96,7 +100,7 @@ export default function SignalsPage() {
           </div>
         );
       }
-      if (value === "PENDING_EXECUTION") {
+      if (valUpper === "PENDING_EXECUTION") {
         return (
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 'bold', fontSize: '11px' }}>
             <svg width="12" height="12" viewBox="0 0 32 32" style={{ fill: '#11a3c6', flexShrink: 0 }}>
@@ -106,7 +110,7 @@ export default function SignalsPage() {
           </div>
         );
       }
-      if (value === "EXECUTED") {
+      if (valUpper === "EXECUTED") {
         return (
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 'bold', fontSize: '11px' }}>
             <svg width="12" height="12" viewBox="0 0 32 32" style={{ fill: '#24a148', flexShrink: 0 }}>
@@ -116,13 +120,23 @@ export default function SignalsPage() {
           </div>
         );
       }
-      if (value === "NEW") {
+      if (valUpper === "NEW") {
         return (
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 'bold', fontSize: '11px' }}>
             <svg width="12" height="12" viewBox="0 0 32 32" style={{ fill: '#fa4d56', flexShrink: 0 }}>
               <circle cx="16" cy="16" r="8" />
             </svg>
             <span style={{ color: '#ffffff', whiteSpace: 'nowrap' }}>New</span>
+          </div>
+        );
+      }
+      if (valUpper === "NEUTRAL" || valUpper === "IGNORED" || rowDir === "NEUTRAL" || !value) {
+        return (
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 'bold', fontSize: '11px' }}>
+            <svg width="12" height="12" viewBox="0 0 32 32" style={{ fill: '#6f6f6f', flexShrink: 0 }}>
+              <circle cx="16" cy="16" r="8" />
+            </svg>
+            <span style={{ color: '#8d8d8d', whiteSpace: 'nowrap' }}>Ignored</span>
           </div>
         );
       }
@@ -173,13 +187,7 @@ export default function SignalsPage() {
       );
     }
     if (col.includes("regime")) {
-      const format = getRegimeFormat(value);
-      const parts = format.text.split(' ');
-      return (
-        <span style={{ color: format.color, fontWeight: 'bold', fontSize: '0.85em', display: 'inline-block', lineHeight: '1.1' }}>
-          {parts.map((p, i) => <span key={i}>{p}{i < parts.length - 1 && <br/>}</span>)}
-        </span>
-      );
+      return <RegimeBadge regime={value} fontSize="9.5px" />;
     }
     if (col.includes("model")) {
       const rowId = cellId.split(':')[0];

@@ -17,15 +17,15 @@
 ## ⚡ Key Dashboard Capabilities
 
 1. **Range Bar Telemetry Monitor**:
-   - Live progress indicator of current active bar formation `[$X.XX / $1.50] (0% - 100%)`.
+   - Live progress indicator of current active bar formation `[$X.XX / $2.00] (0% - 100%)`.
    - Metrics: Price Velocity (\$/sec), Bar Duration (sec), Streak Count, Bar Velocity Sparkline.
 2. **Pyramiding Decision State Widget**:
-   - Visual indicators for 4 layers: `L1 Base`, `L2 Add`, `L3 Waiting`, `L4 Cap`.
+   - Visual indicators for 3 layers: `L1 Base`, `L2 Add`, `L3 Cap`.
    - Cluster average price and Dynamic Trailing Stop locking indicator.
 3. **Pure Range Bar Charting**:
-   - Candlestick stream driven by discrete \$1.50 range bars.
-   - Event marker overlays (`ENTRY`, `+P2`, `+P3`, `+P4`, `TRAIL`).
-   - Timeframe switcher: `RANGE ($1.50)`, `M1`, `M5`, `H1`.
+   - Candlestick stream driven by discrete \$2.00 range bars (Micro scale).
+   - Event marker overlays (`ENTRY`, `+P2`, `+P3`, `TRAIL`).
+   - Timeframe switcher: `RANGE ($2.00)`, `M1`, `M5`, `M15`, `H1`.
 4. **Macro Soft-Switching & Threshold Control**:
    - Visual regime status (*Strong Bullish, Moderate Bullish, Neutral, Moderate Bearish, Strong Bearish*).
    - Interactive sliders/inputs to tune probability thresholds.

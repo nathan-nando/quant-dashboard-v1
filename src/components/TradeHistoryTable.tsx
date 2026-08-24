@@ -46,6 +46,7 @@ interface Trade {
 }
 
 import { getMarketRegimeFormat as getRegimeFormat, getEngineSourceFormat } from '../utils/formatters';
+import RegimeBadge from './RegimeBadge';
 
 const getFriendlyRegimeText = (regime: string) => {
   if (!regime) return '';
@@ -491,12 +492,7 @@ export default function TradeHistoryTable({
       const reg = trade.regime;
       if (!reg || reg === '-') return <span style={{ color: '#525252', fontSize: '10px' }}>-</span>;
       
-      const format = getRegimeFormat(reg);
-      return (
-        <span style={{ color: format.color, fontWeight: 'bold', fontSize: compact ? '9.5px' : '11px', whiteSpace: 'nowrap' }}>
-          {getFriendlyRegimeText(reg)}
-        </span>
-      );
+      return <RegimeBadge regime={reg} fontSize={compact ? '9.5px' : '10.5px'} />;
     }
     return value;
   };

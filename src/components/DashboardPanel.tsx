@@ -1,20 +1,31 @@
 "use client";
 
 import React, { useRef, useState, useEffect } from 'react';
-import { Tile, IconButton, Tooltip, OverflowMenu, OverflowMenuItem } from '@carbon/react';
+import { Tile, IconButton, Tooltip, OverflowMenu, OverflowMenuItem, Modal } from '@carbon/react';
 import { Maximize, Minimize, Information, OverflowMenuVertical } from '@carbon/icons-react';
 
 interface DashboardPanelProps {
   title: string;
   tooltipInfo?: string;
+  infoModalTitle?: string;
+  infoModalContent?: React.ReactNode;
   onExportCsv?: () => void;
   headerActions?: React.ReactNode;
   children: React.ReactNode;
 }
 
-export default function DashboardPanel({ title, tooltipInfo, onExportCsv, headerActions, children }: DashboardPanelProps) {
+export default function DashboardPanel({ 
+  title, 
+  tooltipInfo, 
+  infoModalTitle,
+  infoModalContent,
+  onExportCsv, 
+  headerActions, 
+  children 
+}: DashboardPanelProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showInfoModal, setShowInfoModal] = useState(false);
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -71,10 +82,28 @@ export default function DashboardPanel({ title, tooltipInfo, onExportCsv, header
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <h4 style={{ margin: 0, fontSize: '0.875rem', fontWeight: 600 }}>{title}</h4>
-          {tooltipInfo && (
-            <Tooltip align="bottom" label={tooltipInfo}>
-              <button style={{ background: 'none', border: 'none', cursor: 'help', padding: 0, display: 'flex', transform: 'translateY(-2px)' }} type="button">
-                <Information size={14} style={{ fill: '#a8a8a8' }} />
+          {(tooltipInfo || infoModalContent) && (
+            <Tooltip align="bottom" label={tooltipInfo || (infoModalContent ? "Click to view architecture guide" : "")}>
+              <button 
+                style={{ 
+                  background: 'none', 
+                  border: 'none', 
+                  cursor: infoModalContent ? 'pointer' : 'help', 
+                  padding: '2px', 
+                  display: 'flex', 
+                  alignItems: 'center',
+                  transform: 'translateY(-1px)',
+                  borderRadius: '2px'
+                }} 
+                type="button"
+                onClick={(e) => {
+                  if (infoModalContent) {
+                    e.stopPropagation();
+                    setShowInfoModal(true);
+                  }
+                }}
+              >
+                <Information size={14} style={{ fill: infoModalContent ? '#78a9ff' : '#a8a8a8' }} />
               </button>
             </Tooltip>
           )}
@@ -122,6 +151,21 @@ export default function DashboardPanel({ title, tooltipInfo, onExportCsv, header
       <div style={{ flex: 1, overflow: 'auto', position: 'relative' }} className="nodrag">
         {children}
       </div>
+
+      {/* Info Guide Modal */}
+      {infoModalContent && (
+        <Modal
+          open={showInfoModal}
+          onRequestClose={() => setShowInfoModal(false)}
+          modalHeading={infoModalTitle || title}
+          passiveModal
+          size="lg"
+        >
+          <div style={{ padding: '0.5rem 0', maxHeight: '65vh', overflowY: 'auto' }}>
+            {infoModalContent}
+          </div>
+        </Modal>
+      )}
     </Tile>
   );
 }
