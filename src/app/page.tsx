@@ -149,7 +149,6 @@ export default function Home() {
     { key: "model", header: "Model" },
     { key: "status", header: "Status", width: "80px" },
     { key: "validation_outcome", header: "Outcome" },
-    { key: "remarks", header: "Remarks" },
   ];
   const [selectedSignal, setSelectedSignal] = useState<number | null>(null);
 
@@ -408,9 +407,24 @@ export default function Home() {
                     const modelName = signal?.model || signal?.model_version || value;
                     const conf = Number(signal?.confidence || 0);
                     
-                    let readableModelText = 'range_scalper_v1';
+                    let readableModelText = 'RANGE';
                     if (modelName) {
-                      readableModelText = String(modelName);
+                      const mUpper = String(modelName).toUpperCase();
+                      if (mUpper.includes('TREND')) readableModelText = 'TREND';
+                      else if (mUpper.includes('COUNTER')) readableModelText = 'COUNTER';
+                      else if (mUpper.includes('RANGE') || mUpper.includes('SCALP')) readableModelText = 'RANGE';
+                      else readableModelText = String(modelName);
+                    }
+
+                    const rawRegime = signal?.regime || signal?.market_regime || signal?.signal_metadata?.market_regime || row?.regime || '';
+                    let regimeText = '';
+                    if (rawRegime) {
+                      const rUpper = String(rawRegime).toUpperCase();
+                      if (rUpper.includes('COUNTER')) regimeText = 'counter scalp';
+                      else if (rUpper.includes('BULL')) regimeText = 'bull trend';
+                      else if (rUpper.includes('BEAR')) regimeText = 'bear trend';
+                      else if (rUpper.includes('OSCILLATION') || rUpper.includes('RANGE') || rUpper.includes('SIDEWAYS')) regimeText = 'sideways';
+                      else regimeText = String(rawRegime).toLowerCase().replace(/_/g, ' ');
                     }
                     
                     const mo = signal?.signal_metadata?.model_output || signal?.metadata?.model_output || {};
@@ -419,7 +433,7 @@ export default function Home() {
                     
                     return (
                       <div style={{ display: 'flex', flexDirection: 'column', lineHeight: '1.2', fontSize: '10.5px' }}>
-                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
                           <svg width="10" height="10" viewBox="0 0 32 32" style={{ fill: '#4589ff', flexShrink: 0 }}>
                             <path d="M26,8V6a2,2,0,0,0-2-2H22V2H20V4H18V2H16V4H14V2H12V4H10V2H8V4H6A2,2,0,0,0,4,6V8H2v2H4v2H2v2H4v2H2v2H4v2H2v2H4v2H2v2H4v2A2,2,0,0,0,6,28H8v2h2V28h2v2h2V28h2v2h2V28h2v2h2V28h2A2,2,0,0,0,28,26V24h2V22H28V20h2V18H28V16h2V14H28V12h2V10H28V8ZM26,26H6V6H26Z" />
                             <rect x="10" y="10" width="12" height="12" />
@@ -427,6 +441,11 @@ export default function Home() {
                           <span style={{ color: '#ffffff', fontWeight: 'bold', fontSize: '10.5px', whiteSpace: 'nowrap' }}>
                             {readableModelText}
                           </span>
+                          {regimeText && (
+                            <span style={{ color: '#a8a8a8', fontSize: '8.5px', textTransform: 'lowercase', whiteSpace: 'nowrap' }}>
+                              {regimeText}
+                            </span>
+                          )}
                         </div>
                         <div style={{ fontSize: '11px', fontWeight: 700, display: 'flex', gap: '4px', marginTop: '2px' }}>
                           <span style={{ color: '#24a148' }}>B:{calBuy !== undefined ? (calBuy * 100).toFixed(1) : '0.0'}%</span>

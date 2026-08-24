@@ -13,8 +13,19 @@ import { API_BASE_URL } from '@/config/env';
 
 const getRegimeFormat = (regime: string) => {
   if (!regime) return { text: 'UNKNOWN', color: '#f4f4f4' };
-  if (regime === 'RANGE_SCALPER' || regime === 'SCALPING' || regime === 'SCALPER' || regime === 'SCALPER_M5' || regime === 'SCALPER_M1') return { text: '⚡ Range Scalper', color: '#11a3c6' };
-  if (regime === 'MACRO_EVALUATOR' || regime === 'MACRO') return { text: '🌐 Macro Trend Evaluator', color: '#24a148' };
+  const r = regime.toUpperCase();
+  if (r === 'TREND_MOMENTUM' || r === 'TREND' || r === 'TRIPLE_ALIGNED_BULL' || r === 'TRIPLE_ALIGNED_BEAR') {
+    return { text: '🚀 Trend Momentum Alpha', color: '#24a148' };
+  }
+  if (r === 'RANGE_SCALPER' || r === 'SCALPING' || r === 'OSCILLATION_RANGE') {
+    return { text: '⚡ Range Scalper Alpha', color: '#11a3c6' };
+  }
+  if (r === 'COUNTER_SCALP' || r === 'COUNTER_TREND' || r === 'EXHAUSTION') {
+    return { text: '🔄 Counter-Scalp Alpha', color: '#f1c21b' };
+  }
+  if (r === 'MACRO_EVALUATOR' || r === 'MACRO') {
+    return { text: '🌐 Macro Trend Evaluator', color: '#8a3ffc' };
+  }
   return { text: regime, color: '#f4f4f4' };
 };
 
@@ -42,7 +53,9 @@ function ModelsContent() {
   const [datasets, setDatasets] = useState<any[]>([]);
   const [initialModelRouting, setInitialModelRouting] = useState<any>(null);
   const [modelRouting, setModelRouting] = useState<any>({
-    RANGE_SCALPER: { champion: "range_scalper_v1", challenger: "NONE" },
+    TREND_MOMENTUM:  { champion: "trend_bull_v1", challenger: "NONE" },
+    RANGE_SCALPER:   { champion: "range_scalper_v1", challenger: "NONE" },
+    COUNTER_SCALP:   { champion: "counter_scalp_v1", challenger: "NONE" },
     MACRO_EVALUATOR: { champion: "macro_evaluator_v1", challenger: "NONE" }
   });
   const [isLoadingData, setIsLoadingData] = useState(true);
@@ -113,18 +126,27 @@ function ModelsContent() {
       const dsData = await dsRes.json();
       
       const formattedRouting: Record<string, { champion: string; challenger: string }> = {
-        RANGE_SCALPER: { champion: "range_scalper_v1", challenger: "NONE" },
+        TREND_MOMENTUM:  { champion: "trend_bull_v1", challenger: "NONE" },
+        RANGE_SCALPER:   { champion: "range_scalper_v1", challenger: "NONE" },
+        COUNTER_SCALP:   { champion: "counter_scalp_v1", challenger: "NONE" },
         MACRO_EVALUATOR: { champion: "macro_evaluator_v1", challenger: "NONE" }
       };
       if (routeData && typeof routeData === 'object') {
-        for(const k in routeData) {
-          if(typeof routeData[k] === 'string') {
-            formattedRouting[k] = { champion: routeData[k], challenger: "NONE" };
-          } else if (routeData[k] && typeof routeData[k] === 'object') {
-            formattedRouting[k] = { 
-              champion: routeData[k]?.champion || "NONE", 
-              challenger: routeData[k]?.challenger || "NONE" 
-            };
+        // Map any legacy keys into canonical keys if needed
+        if (routeData["TRIPLE_ALIGNED_BULL"] && !routeData["TREND_MOMENTUM"]) {
+          const val = routeData["TRIPLE_ALIGNED_BULL"];
+          formattedRouting["TREND_MOMENTUM"] = typeof val === 'string' ? { champion: val, challenger: "NONE" } : { champion: val?.champion || "NONE", challenger: val?.challenger || "NONE" };
+        }
+        for(const k of ["TREND_MOMENTUM", "RANGE_SCALPER", "COUNTER_SCALP", "MACRO_EVALUATOR"]) {
+          if (routeData[k]) {
+            if(typeof routeData[k] === 'string') {
+              formattedRouting[k] = { champion: routeData[k], challenger: "NONE" };
+            } else if (routeData[k] && typeof routeData[k] === 'object') {
+              formattedRouting[k] = { 
+                champion: routeData[k]?.champion || "NONE", 
+                challenger: routeData[k]?.challenger || "NONE" 
+              };
+            }
           }
         }
       }
@@ -396,11 +418,20 @@ function ModelsContent() {
     let algo = "Dual Binary LightGBM + Isotonic Calibration";
     let mName = "scalper_v2_dual";
     let rSize = 2.0;
+    
     if (regime === "MACRO") {
       algo = "Macro Weight Evaluator";
       mName = "macro_evaluator_v1";
+    } else if (regime === "TREND_MOMENTUM" || regime === "TREND_BULL" || regime === "TREND") {
+      algo = "Dual Binary LightGBM (Trend Momentum - Wide TBL)";
+      mName = "trend_bull_v1";
+      rSize = 2.0;
+    } else if (regime === "COUNTER_SCALP") {
+      algo = "Dual Binary LightGBM (Counter Scalp - Micro TBL)";
+      mName = "counter_scalp_v1";
+      rSize = 2.0;
     } else if (regime === "RANGE_SCALPER") {
-      algo = "Dual Binary LightGBM (Range Bar)";
+      algo = "Dual Binary LightGBM (Range Bar Scalper)";
       mName = "range_scalper_v1";
       rSize = 2.0;
     }
@@ -639,33 +670,71 @@ function ModelsContent() {
             {/* TAB: TRAIN */}
             {currentTab === 'train' && (
               <>
-                <div className="models-train-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '0.2rem', marginBottom: '0.2rem' }}>
-                    {/* Card 1: Range Bar Scalping Model */}
-                    <Tile style={{ padding: '1.5rem', background: 'var(--cds-layer-01, #262626)', borderLeft: '4px solid #11a3c6' }}>
-                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
-                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                           <MachineLearningModel size={28} style={{ color: '#11a3c6' }} />
-                           <div>
-                             <h4 style={{ fontWeight: 600, margin: 0, color: '#f4f4f4' }}>Range Bar Scalping Model</h4>
-                             <p style={{ fontSize: '0.75rem', color: '#a8a8a8', margin: 0, marginTop: '0.25rem' }}>Dual LightGBM on Event-Driven Range Bars</p>
-                           </div>
-                         </div>
-                       </div>
-                       <p style={{ fontSize: '0.8rem', color: '#c6c6c6', marginBottom: '1.25rem', lineHeight: '1.4' }}>
-                         Latih model Range Bar dengan parameter ukuran harga dinamis ($2.00, $2.50, dll.), fitur Price Velocity, Bar Duration, dan Consecutive Bars untuk momentum scalping berkecepatan tinggi.
-                       </p>
-                       <Button kind="primary" size="sm" renderIcon={Play} onClick={() => openTrainModal("RANGE_SCALPER")}>
-                          Train Range Scalper
-                       </Button>
-                    </Tile>
-
-                    {/* Card 2: Macro & Trend Evaluator */}
+                <div className="models-train-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                    {/* Card 1: Trend Momentum Alpha Model */}
                     <Tile style={{ padding: '1.5rem', background: 'var(--cds-layer-01, #262626)', borderLeft: '4px solid #24a148' }}>
                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                            <MachineLearningModel size={28} style={{ color: '#24a148' }} />
                            <div>
-                             <h4 style={{ fontWeight: 600, margin: 0, color: '#f4f4f4' }}>Macro & Trend Evaluator Model</h4>
+                             <h4 style={{ fontWeight: 600, margin: 0, color: '#f4f4f4' }}>Trend Momentum Alpha</h4>
+                             <p style={{ fontSize: '0.75rem', color: '#a8a8a8', margin: 0, marginTop: '0.25rem' }}>Multi-Scale Momentum Rider (Wide TBL: SL $5, TP $10, 35 bars)</p>
+                           </div>
+                         </div>
+                       </div>
+                       <p style={{ fontSize: '0.8rem', color: '#c6c6c6', marginBottom: '1.25rem', lineHeight: '1.4' }}>
+                         Latih model Trend Following untuk kondisi <code>TRIPLE_ALIGNED_BULL / BEAR</code>. Mempelajari entri breakout dan ride tren panjang dengan toleransi pullback normal.
+                       </p>
+                       <Button kind="primary" size="sm" renderIcon={Play} onClick={() => openTrainModal("TREND_MOMENTUM")}>
+                          Train Trend Alpha
+                       </Button>
+                    </Tile>
+
+                    {/* Card 2: Range Bar Scalping Model */}
+                    <Tile style={{ padding: '1.5rem', background: 'var(--cds-layer-01, #262626)', borderLeft: '4px solid #11a3c6' }}>
+                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                           <MachineLearningModel size={28} style={{ color: '#11a3c6' }} />
+                           <div>
+                             <h4 style={{ fontWeight: 600, margin: 0, color: '#f4f4f4' }}>Range Bar Scalper Alpha</h4>
+                             <p style={{ fontSize: '0.75rem', color: '#a8a8a8', margin: 0, marginTop: '0.25rem' }}>Micro-Oscillation Scalper (Tight TBL: SL $3, TP $4.5, 15 bars)</p>
+                           </div>
+                         </div>
+                       </div>
+                       <p style={{ fontSize: '0.8rem', color: '#c6c6c6', marginBottom: '1.25rem', lineHeight: '1.4' }}>
+                         Latih model Range Scalper untuk kondisi <code>OSCILLATION_RANGE</code>. Mengunci profit kilat dari osilasi mikro Range Bar dengan filter anti-chop.
+                       </p>
+                       <Button kind="secondary" size="sm" renderIcon={Play} onClick={() => openTrainModal("RANGE_SCALPER")}>
+                          Train Range Scalper
+                       </Button>
+                    </Tile>
+
+                    {/* Card 3: Counter-Scalp Exhaustion Model */}
+                    <Tile style={{ padding: '1.5rem', background: 'var(--cds-layer-01, #262626)', borderLeft: '4px solid #f1c21b' }}>
+                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                           <MachineLearningModel size={28} style={{ color: '#f1c21b' }} />
+                           <div>
+                             <h4 style={{ fontWeight: 600, margin: 0, color: '#f4f4f4' }}>Counter-Scalp Alpha</h4>
+                             <p style={{ fontSize: '0.75rem', color: '#a8a8a8', margin: 0, marginTop: '0.25rem' }}>Mean-Reversion Exhaustion (Micro TBL: SL $2.4, TP $3.6, 8 bars)</p>
+                           </div>
+                         </div>
+                       </div>
+                       <p style={{ fontSize: '0.8rem', color: '#c6c6c6', marginBottom: '1.25rem', lineHeight: '1.4' }}>
+                         Latih model pembalikan arah mikro pada kondisi jenuh overbought/oversold ekstrem dengan perlindungan runaway streak guard.
+                       </p>
+                       <Button kind="tertiary" size="sm" renderIcon={Play} onClick={() => openTrainModal("COUNTER_SCALP")}>
+                          Train Counter Scalp
+                       </Button>
+                    </Tile>
+
+                    {/* Card 4: Macro & Trend Evaluator */}
+                    <Tile style={{ padding: '1.5rem', background: 'var(--cds-layer-01, #262626)', borderLeft: '4px solid #8a3ffc' }}>
+                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                           <MachineLearningModel size={28} style={{ color: '#8a3ffc' }} />
+                           <div>
+                             <h4 style={{ fontWeight: 600, margin: 0, color: '#f4f4f4' }}>Macro Trend Evaluator</h4>
                              <p style={{ fontSize: '0.75rem', color: '#a8a8a8', margin: 0, marginTop: '0.25rem' }}>H1/M15 Alignment + DXY Inverse Correlation</p>
                            </div>
                          </div>
@@ -673,7 +742,7 @@ function ModelsContent() {
                        <p style={{ fontSize: '0.8rem', color: '#c6c6c6', marginBottom: '1.25rem', lineHeight: '1.4' }}>
                          Latih ulang atau kalibrasi bobot Macro Evaluator (-1.0 s/d +1.0) untuk memperbarui dinamika ambang batas Soft Switching secara otomatis di Redis.
                        </p>
-                       <Button kind="secondary" size="sm" renderIcon={Play} onClick={() => openTrainModal("MACRO")}>
+                       <Button kind="ghost" size="sm" renderIcon={Play} onClick={() => openTrainModal("MACRO")}>
                           Train Macro Evaluator
                        </Button>
                     </Tile>
@@ -715,22 +784,31 @@ function ModelsContent() {
                   </Button>
                 </div>
  
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '0.2rem' }}>
-                  {Object.keys(modelRouting).map((key) => {
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '0.5rem' }}>
+                  {['TREND_MOMENTUM', 'RANGE_SCALPER', 'COUNTER_SCALP', 'MACRO_EVALUATOR'].map((key) => {
                     const format = getRegimeFormat(key);
                     const currentConfig = modelRouting[key] || { champion: "NONE", challenger: "NONE" };
                     const champ = currentConfig.champion || "NONE";
                     const chall = currentConfig.challenger || "NONE";
                     
+                    // Descriptive subtitle for each regime
+                    let regimeDesc = "";
+                    if (key === 'TREND_MOMENTUM') regimeDesc = "Handles: TRIPLE_ALIGNED_BULL & BEAR (Pro-Trend Ride)";
+                    else if (key === 'RANGE_SCALPER') regimeDesc = "Handles: OSCILLATION_RANGE (Micro-Chop Scalp)";
+                    else if (key === 'COUNTER_SCALP') regimeDesc = "Handles: COUNTER_SCALP (Pullback Exhaustion)";
+                    else if (key === 'MACRO_EVALUATOR') regimeDesc = "Handles: Macro Soft-Switching & Bias Calculation";
+
                     // Ensure all registered models are available for routing selection
                     const availableModels = models && models.length > 0 ? models : [];
 
                     return (
                       <Tile key={key} style={{ padding: '1.25rem', background: 'var(--cds-layer-01, #262626)', borderTop: `3px solid ${format.color}` }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-                          <span style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: format.color, display: 'inline-block' }} />
-                          <h5 style={{ fontWeight: 600, color: '#f4f4f4', margin: 0 }}>{format.text}</h5>
-                          <span style={{ fontSize: '0.7rem', color: '#6f6f6f', marginLeft: 'auto' }}>{key}</span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', marginBottom: '1rem' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <span style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: format.color, display: 'inline-block' }} />
+                            <h5 style={{ fontWeight: 600, color: '#f4f4f4', margin: 0 }}>{format.text}</h5>
+                          </div>
+                          <span style={{ fontSize: '0.75rem', color: '#8d8d8d', marginLeft: '1.25rem' }}>{regimeDesc}</span>
                         </div>
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
