@@ -14,7 +14,7 @@ import {
   TableToolbarContent,
   TableToolbarSearch,
   Button,
-  Modal
+  InlineLoading
 } from "@carbon/react";
 import { View, Close } from "@carbon/icons-react";
 import GlobalTable from "./GlobalTable";
@@ -82,9 +82,7 @@ export default function TradeHistoryTable({
   const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
   const [selectedSignalId, setSelectedSignalId] = useState<number | null>(null);
   const [mounted, setMounted] = useState(false);
-  const [tradeToClose, setTradeToClose] = useState<Trade | null>(null);
-  const [isClosing, setIsClosing] = useState(false);
-  const [closeError, setCloseError] = useState<string | null>(null);
+  const [closingTickets, setClosingTickets] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     setMounted(true);
@@ -97,38 +95,36 @@ export default function TradeHistoryTable({
     }
   };
 
-  const handleOpenCloseModal = (rawTrade: any) => {
-    setCloseError(null);
-    setTradeToClose(rawTrade);
-  };
+  const handleDirectClose = async (rawTrade: any) => {
+    const ticket = String(rawTrade?.mt5_ticket || rawTrade?.trade_id || rawTrade?.id || '');
+    if (!ticket || closingTickets.has(ticket)) return;
 
-  const handleConfirmClose = async () => {
-    if (!tradeToClose) return;
-    const ticket = (tradeToClose as any)?.mt5_ticket || tradeToClose?.trade_id;
-    if (!ticket) return;
-
-    setIsClosing(true);
-    setCloseError(null);
+    setClosingTickets(prev => new Set(prev).add(ticket));
     try {
       const res = await fetch(`${API_BASE_URL}/account/positions/${ticket}/close`, {
         method: 'POST'
       });
       const data = await res.json();
       if (!res.ok) {
-        setCloseError(data.detail || data.message || "Failed to close position");
+        console.error("Failed to close position:", data.detail || data.message || "Failed to close position");
       } else {
-        setTradeToClose(null);
         if (onReload) await onReload();
       }
     } catch (err: any) {
-      setCloseError(err.message || "Error communicating with server");
+      console.error("Error communicating with server to close position:", err);
     } finally {
-      setIsClosing(false);
+      setClosingTickets(prev => {
+        const next = new Set(prev);
+        next.delete(ticket);
+        return next;
+      });
     }
   };
 
   const renderRowActions = (rowId: any, rawItem: any) => {
     const isOpen = isLiveTrades || rawItem?.status === 'OPEN';
+    const ticket = String(rawItem?.mt5_ticket || rawItem?.trade_id || rawItem?.id || '');
+    const isThisClosing = closingTickets.has(ticket);
 
     return (
       <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', justifyContent: 'center' }}>
@@ -139,11 +135,16 @@ export default function TradeHistoryTable({
             hasIconOnly
             tooltipPosition="left"
             tooltipAlignment="center"
-            renderIcon={() => <Close size={compact ? 12 : 14} fill="#fa4d56" />}
-            iconDescription="Close Trade"
+            disabled={isThisClosing}
+            renderIcon={() => isThisClosing ? (
+              <InlineLoading status="active" style={{ minHeight: 'auto', width: 'auto' }} />
+            ) : (
+              <Close size={compact ? 12 : 14} fill="#fa4d56" />
+            )}
+            iconDescription={isThisClosing ? "Closing..." : "Close Trade"}
             onClick={(e: React.MouseEvent) => {
               e.stopPropagation();
-              handleOpenCloseModal(rawItem);
+              handleDirectClose(rawItem);
             }}
             style={{
               height: compact ? '22px' : '26px',
@@ -527,57 +528,6 @@ export default function TradeHistoryTable({
           type="signal"
           onClose={() => setSelectedSignalId(null)} 
         />
-      )}
-
-      {mounted && (
-        <Modal
-          open={tradeToClose !== null}
-          danger
-          modalHeading="Close Trade Position"
-          primaryButtonText={isClosing ? "Closing Position..." : "Close Position"}
-          secondaryButtonText="Cancel"
-          primaryButtonDisabled={isClosing}
-          onRequestClose={() => {
-            if (!isClosing) {
-              setTradeToClose(null);
-              setCloseError(null);
-            }
-          }}
-          onRequestSubmit={handleConfirmClose}
-        >
-          {tradeToClose && (
-            <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "16px", fontSize: "13px" }}>
-              <p style={{ color: "#c6c6c6" }}>
-                Are you sure you want to manually close this active position at current market price?
-              </p>
-
-              <div style={{ background: "#262626", border: "1px solid #393939", borderRadius: "4px", padding: "12px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
-                <div><strong style={{ color: "#8d8d8d" }}>Ticket:</strong> #{tradeToClose.mt5_ticket || tradeToClose.trade_id}</div>
-                <div><strong style={{ color: "#8d8d8d" }}>Symbol:</strong> {tradeToClose.symbol}</div>
-                <div>
-                  <strong style={{ color: "#8d8d8d" }}>Direction:</strong>{" "}
-                  <span style={{ color: tradeToClose.direction === "BUY" ? "#24a148" : "#fa4d56", fontWeight: "bold" }}>
-                    {tradeToClose.direction} ({tradeToClose.volume} Lots)
-                  </span>
-                </div>
-                <div><strong style={{ color: "#8d8d8d" }}>Entry Price:</strong> {tradeToClose.entry_price != null ? Number(tradeToClose.entry_price).toFixed(2) : '-'}</div>
-                <div><strong style={{ color: "#8d8d8d" }}>Current Price:</strong> {tradeToClose.exit_price != null ? Number(tradeToClose.exit_price).toFixed(2) : '-'}</div>
-                <div>
-                  <strong style={{ color: "#8d8d8d" }}>Unrealized PnL:</strong>{" "}
-                  <span style={{ color: (tradeToClose.pnl_money ?? 0) >= 0 ? "#24a148" : "#fa4d56", fontWeight: "bold" }}>
-                    {tradeToClose.pnl_money != null ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(tradeToClose.pnl_money) : '-'}
-                  </span>
-                </div>
-              </div>
-
-              {closeError && (
-                <div style={{ color: "#fa4d56", background: "rgba(250, 77, 86, 0.1)", border: "1px solid #fa4d56", padding: "8px 12px", borderRadius: "4px", fontSize: "12px" }}>
-                  ⚠️ {closeError}
-                </div>
-              )}
-            </div>
-          )}
-        </Modal>
       )}
     </>
   );

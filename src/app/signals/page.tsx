@@ -81,12 +81,21 @@ export default function SignalsPage() {
     if (col.includes("validation_outcome")) {
       const rowId = cellId.split(':')[0];
       const signal = row || signals.find((s: any) => String(s.id) === String(rowId));
-      const outcome = signal?.validation_outcome || (signal?.signal_correct === true ? 'WIN' : (signal?.signal_correct === false ? 'LOSS' : null));
-      const barrier = signal?.validation_barrier;
-      const realizedPips = signal?.realized_pips !== undefined && signal?.realized_pips !== null ? Number(signal.realized_pips) : (signal?.actual_magnitude !== null && signal?.actual_magnitude !== undefined ? Number(signal.actual_magnitude) : null);
-      const mfe = signal?.mfe_pips !== undefined ? Number(signal.mfe_pips) : null;
-      const mae = signal?.mae_pips !== undefined ? Number(signal.mae_pips) : null;
-      const vetoEval = signal?.veto_evaluation || 'NONE';
+      const metaVal = signal?.signal_metadata?.validation || signal?.metadata?.validation || {};
+      const outcome = signal?.validation_outcome || metaVal?.outcome || (signal?.signal_correct === true ? 'WIN' : (signal?.signal_correct === false ? 'LOSS' : null));
+      const barrier = signal?.validation_barrier || metaVal?.barrier_hit;
+      const realizedPips = signal?.realized_pips !== undefined && signal?.realized_pips !== null 
+        ? Number(signal.realized_pips) 
+        : (metaVal?.realized_pips !== undefined && metaVal?.realized_pips !== null 
+          ? Number(metaVal.realized_pips) 
+          : (signal?.actual_magnitude !== null && signal?.actual_magnitude !== undefined ? Number(signal.actual_magnitude) : null));
+      const mfe = signal?.mfe_pips !== undefined && signal?.mfe_pips !== null 
+        ? Number(signal.mfe_pips) 
+        : (metaVal?.mfe_pips !== undefined && metaVal?.mfe_pips !== null ? Number(metaVal.mfe_pips) : null);
+      const mae = signal?.mae_pips !== undefined && signal?.mae_pips !== null 
+        ? Number(signal.mae_pips) 
+        : (metaVal?.mae_pips !== undefined && metaVal?.mae_pips !== null ? Number(metaVal.mae_pips) : null);
+      const vetoEval = signal?.veto_evaluation || metaVal?.veto_evaluation || 'NONE';
 
       if (!outcome && !barrier) {
         if (signal?.direction === 'NEUTRAL' && !signal?.actual_direction) {

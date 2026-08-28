@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Tile } from '@carbon/react';
-import { CurrencyDollar, Activity, Power, MachineLearningModel, ChartLine, Wallet } from '@carbon/icons-react';
+import { CurrencyDollar, Activity, Power, MachineLearningModel, ChartLine, Wallet, ArrowDownRight } from '@carbon/icons-react';
 import { useGlobalState } from '../contexts/GlobalStateContext';
 
 const getRegimeFormat = (regime: string) => {
@@ -20,6 +20,8 @@ const getRegimeFormat = (regime: string) => {
 
 export default function DashboardMetrics() {
   const { state, analytics } = useGlobalState();
+
+  const todayDdVal = Number(analytics?.today_drawdown ?? analytics?.max_drawdown ?? 0);
 
   return (
     <div className="dashboard-metrics-grid" style={{ height: '100%' }}>
@@ -48,7 +50,7 @@ export default function DashboardMetrics() {
         </div>
       </Tile>
 
-      {/* Group 2: Today Trades, Today PnL, Today Winrate */}
+      {/* Group 2: Today Trades, Today PnL, Today Winrate, Today Drawdown */}
       <Tile style={{ padding: '0.25rem 0.5rem', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-around', height: '100%', gap: '0.5rem' }}>
           <div>
@@ -80,6 +82,20 @@ export default function DashboardMetrics() {
             </div>
             <h4 style={{ margin: 0, color: "#f4f4f4", fontWeight: 600, lineHeight: "1.1" }}>
               {analytics?.win_rate !== undefined && analytics?.win_rate !== null ? `${Number(analytics.win_rate).toFixed(1)}%` : "0.0%"}
+            </h4>
+          </div>
+          <div style={{ width: '1px', height: '65%', backgroundColor: '#393939' }} />
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', marginBottom: "0.25rem" }}>
+              <ArrowDownRight size={13} color="#a8a8a8" />
+              <p style={{ fontSize: "10px", color: "#a8a8a8", margin: 0 }}>Today Drawdown</p>
+            </div>
+            <h4 style={{ margin: 0, fontWeight: 600, color: todayDdVal > 0 ? "#fa4d56" : "#24a148", lineHeight: "1.1" }}>
+              {analytics?.today_drawdown !== undefined && analytics?.today_drawdown !== null
+                ? `${Number(analytics.today_drawdown) > 0 ? '-' : ''}${Math.abs(Number(analytics.today_drawdown)).toFixed(2)}%`
+                : (analytics?.max_drawdown !== undefined && analytics?.max_drawdown !== null
+                  ? `${Number(analytics.max_drawdown) > 0 ? '-' : ''}${Math.abs(Number(analytics.max_drawdown)).toFixed(2)}%`
+                  : "0.00%")}
             </h4>
           </div>
         </div>

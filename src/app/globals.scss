@@ -503,7 +503,7 @@ main {
 /* Dashboard Metrics Grid */
 .dashboard-metrics-grid {
   display: grid;
-  grid-template-columns: 2fr 3fr;
+  grid-template-columns: 1fr 2fr;
   gap: 0.2rem;
   flex: 1 1 auto;
   width: 100%;
@@ -554,12 +554,12 @@ main {
 }
 
 .dashboard-metrics-wrapper {
-  flex: 5.5;
+  flex: 6;
   height: 100%;
 }
 
 .macro-snapshot-wrapper {
-  flex: 4.5;
+  flex: 4;
   height: 100%;
 }
 

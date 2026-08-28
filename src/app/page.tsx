@@ -51,7 +51,10 @@ export default function Home() {
       if (s.id) map.set(s.id, s);
     });
     (signals || []).forEach((s: any) => {
-      if (s.id) map.set(s.id, s);
+      if (s.id) {
+        const existing = map.get(s.id) || {};
+        map.set(s.id, { ...existing, ...s });
+      }
     });
     const list = Array.from(map.values());
     list.sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime());
@@ -512,12 +515,21 @@ export default function Home() {
                   if (col.includes("validation_outcome")) {
                     const rowId = cellId.split(':')[0];
                     const signal = row || (nonShadowSignals || []).find((s: any) => String(s.id) === String(rowId));
-                    const outcome = signal?.validation_outcome || (signal?.signal_correct === true ? 'WIN' : (signal?.signal_correct === false ? 'LOSS' : null));
-                    const barrier = signal?.validation_barrier;
-                    const realizedPips = signal?.realized_pips !== undefined && signal?.realized_pips !== null ? Number(signal.realized_pips) : (signal?.actual_magnitude !== null && signal?.actual_magnitude !== undefined ? Number(signal.actual_magnitude) : null);
-                    const mfe = signal?.mfe_pips !== undefined ? Number(signal.mfe_pips) : null;
-                    const mae = signal?.mae_pips !== undefined ? Number(signal.mae_pips) : null;
-                    const vetoEval = signal?.veto_evaluation || 'NONE';
+                    const metaVal = signal?.signal_metadata?.validation || signal?.metadata?.validation || {};
+                    const outcome = signal?.validation_outcome || metaVal?.outcome || (signal?.signal_correct === true ? 'WIN' : (signal?.signal_correct === false ? 'LOSS' : null));
+                    const barrier = signal?.validation_barrier || metaVal?.barrier_hit;
+                    const realizedPips = signal?.realized_pips !== undefined && signal?.realized_pips !== null 
+                      ? Number(signal.realized_pips) 
+                      : (metaVal?.realized_pips !== undefined && metaVal?.realized_pips !== null 
+                        ? Number(metaVal.realized_pips) 
+                        : (signal?.actual_magnitude !== null && signal?.actual_magnitude !== undefined ? Number(signal.actual_magnitude) : null));
+                    const mfe = signal?.mfe_pips !== undefined && signal?.mfe_pips !== null 
+                      ? Number(signal.mfe_pips) 
+                      : (metaVal?.mfe_pips !== undefined && metaVal?.mfe_pips !== null ? Number(metaVal.mfe_pips) : null);
+                    const mae = signal?.mae_pips !== undefined && signal?.mae_pips !== null 
+                      ? Number(signal.mae_pips) 
+                      : (metaVal?.mae_pips !== undefined && metaVal?.mae_pips !== null ? Number(metaVal.mae_pips) : null);
+                    const vetoEval = signal?.veto_evaluation || metaVal?.veto_evaluation || 'NONE';
 
                     if (!outcome && !barrier) {
                       if (signal?.direction === 'NEUTRAL' && !signal?.actual_direction) {
@@ -555,9 +567,9 @@ export default function Home() {
                         </div>
                         {(mfe !== null || mae !== null) && (
                           <div style={{ fontSize: '8.5px', color: '#a8a8a8', marginTop: '1px' }}>
-                            <span style={{ color: '#24a148' }}>+{mfe?.toFixed(1) || '0.0'}</span>
+                            <span style={{ color: '#24a148' }}>MFE: +{mfe?.toFixed(1) || '0.0'}p</span>
                             <span style={{ margin: '0 2px' }}>|</span>
-                            <span style={{ color: '#fa4d56' }}>-{mae?.toFixed(1) || '0.0'}</span>
+                            <span style={{ color: '#fa4d56' }}>MAE: -{mae?.toFixed(1) || '0.0'}p</span>
                           </div>
                         )}
                         {vetoEval === 'SAVED_LOSS' && (
