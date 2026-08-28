@@ -176,6 +176,8 @@ export default function HMMRegimeGauges() {
   const weight = data.macro_weight !== undefined ? data.macro_weight : 0.0;
   const buyThresh = data.buy_threshold !== undefined ? data.buy_threshold : 0.50;
   const sellThresh = data.sell_threshold !== undefined ? data.sell_threshold : 0.50;
+  const activeModel = data.active_model || "AUTO";
+  const modelBase = data.model_base_threshold ? Math.round(data.model_base_threshold * 100) : 50;
 
   const isBearish = weight < -0.10;
   const isBullish = weight > 0.10;
@@ -197,16 +199,16 @@ export default function HMMRegimeGauges() {
           pct={weightPct} 
           label="Macro Weight" 
           valueStr={`${Math.abs(Math.round(weight * 100))}%`} 
-          sublabel={isBullish ? "Bullish Alignment" : (isBearish ? "Bearish Alignment" : "Neutral Alignment")} 
+          sublabel={isBullish ? "Bullish Bias" : (isBearish ? "Bearish Bias" : "Neutral (4%)")} 
           color={weightColor} 
         />
 
         {/* Gauge 3: BUY Threshold */}
         <RadialGauge 
           pct={buyThresh * 100} 
-          label="BUY Threshold" 
+          label={`BUY Thresh (${activeModel})`} 
           valueStr={`${(buyThresh * 100).toFixed(1)}%`} 
-          sublabel={isBullish ? "Favored (Easier)" : (isBearish ? "Hurdle Raised" : "Standard 50%")} 
+          sublabel={`Base ${modelBase}% ${isBullish ? '↓ Favored' : (isBearish ? '↑ Hurdle' : '± Netral')}`} 
           color={isBullish ? "#24a148" : "#8d8d8d"} 
           isHighlighted={isBullish}
         />
@@ -214,9 +216,9 @@ export default function HMMRegimeGauges() {
         {/* Gauge 4: SELL Threshold */}
         <RadialGauge 
           pct={sellThresh * 100} 
-          label="SELL Threshold" 
+          label={`SELL Thresh (${activeModel})`} 
           valueStr={`${(sellThresh * 100).toFixed(1)}%`} 
-          sublabel={isBearish ? "Favored (Easier)" : (isBullish ? "Hurdle Raised" : "Standard 50%")} 
+          sublabel={`Base ${modelBase}% ${isBearish ? '↓ Favored' : (isBullish ? '↑ Hurdle' : '± Netral')}`} 
           color={isBearish ? "#da1e28" : "#8d8d8d"} 
           isHighlighted={isBearish}
         />

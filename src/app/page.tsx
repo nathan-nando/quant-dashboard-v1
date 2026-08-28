@@ -657,8 +657,8 @@ export default function Home() {
 
         <div key="range_pyramid">
           <DashboardPanel 
-            title="Event-Driven Price Engine" 
-            tooltipInfo="Live range bar builder and pyramiding scale-in state (Click for architecture guide)."
+            title="Event-Driven Microstructure" 
+            tooltipInfo="Multi-Scale Range Bar Builder ($2.00 / $6.00 / $18.00) & Pyramiding Scale-In State."
             infoModalTitle="Event-Driven Price Engine (Micro, Meso, Macro & Pyramiding)"
             infoModalContent={<EventDrivenEngineGuide />}
           >
@@ -667,7 +667,10 @@ export default function Home() {
         </div>
 
         <div key="hmm_gauges">
-          <DashboardPanel title="Regime Detection" tooltipInfo="Hidden Markov Model regime probabilities.">
+          <DashboardPanel 
+            title="Macro Climate & Calibrated Hurdles" 
+            tooltipInfo="Higher Timeframe Trend (H1), Intermarket Momentum (DXY/VIX), and Active Model Hurdle Rates."
+          >
             <HMMRegimeGauges />
           </DashboardPanel>
         </div>

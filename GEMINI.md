@@ -48,3 +48,6 @@
 5. **Standard WSL Command Sequence**:
    1. Check types: `wsl bash -c 'source ~/.nvm/nvm.sh && cd /mnt/c/code/quant-v1/quant-dashboard-v1 && npx tsc --noEmit'`
    2. If passes: `wsl bash -c 'cd /mnt/c/code/quant-v1/quant-dashboard-v1 && make rebuild'`
+6. **Active Model Threshold & Regime Disambiguation**:
+   - Radial Gauges di widget *Macro Climate & Calibrated Hurdles* wajib menampilkan **threshold efektif dari model yang sedang aktif** (`effective_buy_threshold`, `effective_sell_threshold`), bukan rumus makro global statis, agar 100% konsisten dengan angka pemicu pada tabel *Recent Signals*.
+   - Selalu pertahankan pemisahan visual yang jelas antara **Microstructure Price Action** ($2/$6/$18 event clock) dan **Macro Intermarket Climate** (H1/DXY time-series).
